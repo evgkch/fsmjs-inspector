@@ -14,21 +14,6 @@
     </head>
     <body>
         <main>
-            <header>
-                <p class="eyebrow">
-                    <a href="https://github.com/evgkch/fsmjs">@evgkch/fsmjs</a>
-                </p>
-                <h1>Inspector</h1>
-                <p class="lede">
-                    A machine's graph is a projection of the machine itself:
-                    <code>JSON.stringify</code> keeps the labels and writes the
-                    name of every operation in place of its code. What is left
-                    is enough to draw the machine, to check it — and, with no
-                    operations in it at all, to still run it. Everything on the
-                    right is computed from the JSON on the left.
-                </p>
-            </header>
-
             <div class="bar">
                 <label
                     >Schema
@@ -51,7 +36,7 @@
                         spellcheck="false"
                         autocapitalize="off"
                         autocomplete="off"
-                        aria-label="Schema JSON"
+                        aria-label="Schema, as rules"
                     ></textarea>
                     <p class="parse" id="parse" hidden></p>
                     <ul
@@ -76,54 +61,12 @@
                             ><span class="value" id="n-terminal">—</span>
                         </li>
                     </ul>
-                    <p class="from">
-                        <code>analyze(schema, start)</code> —
-                        <code>fsmjs/analysis</code>
-                    </p>
-                    <p class="note">
-                        A guard read back from JSON is a name and not code, so a
-                        dump has lost the one thing that tells two rules of the
-                        same cell apart. The figure hands it back: every rule is
-                        built with a guard that asks whether it is the rule you
-                        named, so your second click <em>is</em> the guard, and
-                        the rule that fires is the rule you chose.
-                        <code>with</code> still reads as the identity, so the
-                        context stays as it started. The machine driven on the
-                        right is a real one throughout.
-                    </p>
                 </section>
 
-                <section class="pane">
-                    <div class="work">
-                        <div class="out" id="out"></div>
-                        <aside class="trace">
-                            <h2 class="tag">reading</h2>
-                            <div class="reading" id="reading"></div>
-                            <h2 class="tag" id="log-tag">
-                                <span class="no">#</span>
-                                <span>history — <code>history(fsm)</code></span>
-                            </h2>
-                            <div class="log" id="last" aria-live="polite"></div>
-                            <div class="rewind" id="rewind">
-                                <button id="undo" title="history.undo()">
-                                    ↶ undo
-                                </button>
-                                <button id="redo" title="history.redo()">
-                                    ↷ redo
-                                </button>
-                                <button
-                                    id="reset"
-                                    title="build the machine again, at the start"
-                                >
-                                    ↺ reset
-                                </button>
-                            </div>
-                        </aside>
-                    </div>
-                </section>
+                <section class="pane" id="inspector"></section>
             </div>
         </main>
 
-        <script type="module" src="./src/main.ts"></script>
+        <script type="module" src="./src/app.ts"></script>
     </body>
 </html>

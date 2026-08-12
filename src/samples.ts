@@ -6,10 +6,13 @@
  * they are `JSON.stringify` of the machines this page itself runs on, produced by
  * `scripts/dump.mjs` before every build, so the page's first subject is the page.
  *
- * That is the claim in the lede made checkable rather than asserted. Open `the inspector's
- * choice` and the figure draws the thing that was deciding what the figure did while you were
- * pointing at it — three states, one cell of three rules, and every guard by name. Nothing was
- * written twice to make that work: a dump is what a machine says about itself.
+ * Open `the inspector's choice` and the figure draws the thing that was deciding what the figure
+ * did while you were pointing at it — three states, one cell of three rules, and every guard by
+ * name. Nothing was written twice to make that work: a dump is what a machine says about itself.
+ *
+ * They are kept as JSON because that is what `JSON.stringify(machine)` writes, and `dump.mjs`
+ * has nothing else to write. What the editor shows is `toRules` of the same thing: the schema in
+ * the language it is written in, which is also the language every line of the history is in.
  */
 import choice from "../schemas/the-inspectors-choice.json?raw";
 import page from "../schemas/the-inspectors-page.json?raw";

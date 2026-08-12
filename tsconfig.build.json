@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist-lib",
+    "types": []
+  },
+  "include": ["src"],
+  "exclude": ["src/app.ts", "src/samples.ts", "src/page.ts"]
+}

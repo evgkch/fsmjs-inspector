@@ -86,7 +86,7 @@
 
 body {
     margin: 0;
-    padding: clamp(1.5rem, 5vw, 3.5rem) 1.25rem 4rem;
+    padding: 1.25rem 1.25rem 2rem;
     background: var(--bg);
     color: var(--ink);
     font: 400 15px/1.6 var(--main-font);
@@ -97,49 +97,6 @@ main {
     margin: 0 auto;
     display: grid;
     gap: 1.5rem;
-}
-
-/* ── header ──────────────────────────────────────────────────────────────── */
-
-header {
-    display: grid;
-    gap: 0.4rem;
-}
-
-.eyebrow {
-    margin: 0;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-}
-
-.eyebrow a {
-    color: var(--accent);
-    text-decoration: none;
-}
-
-.eyebrow a:hover {
-    text-decoration: underline;
-}
-
-h1 {
-    margin: 0;
-    font-size: clamp(1.5rem, 4vw, 1.9rem);
-    font-weight: 620;
-    letter-spacing: -0.021em;
-}
-
-.lede {
-    margin: 0;
-    max-width: 48rem;
-    color: var(--muted);
-    text-wrap: pretty;
-}
-
-code {
-    font: 500 0.88em/1 var(--mono-font);
-    color: var(--ink);
 }
 
 /* ── controls ────────────────────────────────────────────────────────────── */
@@ -202,7 +159,8 @@ select {
     min-width: 0;
 }
 
-h2 {
+h2,
+.tag {
     margin: 0;
     font-size: 0.72rem;
     font-weight: 600;
@@ -263,14 +221,13 @@ textarea:focus-visible {
     overflow-wrap: anywhere;
 }
 
-.from {
-    margin: 0;
-    color: var(--faint);
-    font: 400 0.78rem/1.6 var(--mono-font);
-    text-wrap: pretty;
-}
-
 /* ── the work surface ────────────────────────────────────────────────────── */
+
+/* One mount, and everything below is inside it. Two inspectors on a screen are two of these. */
+.fsmjs-inspector {
+    display: grid;
+    min-width: 0;
+}
 
 /* The figure, and beside it what the figure has come to. One is read by looking, the other by
    reading, and they answer the same question — so they are two halves of one surface rather
@@ -327,7 +284,7 @@ textarea:focus-visible {
     padding: 0.6rem 0.9rem 0.1rem;
 }
 
-#log-tag {
+.log-tag {
     display: grid;
     grid-template-columns: var(--no) minmax(0, 1fr);
     align-items: center;
@@ -381,8 +338,8 @@ textarea:focus-visible {
 }
 
 /* No transitions yet, so there is no second block: nothing to head, and nothing to move along. */
-.trace:has(#last:empty) #log-tag,
-.trace:has(#last:empty) #rewind {
+.trace:has(.log:empty) .log-tag,
+.trace:has(.log:empty) .rewind {
     display: none;
 }
 
@@ -628,23 +585,6 @@ rect.grab:focus {
     stroke-width: 2;
 }
 
-/* Why a machine built from a dump can be driven at all. It is the one thing on this page that
-   has to be said in prose, so it is said once and kept quiet. */
-.note {
-    margin: 0;
-    padding: 0.7rem 0.85rem;
-    border-radius: 8px;
-    background: var(--bg);
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.65;
-    text-wrap: pretty;
-}
-
-.note code {
-    font-size: 0.85em;
-}
-
 /* One flag, because there is one difference and it is a restriction: off, the machine stands
    somewhere and only what it can do is in reach; on, no state is current and nothing fires. */
 .bar label.flag {
@@ -727,4 +667,82 @@ rect.grab:focus {
     * {
         transition: none !important;
     }
+}
+
+/* ── the overlay ─────────────────────────────────────────────────────────── */
+
+/* `inspect(fsm)` with nowhere to go puts the tool on top of the page it is inspecting. It sits
+   above everything, carries its own frame, and is dragged by its bar — a panel over somebody's
+   application is always over the wrong part of it. */
+.fsmjs-overlay {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 2147483000;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-width: min(92vw, 68rem);
+    max-height: 86vh;
+    border: 1px solid var(--line-firm);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 15px/1.6 var(--main-font);
+    box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.45);
+    overflow: hidden;
+}
+
+.overlay-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.4rem 0.5rem 0.4rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    font: 500 0.75rem/1 var(--mono-font);
+    color: var(--muted);
+    cursor: grab;
+    user-select: none;
+}
+
+.overlay-bar:active {
+    cursor: grabbing;
+}
+
+.overlay-bar .flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    cursor: pointer;
+}
+
+.overlay-bar button {
+    padding: 0.2rem 0.45rem;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.overlay-bar button:hover {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.overlay-body {
+    padding: 0.75rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* Free-standing, the work surface is as wide as the figure needs and no wider. */
+.overlay-body .work {
+    grid-template-columns: minmax(0, auto) minmax(0, 19rem);
+}
+
+.overlay-body .out {
+    min-height: 0;
 }

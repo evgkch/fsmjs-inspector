@@ -143,10 +143,17 @@ const choosing: Schema<Held, Pressing, Took> = {
   },
 };
 
-export const choice = new StateMachine<Held, Pressing, Took>(choosing, {
-  type: "nothing",
-  context: undefined,
-});
+/**
+ * One diagram per figure, not one per page. Two inspectors on a screen — the tool beside the
+ * thing it is inspecting — are two of these, and a pointer over one of them says nothing about
+ * the other. Module-level machines would have made that impossible to write and hard to see.
+ */
+export type Diagram = {
+  readonly choice: StateMachine<Held, Pressing, Took>;
+  readonly pointer: StateMachine<Where, Moving, Record<string, never>>;
+  /** How the figure looks right now. */
+  readonly look: () => Look;
+};
 
 // ── the pointer: which cell it is over ───────────────────────────────────────
 
@@ -168,11 +175,6 @@ const moving: Schema<Where, Moving, Record<string, never>> = {
   },
 };
 
-export const pointer = new StateMachine<Where, Moving, Record<string, never>>(
-  moving,
-  { type: "away", context: undefined },
-);
-
 // ── the two, read together ───────────────────────────────────────────────────
 
 /**
@@ -191,7 +193,22 @@ export type Look = {
   open: Kind[];
 };
 
-export const look = (): Look => {
+export function newDiagram(): Diagram {
+  const choice = new StateMachine<Held, Pressing, Took>(choosing, {
+    type: "nothing",
+    context: undefined,
+  });
+  const pointer = new StateMachine<Where, Moving, Record<string, never>>(
+    moving,
+    { type: "away", context: undefined },
+  );
+  return { choice, pointer, look: () => look(choice, pointer) };
+}
+
+const look = (
+  choice: StateMachine<Held, Pressing, Took>,
+  pointer: StateMachine<Where, Moving, Record<string, never>>,
+): Look => {
   const held = choice.state;
   const fixed =
     held.type === "half"

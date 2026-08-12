@@ -25,7 +25,9 @@
     "typecheck": "tsc --noEmit",
     "dump": "node --no-warnings scripts/dump.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build:lib"
   },
   "peerDependencies": {
     "@evgkch/fsmjs": ">=0.1.1"
@@ -35,5 +37,20 @@
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "vite": "^8.2.0"
-  }
+  },
+  "files": [
+    "dist-lib"
+  ],
+  "main": "./dist-lib/index.js",
+  "types": "./dist-lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/index.d.ts",
+      "default": "./dist-lib/index.js"
+    },
+    "./style.css": "./dist-lib/index.css"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

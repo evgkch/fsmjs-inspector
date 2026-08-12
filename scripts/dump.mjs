@@ -11,8 +11,12 @@ import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-const { choice, pointer } = await import("../src/diagram.ts");
+const { newDiagram } = await import("../src/diagram.ts");
 const { page } = await import("../src/page.ts");
+
+// One diagram per figure, so there is no module-level pair to reach for: the dump asks for one
+// the same way a mount does.
+const { choice, pointer } = newDiagram();
 
 const here = dirname(fileURLToPath(import.meta.url));
 
