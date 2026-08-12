@@ -1,0 +1,57 @@
+{
+  "nothing": {
+    "press": [
+      {
+        "to": "half",
+        "when": "isHalf",
+        "with": "hold"
+      }
+    ]
+  },
+  "half": {
+    "press": [
+      {
+        "to": "nothing",
+        "when": "same"
+      },
+      {
+        "to": "whole",
+        "emit": "took",
+        "when": "causeHeld",
+        "with": "pairUp",
+        "by": "both"
+      },
+      {
+        "to": "whole",
+        "emit": "took",
+        "when": "effectHeld",
+        "with": "pairDown",
+        "by": "both"
+      }
+    ],
+    "drop": [
+      {
+        "to": "nothing"
+      }
+    ]
+  },
+  "whole": {
+    "press": [
+      {
+        "to": "half",
+        "when": "isCause",
+        "with": "keepEffect"
+      },
+      {
+        "to": "half",
+        "when": "isEffect",
+        "with": "keepCause"
+      }
+    ],
+    "drop": [
+      {
+        "to": "nothing"
+      }
+    ]
+  }
+}

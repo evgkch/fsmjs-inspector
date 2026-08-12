@@ -1,0 +1,61 @@
+{
+  "blank": {
+    "parsed": [
+      {
+        "to": "ready",
+        "emit": "built",
+        "when": "readable",
+        "with": "adopt",
+        "by": "made"
+      },
+      {
+        "to": "broken",
+        "emit": "stopped",
+        "with": "first",
+        "by": "told"
+      }
+    ]
+  },
+  "ready": {
+    "parsed": [
+      {
+        "to": "ready",
+        "emit": "built",
+        "when": "readable",
+        "with": "adopt",
+        "by": "made"
+      },
+      {
+        "to": "broken",
+        "emit": "stopped",
+        "with": "keep",
+        "by": "told"
+      }
+    ],
+    "begin": [
+      {
+        "to": "ready",
+        "emit": "built",
+        "with": "begun",
+        "by": "made"
+      }
+    ]
+  },
+  "broken": {
+    "parsed": [
+      {
+        "to": "ready",
+        "emit": "built",
+        "when": "readable",
+        "with": "adopt",
+        "by": "made"
+      },
+      {
+        "to": "broken",
+        "emit": "stopped",
+        "with": "still",
+        "by": "told"
+      }
+    ]
+  }
+}

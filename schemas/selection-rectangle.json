@@ -1,0 +1,39 @@
+{
+  "empty": { "down": [{ "to": "drawing", "with": "begin" }] },
+  "ready": {
+    "down": [
+      { "to": "resizing", "when": "onHandle", "with": "grabHandle" },
+      { "to": "moving", "when": "inside", "with": "grab" },
+      { "to": "drawing", "with": "begin" }
+    ],
+    "cancel": [{ "to": "empty", "emit": "clear" }]
+  },
+  "drawing": {
+    "move": [
+      { "to": "drawing", "with": "stretch", "emit": "draw", "by": "shot" }
+    ],
+    "up": [
+      { "to": "empty", "when": "tiny", "emit": "clear" },
+      { "to": "ready", "with": "settle", "emit": "draw", "by": "shot" }
+    ],
+    "cancel": [{ "to": "empty", "emit": "clear" }]
+  },
+  "moving": {
+    "move": [
+      { "to": "moving", "with": "translate", "emit": "draw", "by": "shot" }
+    ],
+    "up": [{ "to": "ready", "with": "settle", "emit": "draw", "by": "shot" }],
+    "cancel": [
+      { "to": "ready", "with": "revert", "emit": "draw", "by": "shot" }
+    ]
+  },
+  "resizing": {
+    "move": [
+      { "to": "resizing", "with": "resize", "emit": "draw", "by": "shot" }
+    ],
+    "up": [{ "to": "ready", "with": "settle", "emit": "draw", "by": "shot" }],
+    "cancel": [
+      { "to": "ready", "with": "revert", "emit": "draw", "by": "shot" }
+    ]
+  }
+}

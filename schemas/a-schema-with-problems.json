@@ -1,0 +1,9 @@
+{
+  "idle": { "go": [{ "to": "work" }] },
+  "work": {
+    "tick": [{ "to": "work" }, { "to": "done", "when": "finished" }],
+    "stop": [{ "to": "done" }]
+  },
+  "done": {},
+  "orphan": { "go": [{ "to": "idle" }] }
+}

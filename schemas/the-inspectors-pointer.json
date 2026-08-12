@@ -1,0 +1,23 @@
+{
+  "away": {
+    "enter": [
+      {
+        "to": "over",
+        "with": "onto"
+      }
+    ]
+  },
+  "over": {
+    "enter": [
+      {
+        "to": "over",
+        "with": "onto"
+      }
+    ],
+    "leave": [
+      {
+        "to": "away"
+      }
+    ]
+  }
+}

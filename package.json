@@ -1,0 +1,39 @@
+{
+  "name": "@evgkch/fsmjs-inspector",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Look at a state machine: three projections of its transition relation, drawn from the graph and driven by two clicks. Reads a dumped schema, or attaches to a machine that is running",
+  "license": "MIT",
+  "author": "Evgeny Kucherenko",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evgkch/fsmjs-inspector.git"
+  },
+  "homepage": "https://evgkch.github.io/fsmjs/inspector/",
+  "keywords": [
+    "fsm",
+    "state-machine",
+    "mealy",
+    "inspector",
+    "devtools",
+    "visualisation"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run dump && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "dump": "node --no-warnings scripts/dump.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "peerDependencies": {
+    "@evgkch/fsmjs": ">=0.1.1"
+  },
+  "devDependencies": {
+    "@evgkch/fsmjs": "^0.1.1",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.0"
+  }
+}
