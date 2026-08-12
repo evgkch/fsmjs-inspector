@@ -270,37 +270,7 @@ textarea:focus-visible {
     text-wrap: pretty;
 }
 
-/* ── tabs and output ─────────────────────────────────────────────────────── */
-
-.tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-}
-
-.tabs button {
-    padding: 0.22rem 0.65rem;
-    border: 1px solid var(--line-firm);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--muted);
-    font: 500 0.8rem/1.5 var(--mono-font);
-    cursor: pointer;
-    transition:
-        color 0.12s,
-        background-color 0.12s,
-        border-color 0.12s;
-}
-
-.tabs button:hover {
-    color: var(--ink);
-}
-
-.tabs button.on {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-in);
-}
+/* ── the work surface ────────────────────────────────────────────────────── */
 
 /* The figure, and beside it what the figure has come to. One is read by looking, the other by
    reading, and they answer the same question — so they are two halves of one surface rather
@@ -414,13 +384,6 @@ textarea:focus-visible {
 .trace:has(#last:empty) #log-tag,
 .trace:has(#last:empty) #rewind {
     display: none;
-}
-
-.out pre {
-    margin: 0;
-    color: var(--muted);
-    font: 400 12.5px/1.7 var(--mono-font);
-    white-space: pre;
 }
 
 /* ── the figure: three blocks around a shared index, and the run under them ── */

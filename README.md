@@ -38,7 +38,10 @@ with. A crossing is not something to choose.
 
 What is drawn beyond the schema is what the schema does not say in any one place: which states no
 run reaches, which have nothing leaving them, which pairs are connected but not by one rule, and
-which rules `validate` finds can never fire.
+which rules `validate` finds can never fire. There is no second view and no third: `toRules`,
+`toTree`, `toDot` and `formatIssues` all write the schema again in other words, and the schema is
+already open on the left. The figure earns its place by saying what none of them can — where the
+machine stands, what it can do from there, and what it has done.
 
 ## Two ways to work it
 

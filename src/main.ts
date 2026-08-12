@@ -37,15 +37,9 @@
  */
 import { StateMachine, TRANSITION, edges, nodes } from "@evgkch/fsmjs";
 import type { Edge, Off, Transition } from "@evgkch/fsmjs";
-import { analyze, paths, validate } from "@evgkch/fsmjs/analysis";
+import { analyze, validate } from "@evgkch/fsmjs/analysis";
 import type { Analysis } from "@evgkch/fsmjs/analysis";
-import {
-  edgeLabel,
-  formatIssues,
-  toDot,
-  toRules,
-  toTree,
-} from "@evgkch/fsmjs/formatters";
+import { edgeLabel } from "@evgkch/fsmjs/formatters";
 import { history, log, rules } from "@evgkch/fsmjs/debug";
 import type { History } from "@evgkch/fsmjs/debug";
 import { page, shown as onScreen } from "./page.js";
@@ -71,9 +65,7 @@ const area = el<HTMLTextAreaElement>("schema");
 const sampleSel = el<HTMLSelectElement>("sample");
 const startSel = el<HTMLSelectElement>("start");
 const parseEl = el("parse");
-const tabs = el("tabs");
 const out = el("out");
-const fromEl = el("from");
 const logEl = el("last");
 const undoBtn = el<HTMLButtonElement>("undo");
 const redoBtn = el<HTMLButtonElement>("redo");
@@ -91,8 +83,6 @@ type Ev = Record<string, void>;
 type Step = { line: string; t: Transition<Ctx, Ev, Ev> };
 
 const SVG = "http://www.w3.org/2000/svg";
-
-let view = "figure";
 
 /**
  * One flag, because there is one difference and it is a restriction.
@@ -1128,15 +1118,12 @@ function board(d: Draw): SVGSVGElement {
   return root;
 }
 
-// ── the text views ───────────────────────────────────────────────────────────
-
-function text(body: string, from: string): void {
-  const pre = document.createElement("pre");
-  pre.textContent = body;
-  out.replaceChildren(pre);
-  fromEl.textContent = from;
-}
-
+/**
+ * Draw. There is one thing to draw: what `toRules`, `toTree`, `toDot` and `formatIssues` would
+ * write is the schema said again in other words, and the schema is already on the left. What the
+ * figure adds is what none of them can — where the machine stands, what it can do from there,
+ * and what it has done. A tool shows that and nothing else.
+ */
 function render(): void {
   redress = null;
   logEl.replaceChildren();
@@ -1144,54 +1131,9 @@ function render(): void {
   const at = onScreen(page.state);
   if (!at) {
     out.replaceChildren();
-    fromEl.textContent = "";
     return;
   }
-  const { graph, start } = at;
-  const current = fsm?.state.type;
-
-  switch (view) {
-    case "rules":
-      text(toRules(graph), "toRules(schema)");
-      return;
-
-    case "tree":
-      text(toTree(graph, { current }), "toTree(schema, { current })");
-      return;
-
-    case "dot":
-      text(
-        toDot(graph, { start, current, direction: "LR" }),
-        "toDot(schema, { start, current, direction: 'LR' })",
-      );
-      return;
-
-    case "report": {
-      const issues = validate(graph, start);
-      text(
-        issues.length ? formatIssues(issues) : "No findings.",
-        `validate(schema, "${start}") → formatIssues — ${issues.length} finding(s). ` +
-          "duplicate-edge is not among them: telling two rules apart needs the guard functions, " +
-          "and JSON keeps only their names.",
-      );
-      return;
-    }
-
-    case "paths": {
-      const found = paths(graph, start);
-      const line = (p: (typeof found)[number]) =>
-        `${p.kind === "cycle" ? "↻" : "→"}  ${p.nodes.join(" → ")}`;
-      text(
-        found.length ? found.map(line).join("\n") : "No paths.",
-        `paths(schema, "${start}") — ${found.length} simple path(s)`,
-      );
-      return;
-    }
-
-    default:
-      fromEl.textContent = "";
-      figure(graph, start);
-  }
+  figure(at.graph, at.start);
 }
 
 // ── wiring ───────────────────────────────────────────────────────────────────
@@ -1224,15 +1166,6 @@ flag.addEventListener("change", () => {
   exploring = flag.checked;
   forget();
   paint();
-});
-
-tabs.addEventListener("click", (e) => {
-  const button = (e.target as HTMLElement).closest("button");
-  if (!button) return;
-  view = button.dataset.view ?? "figure";
-  for (const other of tabs.querySelectorAll("button"))
-    other.classList.toggle("on", other === button);
-  render();
 });
 
 // Esc lets a selection go all at once, where clicking a named end walks it back one step.
