@@ -35,15 +35,15 @@
  * shape is and what reaches what, `formatters` writes the labels, `debug` records the run,
  * `edges` flattens the schema once. What is left, and all that is here, is layout.
  */
-import { StateMachine, TRANSITION, edges, nodes } from "@evgkch/fsmjs";
-import type { Edge, Off, Transition } from "@evgkch/fsmjs";
+import { TRANSITION, edges, nodes } from "@evgkch/fsmjs";
+import type { Edge } from "@evgkch/fsmjs";
 import { analyze, validate } from "@evgkch/fsmjs/analysis";
 import type { Analysis } from "@evgkch/fsmjs/analysis";
 import { edgeLabel } from "@evgkch/fsmjs/formatters";
-import { history, log, rules } from "@evgkch/fsmjs/debug";
-import type { History } from "@evgkch/fsmjs/debug";
 import { page, shown as onScreen } from "./page.js";
-import type { Graph } from "./page.js";
+import { idOf } from "./subject.js";
+import type { Graph, Step, Subject } from "./subject.js";
+import { fromText } from "./subjects/text.js";
 
 import {
   CAUSE,
@@ -71,17 +71,6 @@ const undoBtn = el<HTMLButtonElement>("undo");
 const redoBtn = el<HTMLButtonElement>("redo");
 const resetBtn = el<HTMLButtonElement>("reset");
 
-/**
- * What JSON leaves of the three carriers: no state carries a context, no event carries a
- * payload. That is not a simplification made for the page. It is what a dumped schema is, and
- * it is the reason a machine can be built from one at all.
- */
-type Ctx = Record<string, undefined>;
-type Ev = Record<string, void>;
-
-/** One transition, kept with the line `rules` wrote for it — which is what its row says on hover. */
-type Step = { line: string; t: Transition<Ctx, Ev, Ev> };
-
 const SVG = "http://www.w3.org/2000/svg";
 
 /**
@@ -94,10 +83,8 @@ const SVG = "http://www.w3.org/2000/svg";
  */
 let exploring = false;
 
-let fsm: StateMachine<Ctx, Ev, Ev> | null = null;
-let past: History<Ctx> | null = null;
-let steps: Step[] = [];
-let detach: Off[] = [];
+/** What is being inspected. A dump here; `inspect(fsm)` hands the figure a live one instead. */
+let subject: Subject | null = null;
 
 /**
  * How the board now on screen puts its classes on. Set by `board`, and called from one place
@@ -175,91 +162,18 @@ function fillStart(graph: Graph, start: string): void {
   startSel.value = start;
 }
 
-// ── the machine, built from that same JSON ───────────────────────────────────
+// ── what is being inspected ──────────────────────────────────────────────────
 
 /**
- * Which rule the machine is being asked to take, while it is being asked. Null the rest of the
- * time, and that is the only state this holds.
+ * Point the figure at a schema. The subject owns the machine, the history and the guards that
+ * put the choice back into a dump; this file owns none of that and asks it questions instead.
  */
-let taking: string | null = null;
-
-/**
- * The graph with guards put back — and the guard is the choice made on the figure.
- *
- * A dumped schema keeps the *name* of every guard and none of the code, so every `when` reads as
- * ⊤ and the first rule of a cell is the only one that can ever fire. That is honest about a
- * dump and useless here: the second click names one of a cell's rules, and naming it has to be
- * what makes it the one that fires. So each rule is given a real guard, and what it asks is
- * whether this is the rule that was named. Nothing is faked around the machine — the choice
- * goes in where a machine's choices actually live.
- */
-function guarded(graph: Graph): Graph {
-  const out: Record<string, Record<string, unknown[]>> = {};
-  for (const [q, cells] of Object.entries(graph)) {
-    if (cells === null || typeof cells !== "object") continue;
-    const byEvent: Record<string, unknown[]> = (out[q] = {});
-    for (const [σ, rules] of Object.entries(cells)) {
-      if (!Array.isArray(rules)) continue;
-      byEvent[σ] = rules.map((rule: unknown, i: number) => ({
-        ...(rule as object),
-        when: () => taking === null || taking === `${q}\0${σ}\0${i}`,
-      }));
-    }
-  }
-  return out;
-}
-
 function build(graph: Graph, start: string): void {
-  for (const off of detach) off();
-  detach = [];
-  past?.stop();
+  subject?.stop();
   forget();
-  steps = [];
   last = [];
-  // The constructor wants a typed schema; this one was parsed at run time, and its types are
-  // precisely the ones JSON dropped. The cast states that and claims nothing else.
-  fsm = new StateMachine<Ctx, Ev, Ev>(guarded(graph) as never, {
-    type: start,
-    context: undefined,
-  });
-  past = history(fsm);
-  detach.push(
-    log(
-      fsm,
-      rules<Ctx, Ev, Ev>((line, t) => {
-        // `history` subscribed first, so by now its index already points at the state this
-        // transition reached. Cutting the array to it drops the redo future here exactly as
-        // the dispatch dropped it there, which keeps one step per recorded state.
-        steps.length = past!.index - 1;
-        steps.push({ line, t });
-      }),
-    ),
-  );
-}
-
-/** Where the run currently stands: 0 is the initial state, k is after `steps[k - 1]`. */
-const position = () => past?.index ?? 0;
-
-/**
- * Take one named rule: say which it is, send its event, and stop saying. The machine does the
- * rest — `dispatch` runs the guards, and the guard of the named rule is the one that passes.
- */
-function send(id: string, type: string): void {
-  taking = id;
-  try {
-    fsm?.dispatch(type);
-  } finally {
-    taking = null;
-  }
-}
-
-/**
- * Which rule this is, as the guards the page puts back name it: its cell, and its place in it.
- * `edges` flattens a cell in the order the schema wrote it, so the index here is that index.
- */
-function idOf(all: Edge[], r: Edge): string {
-  const cell = all.filter((e) => e.from === r.from && e.on === r.on);
-  return `${r.from}\0${r.on}\0${Math.max(0, cell.indexOf(r))}`;
+  subject = fromText(graph, start);
+  subject.watch(() => paint());
 }
 
 /**
@@ -277,16 +191,16 @@ function idOf(all: Edge[], r: Edge): string {
  * they are the same transition as far as anything observable goes, so the first is the one taken.
  */
 choice.rx.on("took", ({ cause, effect }) => {
-  const at = onScreen(page.state);
-  if (!at) return;
-  const rows = edges(at.graph);
+  if (!subject) return;
+  const rows = edges(subject.graph);
   const names = (e: Edge) => holds(cause, e) && holds(effect, e);
+  const drive = subject.drive;
   const r = exploring
     ? rows.find(names)
-    : rows.find((e) => e.from === fsm?.state.type && fsm.can(e.on) && names(e));
+    : rows.find((e) => names(e) && (drive?.can(idOf(rows, e)) ?? false));
   if (r) {
     last = [r];
-    if (!exploring) send(idOf(rows, r), r.on);
+    if (!exploring) drive?.take(idOf(rows, r));
   }
   queueMicrotask(() => {
     forget();
@@ -296,8 +210,9 @@ choice.rx.on("took", ({ cause, effect }) => {
 
 function paint(): void {
   const at = onScreen(page.state);
-  undoBtn.disabled = !past?.canUndo;
-  redoBtn.disabled = !past?.canRedo;
+  undoBtn.disabled = !subject?.rewind || (subject?.step ?? 0) === 0;
+  redoBtn.disabled =
+    !subject?.rewind || (subject?.step ?? 0) >= (subject?.steps.length ?? 0);
   resetBtn.disabled = page.state.type !== "ready";
   startSel.disabled = page.state.type !== "ready";
   shape(at ? analyze(at.graph, at.start) : null);
@@ -460,10 +375,13 @@ function plan(graph: Graph, start: string): Draw {
   const geo = geometry(all, outs, evs);
   // Exploring, no state is current: the question is what the schema allows, not what this
   // machine can do next, and a marked row would answer the other question.
-  const here = !exploring ? (fsm?.state.type ?? start) : "";
-  // A rule fires from where the machine stands when it is the first of its cell to pass its
-  // guard — which is what `can` answers and what `dispatch` will then do.
-  const fires = (row: Edge) => row.from === here && (fsm?.can(row.on) ?? false);
+  const here = !exploring ? (subject?.at ?? start) : "";
+
+  // Whether the machine could take this rule's event from where it stands. On a dump that is a
+  // question about the cell; on a machine that is running it is a question its own guards answer.
+  const drive = subject?.drive;
+  const fires = (row: Edge) =>
+    row.from === here && (drive?.can(idOf(rows, row)) ?? false);
 
   return {
     all,
@@ -547,7 +465,7 @@ function sentence(d: Draw, rules: Edge[]): HTMLElement {
 }
 
 /** A transition that happened, read as the rule it took. */
-const asEdge = (t: Transition<Ctx, Ev, Ev>): Edge => ({
+const asEdge = (t: Step): Edge => ({
   from: t.source.type,
   on: t.input.type,
   to: t.target.type,
@@ -572,9 +490,13 @@ function reading(d: Draw, rules: Edge[]): void {
  */
 function chronicle(d: Draw): void {
   logEl.replaceChildren();
-  if (exploring) return;
-  const at = position();
-  steps.forEach(({ line, t }, i) => {
+  if (exploring || !subject) return;
+  const at = subject.step;
+  const told = (subject.steps as (Step & { line?: string })[]).map(
+    (t) => t.line ?? "",
+  );
+  subject.steps.forEach((t, i) => {
+    const line = told[i] ?? "";
     const row = document.createElement("button");
     row.className = `step${i + 1 === at ? " now" : ""}${i + 1 > at ? " ahead" : ""}`;
     row.title = line;
@@ -582,7 +504,7 @@ function chronicle(d: Draw): void {
     // takes exactly it, so the column is the index the rewinding is done by.
     row.append(word(String(i + 1), "no"), sentence(d, [asEdge(t)]));
     row.addEventListener("click", () => {
-      past?.jump(i + 1);
+      subject?.rewind?.(i + 1);
       forget();
       paint();
     });
@@ -1175,13 +1097,13 @@ document.addEventListener("keydown", (e) => {
 
 // Rewinding moves the machine as surely as a transition does, so it lets the figure go too.
 undoBtn.addEventListener("click", () => {
-  past?.undo();
+  if (subject) subject.rewind?.(subject.step - 1);
   forget();
   paint();
 });
 
 redoBtn.addEventListener("click", () => {
-  past?.redo();
+  if (subject) subject.rewind?.(subject.step + 1);
   forget();
   paint();
 });
