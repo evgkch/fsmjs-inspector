@@ -38,6 +38,13 @@ export function newFigure(w: Wiring): Figure {
    */
   let redress: (() => void) | null = null;
 
+  /**
+   * How wide the board came out. The box around it says nothing about that: it is a scroll
+   * container stretched to its column, so what it reports is the column's width, never the
+   * board's.
+   */
+  let drawn = 0;
+
   const off: Off[] = [
     w.focus.choice.rx.on(TRANSITION, () => redress?.()),
     w.focus.pointer.rx.on(TRANSITION, () => redress?.()),
@@ -48,6 +55,7 @@ export function newFigure(w: Wiring): Figure {
     draw: (start) => {
       redress = null;
       const d = plan(w.subject.graph, start, w.subject, w.exploring());
+      drawn = d.geo.width;
       const { node: svg, dress } = board(d, {
         focus: w.focus,
         exploring: w.exploring(),
@@ -58,9 +66,19 @@ export function newFigure(w: Wiring): Figure {
       node.replaceChildren(wrap);
       redress = dress;
     },
-    // Measured and not computed: what a schema needs is the schema's business, and the box has
-    // already worked it out by the time anybody asks.
-    width: () => node.scrollWidth,
+    // What this schema would need to be shown whole: the board, and the frame around it.
+    width: () => {
+      const box = getComputedStyle(node);
+      const frame = (
+        [
+          "paddingLeft",
+          "paddingRight",
+          "borderLeftWidth",
+          "borderRightWidth",
+        ] as const
+      ).reduce((n, side) => n + (parseFloat(box[side]) || 0), 0);
+      return drawn + frame;
+    },
 
     stop: () => {
       for (const it of off) it();

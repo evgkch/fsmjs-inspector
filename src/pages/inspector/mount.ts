@@ -112,9 +112,14 @@ export function mount(
     // Both in pixels: the stylesheet declares the width in the unit its reader can use.
     const min = parseFloat(style.getPropertyValue("--history-min")) || 0;
     const gap = parseFloat(style.columnGap) || 0;
+    const board = figure.width();
+    // The column is the board, so the figure is shown whole or not at all — a column of `1fr`
+    // would give a five-state schema the width of the page and stand the history a screen away
+    // from it.
+    work.style.setProperty("--board", `${board}px`);
     work.classList.toggle(
       "beside",
-      !history.node.hidden && work.clientWidth >= figure.width() + gap + min,
+      !history.node.hidden && work.clientWidth >= board + gap + min,
     );
   }
 

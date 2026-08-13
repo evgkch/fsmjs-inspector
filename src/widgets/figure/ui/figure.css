@@ -3,8 +3,8 @@
 /* The figure's own box: it fills the band it is in and scrolls inside itself, so a schema too
    wide or too tall for the page never makes the page itself scroll. */
 .out {
-    min-height: 18rem;
-    height: 100%;
+    min-height: 12rem;
+    max-height: 100%;
     padding: 1rem 1.1rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);

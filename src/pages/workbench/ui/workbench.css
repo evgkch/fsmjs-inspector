@@ -151,10 +151,16 @@ select {
     gap: 1rem;
 }
 
+/*
+ * The two rows are shares of the height and not sums of what is in them. Sized to their contents,
+ * the source row grew with the number of lines — the gutter is the one layer of the editor still
+ * in the flow, so a sixty-rule schema made a sixty-row gutter and pushed the figure off the page.
+ * A share of the page cannot do that, and the editor scrolls inside it as it was built to.
+ */
 @media (min-width: 62rem) {
     .panes {
-        grid-template-rows: auto minmax(0, 1fr);
-        height: clamp(38rem, calc(100vh - 7rem), 64rem);
+        grid-template-rows: minmax(15rem, 0.8fr) minmax(16rem, 1fr);
+        height: clamp(38rem, calc(100vh - 7.5rem), 64rem);
     }
 }
 

@@ -29,9 +29,21 @@
     gap: 0.75rem;
     min-height: 0;
     height: 100%;
+    /* Both hug what is in them: a figure with room to spare is a figure, not a field. */
+    align-items: start;
+    justify-content: start;
 }
 
+/*
+ * Beside: the figure column is the width of the board — `--board`, which the mount sets from what
+ * it drew — and the history has the width its sentences need. Anything left over is left over.
+ */
 .work.beside {
-    grid-template-columns: minmax(0, 1fr) var(--history-min);
+    grid-template-columns: var(--board, minmax(0, 1fr)) var(--history-min);
     grid-template-rows: minmax(0, 1fr);
+}
+
+/* Under: the figure has the width of the surface, because it is what did not fit. */
+.work:not(.beside) {
+    justify-content: stretch;
 }
