@@ -127,13 +127,25 @@ const choosing: Schema<Held, Pressing, Took> = {
  * effect. The pointer does not know which of the two it got, and `look` does not either — they
  * both go into `shown`, and a rule is lit when every shown cell holds it, which for the two
  * halves of a rule is that rule and nothing else.
+ *
+ * What it does carry is whether the thing under it is being *offered*. A cell of the figure and a
+ * line of the text are both an invitation: point at them and you may take them. A step of the
+ * history is not — it is a rule being recalled, and one already taken. Both light the same cells,
+ * because they are about the same rule; only one of them means "you could do this now".
  */
-export type Where = Merge<IState<"away"> | IState<"over", { at: Key[] }>>;
+export type Where = Merge<
+  IState<"away"> | IState<"over", { at: Key[]; offer: boolean }>
+>;
 
-export type Moving = Merge<IEvent<"enter", { keys: Key[] }> | IEvent<"leave">>;
+export type Moving = Merge<
+  IEvent<"enter", { keys: Key[]; offer: boolean }> | IEvent<"leave">
+>;
 
 /** The one `with` the pointer has: written once, and named by both of the rules that need it. */
-const onto = (_: unknown, p: { keys: Key[] }) => ({ at: p.keys });
+const onto = (_: unknown, p: { keys: Key[]; offer: boolean }) => ({
+  at: p.keys,
+  offer: p.offer,
+});
 
 const moving: Schema<Where, Moving, Record<string, never>> = {
   away: {
@@ -157,11 +169,14 @@ const moving: Schema<Where, Moving, Record<string, never>> = {
  *            land in the same list on purpose: a press keeps exactly the light pointing gave it,
  *            and pointing works the same before a press and after one.
  *   `open`   which half the next press is asked for.
+ *   `offer`  whether what is under the pointer is on offer — a rule you could take now, rather
+ *            than one being recalled from the run that has already happened.
  */
 export type Look = {
   fixed: Key[];
   shown: Key[];
   open: Kind[];
+  offer: boolean;
 };
 
 /**
@@ -209,6 +224,10 @@ const look = (
       : [];
   return {
     fixed,
+    offer:
+      held.type !== "whole" &&
+      pointer.state.type === "over" &&
+      pointer.state.context.offer,
     // A set, because the pointer is usually still over the cell that was just pressed: the same
     // key twice would draw the same band twice, and two translucent bands on one row are darker
     // than one for no reason a reader could ever work out.

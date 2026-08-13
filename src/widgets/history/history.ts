@@ -98,10 +98,11 @@ export function newHistory(w: Wiring): History {
     if (!maybe) return;
     maybe.replaceChildren();
     if (exploring) return;
-    const { shown } = w.focus.look();
-    // Nothing is being pointed at. `between` would happily answer this — every rule is held by
-    // all of no cells — and the answer would be a step nobody asked about.
-    if (!shown.length) return;
+    const { shown, offer } = w.focus.look();
+    // Nothing is being pointed at, or what is under the pointer is not on offer — a step of this
+    // run, recalled. `between` would answer either happily: with no cells at all every rule is
+    // held by all of them, and with a past step it answers with the step. Both are a phantom.
+    if (!offer || !shown.length) return;
     const rows = edges(graph);
     const id = between(w.subject, rows, shown);
     if (!id) return;
@@ -218,8 +219,10 @@ export function newHistory(w: Wiring): History {
       band.style.width = `${CELL * 2}px`;
       band.append(make("span", "no", String(k)));
       band.title = `back to ${k}`;
+      // Lit like anything else that names a rule, but not on offer: this one has been taken
+      // already, and the dashes are about what could happen next.
       band.addEventListener("mouseenter", () =>
-        w.focus.pointer.dispatch("enter", { keys: halvesOf(r) }),
+        w.focus.pointer.dispatch("enter", { keys: halvesOf(r), offer: false }),
       );
       band.addEventListener("mouseleave", () =>
         w.focus.pointer.dispatch("leave"),

@@ -7,6 +7,12 @@
  * this rule can fire. Every metric below has to hold for all three at once — the same font, the
  * same padding, the same line height, the same tab stop — or the caret drifts off the word it is
  * on and the marks stop pointing at the lines they are about.
+ *
+ * What scrolls is the sheet the two text layers stand on, and not the textarea. A textarea has no
+ * children, so its own scroll has nothing to snap to; the sheet's children are the lines, and a
+ * line is the only place in a source worth stopping at. So the textarea is given the height of
+ * its text — `--lines` and `--cols`, counted where the text is counted — and does not scroll at
+ * all, and the sheet scrolls both layers together, a line at a time.
  */
 .editor {
     position: relative;
@@ -43,17 +49,19 @@
 
 .editor .sheet {
     position: relative;
-    overflow: hidden;
+    overflow: auto;
+    overscroll-behavior: contain;
+    /* A line at a time, and there is nothing between two lines to stop at. */
+    scroll-snap-type: y mandatory;
 }
 
-/* Behind, and never in the way: only the textarea scrolls, and the other two are moved to match. */
+/* Behind, and never in the way. It scrolls because the sheet does, so it needs no moving. */
 .editor .ink {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
     pointer-events: none;
     color: var(--muted);
-    overflow: hidden;
-    will-change: transform;
 }
 
 /* As wide as the widest line, so a lit line is lit the whole way across it. */
@@ -64,12 +72,14 @@
 }
 
 /*
- * One line, one block. The height is set for the empty ones: a blank line is still a line the
- * caret can stand on, and a block with nothing in it would be no line at all.
+ * One line, one block — and one place the scroll can stop. The height is set for the empty ones:
+ * a blank line is still a line the caret can stand on, and a block with nothing in it would be no
+ * line at all.
  */
 .editor .line {
     display: block;
     min-height: 1.7em;
+    scroll-snap-align: start;
 }
 
 /* This line's rule is what the figure is about. The same tint the figure's own bands use, because
@@ -78,17 +88,22 @@
     background: color-mix(in oklab, var(--accent) 14%, transparent);
 }
 
+/*
+ * As tall and as wide as its text, so that it never scrolls on its own and the sheet under it
+ * has something to scroll. The two counts come from the text itself; the units are the ones the
+ * layer above is set in, so the two layers cannot drift.
+ */
 .editor textarea {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    position: relative;
+    display: block;
+    width: max(100%, calc(var(--cols, 0) * 1ch + 1.5rem));
+    height: max(100%, calc(var(--lines, 1) * 1.7em + 1.8rem));
     border: 0;
     background: transparent;
     color: transparent;
     caret-color: var(--ink);
     resize: none;
-    overflow: auto;
+    overflow: hidden;
 }
 
 .editor textarea::selection {

@@ -108,6 +108,14 @@ export function newEditor(w: Wiring): Editor {
    */
   function paint(): void {
     const source = area.value.split("\n");
+    // What the textarea is sized by: it must not scroll, so that the sheet can. Counted here
+    // because this is where the text is already being counted; turned into a height and a width
+    // in the stylesheet, in the units the layer behind it is set in.
+    node.style.setProperty("--lines", String(source.length));
+    node.style.setProperty(
+      "--cols",
+      String(Math.max(0, ...source.map((line) => line.length))),
+    );
     rows.clear();
     lines.clear();
 
@@ -152,7 +160,10 @@ export function newEditor(w: Wiring): Editor {
       // Both halves: the line says where the rule starts and where it ends, so the figure says
       // both too — two bands out of block 1 and two out of block 3, crossing at the corner.
       if (rule)
-        w.focus.pointer.dispatch("enter", { keys: halvesOf(rule.edge) });
+        w.focus.pointer.dispatch("enter", {
+          keys: halvesOf(rule.edge),
+          offer: true,
+        });
     });
     row.addEventListener("mouseleave", () => {
       if (fresh() && written.has(at)) w.focus.pointer.dispatch("leave");
@@ -199,13 +210,15 @@ export function newEditor(w: Wiring): Editor {
     }
   }
 
-  /** Only one of the three layers scrolls; the other two are moved to match. */
+  /**
+   * The sheet scrolls, and the two layers on it go with it. The gutter is not on it — it is beside
+   * it, and a row of it has to stay level with the line it is about, so it is moved to match.
+   */
   function scrolled(): void {
-    ink.style.transform = `translate(${-area.scrollLeft}px, ${-area.scrollTop}px)`;
-    gutter.style.transform = `translateY(${-area.scrollTop}px)`;
+    gutter.style.transform = `translateY(${-sheet.scrollTop}px)`;
   }
 
-  area.addEventListener("scroll", scrolled);
+  sheet.addEventListener("scroll", scrolled);
   area.addEventListener("input", () => {
     // The colour is immediate and the reading of it is not: one is a look at what you typed, the
     // other rebuilds a machine, and only the second is worth waiting a moment for.

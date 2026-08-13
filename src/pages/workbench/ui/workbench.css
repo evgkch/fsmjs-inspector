@@ -176,6 +176,18 @@ select {
     grid-template-rows: minmax(0, 1fr) auto;
 }
 
+/*
+ * In two rows the editor's height is its share of the page, and a floor of its own would be a
+ * second opinion about it: on a short window the share is smaller than the floor, the editor
+ * overflows its row, and it is the caption underneath that gets sat on. The row already has a
+ * floor — `.panes` says so — and this one scrolls.
+ */
+@media (min-width: 62rem) {
+    #text .editor {
+        min-height: 0;
+    }
+}
+
 .shape {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
