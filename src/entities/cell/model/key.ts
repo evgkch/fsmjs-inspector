@@ -61,9 +61,22 @@ export function holds(key: Key, r: Edge): boolean {
   }
 }
 
-/** The cell of block 1 a rule goes out of: the pair a `dispatch` is addressed by. */
+/**
+ * The two cells a rule is written in — its cause and its effect, which is the whole of what the
+ * figure has to say about one rule. Naming a rule from outside the figure means naming both: a
+ * line of text is not half a transition, and lighting only the half it starts at would say the
+ * figure has nothing to show about where it ends up.
+ *
+ * A rule that emits nothing still has an effect cell. It is the name of its column — there is no
+ * output to give it a square, and that name is where `TO r` is written and has been all along.
+ */
 export const causeOf = (r: { from: string; on: string }): Key =>
   keyOf(CAUSE, r.from, r.on);
+
+export const effectOf = (r: { to: string; emit?: string }): Key =>
+  keyOf(EFFECT, r.emit ?? "", r.to);
+
+export const halvesOf = (r: Edge): Key[] => [causeOf(r), effectOf(r)];
 
 /**
  * Is the figure about this rule right now — asked of the cells `look` says are shown.

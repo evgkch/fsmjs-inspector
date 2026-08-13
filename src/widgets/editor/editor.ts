@@ -24,7 +24,7 @@
  */
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
-import { causeOf, shows } from "../../entities/cell/index.js";
+import { halvesOf, shows } from "../../entities/cell/index.js";
 import type { Lane } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { make, word } from "../../shared/lib/dom.js";
@@ -137,7 +137,10 @@ export function newEditor(w: Wiring): Editor {
   function wire(at: number, row: HTMLElement): void {
     row.addEventListener("mouseenter", () => {
       const rule = written.get(at);
-      if (rule) w.focus.pointer.dispatch("enter", { key: causeOf(rule.edge) });
+      // Both halves: the line says where the rule starts and where it ends, so the figure says
+      // both too — two bands out of block 1 and two out of block 3, crossing at the corner.
+      if (rule)
+        w.focus.pointer.dispatch("enter", { keys: halvesOf(rule.edge) });
     });
     row.addEventListener("mouseleave", () => {
       if (written.has(at)) w.focus.pointer.dispatch("leave");

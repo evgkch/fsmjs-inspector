@@ -5,6 +5,8 @@ export {
   HALVES,
   MIRROR,
   causeOf,
+  effectOf,
+  halvesOf,
   holds,
   keyOf,
   kindOf,

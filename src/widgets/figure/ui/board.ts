@@ -229,7 +229,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     // would offer something that cannot be taken.
     const on = () => {
       if (s.node.classList.contains("dim")) return;
-      pointer.dispatch("enter", { key: s.key });
+      pointer.dispatch("enter", { keys: [s.key] });
     };
     const off = () => pointer.dispatch("leave");
     s.node.addEventListener("mouseenter", on);

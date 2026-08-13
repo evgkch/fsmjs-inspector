@@ -119,12 +119,21 @@ const choosing: Schema<Held, Pressing, Took> = {
 
 // ── the pointer: which cell it is over ───────────────────────────────────────
 
-export type Where = Merge<IState<"away"> | IState<"over", { at: Key }>>;
+/**
+ * Where the pointer is: away, or over a *place* — and a place is one or more cells.
+ *
+ * One, when it is a cell of the figure that is being pointed at. Two, when it is a line of the
+ * text: a line names a rule, and a rule is written in the figure twice, as its cause and as its
+ * effect. The pointer does not know which of the two it got, and `look` does not either — they
+ * both go into `shown`, and a rule is lit when every shown cell holds it, which for the two
+ * halves of a rule is that rule and nothing else.
+ */
+export type Where = Merge<IState<"away"> | IState<"over", { at: Key[] }>>;
 
-export type Moving = Merge<IEvent<"enter", { key: Key }> | IEvent<"leave">>;
+export type Moving = Merge<IEvent<"enter", { keys: Key[] }> | IEvent<"leave">>;
 
 /** The one `with` the pointer has: written once, and named by both of the rules that need it. */
-const onto = (_: unknown, p: { key: Key }) => ({ at: p.key });
+const onto = (_: unknown, p: { keys: Key[] }) => ({ at: p.keys });
 
 const moving: Schema<Where, Moving, Record<string, never>> = {
   away: {
@@ -196,7 +205,7 @@ const look = (
   // left to decide: both halves are named, and a third constraint could only empty the set.
   const over =
     held.type !== "whole" && pointer.state.type === "over"
-      ? [pointer.state.context.at]
+      ? pointer.state.context.at
       : [];
   return {
     fixed,
