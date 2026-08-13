@@ -24,13 +24,14 @@ main {
     align-items: center;
 }
 
+/* The same small type every other name on the page is set in. Two sizes of quiet capitals is
+   two levels of quiet, and there is only one thing being said: what this is. */
 .bar label {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
+    font: 500 0.62rem/1 var(--main-font);
+    letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--faint);
 }
