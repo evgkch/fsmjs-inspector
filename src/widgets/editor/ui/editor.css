@@ -14,7 +14,8 @@
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
     height: 100%;
-    min-height: 22rem;
+    /* Eleven or so lines: a rule is one line, and the figure under it wants the rest of the page. */
+    min-height: 17rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);

@@ -1,5 +1,5 @@
 /**
- * The inspector: a figure, and beside it what the figure has come to.
+ * The inspector: a figure, and what the run did to it.
  *
  * What is being inspected is a `Subject` — a dump, or a machine that is running — and neither the
  * figure nor the history ever learns which. What is being *looked at* is a `Focus`, and that one is
@@ -75,9 +75,7 @@ export function mount(
     forget,
   });
 
-  // The figure, and under it what happened on it. Under and not beside: the run is read after the
-  // figure is looked at, and a panel at the far edge of the page is a saccade away from the thing
-  // it is about.
+  // The figure, and what happened on it — beside it or under it, which `fit` decides.
   const work = make("div", "work");
   work.append(figure.node, history.node);
   const root = make("div", "fsmjs-inspector");
@@ -99,14 +97,40 @@ export function mount(
    */
   const start = subject.at || firstOf(subject.graph);
 
+  /**
+   * Where the history goes: beside the figure when the figure still fits whole, under it when it
+   * does not.
+   *
+   * This cannot be a media query, because the question is not how wide the window is — it is
+   * whether *this* schema fits in what is left after the history takes its column, and a schema
+   * six states wide and one thirty states wide are different answers on the same screen. So it is
+   * measured: what the board came out at, against the room there is. The figure is what the tool
+   * is for, and it is never the thing that gets cut.
+   */
+  function fit(): void {
+    const style = getComputedStyle(work);
+    const min = parseFloat(style.getPropertyValue("--history-min")) || 0;
+    const gap = parseFloat(style.columnGap) || 0;
+    work.classList.toggle(
+      "beside",
+      !history.node.hidden && work.clientWidth >= figure.width() + gap + min,
+    );
+  }
+
   function paint(): void {
     history.palette(subject.graph, start);
     history.draw(exploring);
     figure.draw(start);
+    fit();
   }
+
+  // The room changes with the window, and what fits in it changes with the room.
+  const watching = new ResizeObserver(() => fit());
+  watching.observe(work);
 
   const off: (() => void)[] = [
     figure.stop,
+    () => watching.disconnect(),
     subject.watch(() => paint()),
     /**
      * Both halves are named, so a rule has been named — and naming a rule is what takes it. The

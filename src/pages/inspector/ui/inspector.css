@@ -7,18 +7,26 @@
 }
 
 /*
- * The figure, and under it what happened on it.
+ * The figure, and what happened on it: beside, if the figure still fits whole; under, if it does
+ * not. Which of the two is not a question about the window — it is whether this schema fits in
+ * what is left once the history has its column — so the mount measures the board and puts the
+ * class on. `--history-min` is the width it measures against, and it is here rather than there
+ * because it is the width a step's sentence needs, which is a fact about this panel.
  *
- * Under, and not beside. The figure is looked at; the history is read afterwards, and only when
- * there is one — exploring, nothing fires and the panel is not drawn, so the figure has the whole
- * height. A transcript at the far edge of the page would be a saccade away from the thing it is a
- * transcript of, and it would take from the figure the width a wide schema needs.
+ * Exploring, nothing fires and there is no history at all: the figure has the whole surface.
  */
 .work {
+    --history-min: 21rem;
+
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
     gap: 0.75rem;
     min-height: 0;
     height: 100%;
+}
+
+.work.beside {
+    grid-template-columns: minmax(0, 1fr) var(--history-min);
+    grid-template-rows: minmax(0, 1fr);
 }

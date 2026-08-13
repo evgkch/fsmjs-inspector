@@ -124,22 +124,27 @@ select {
 /* ── panes ───────────────────────────────────────────────────────────────── */
 
 /*
- * Two bands, and they are the same height.
+ * The source across the top, the machine under it:
  *
- * What the tool does is three things — write the schema, look at the figure, read what the run
- * did — and the last of those belongs under the figure rather than at the far edge of the page,
- * so the page is two columns and not four. The source is on the left because that is where the
- * machine comes from; the figure is on the right because that is what it becomes.
+ *     ┌───────────────────────────────┐
+ *     │ 1  the schema, as text        │   what you write
+ *     ├──────────────────┬────────────┤
+ *     │ 2  the figure    │ 3  history │   what it is, and what it did
+ *     └──────────────────┴────────────┘
  *
- * They share one height and each scrolls inside itself, so the page never scrolls and the two
- * never disagree about where the bottom is. That is the whole of the composition: one rectangle,
- * divided once.
+ * The source is one thing and the machine is two, so the source takes a row and the other two
+ * share one. Whether 3 stands beside 2 or under it is not settled here: it depends on how wide
+ * *this* schema draws, and the inspector measures that and decides. The figure is what the tool
+ * is for and is never the thing that gets cut.
  *
- * The left column is measured in characters. `toRules` pads its columns so a schema reads as a
- * table, which costs some thirty characters of whitespace: the samples here run to 84, and the
- * half of a rule that falls off a narrow pane is the right-hand one — TO, WITH, EMIT, BY. 48rem
- * is that, with a few to spare for a scrollbar. Narrower than the two columns need, the source
- * goes above the figure and has the width of the page, which is wider than any column.
+ * The editor's own width is measured in characters, not in columns. `toRules` pads to a table,
+ * which costs some thirty characters of whitespace — the samples here run to 84 — and the half of
+ * a rule that falls off a narrow pane is the right-hand one: TO, WITH, EMIT, BY. 48rem is that,
+ * with a few to spare for a scrollbar; what `analyze` says about the schema sits in the room left
+ * over beside it.
+ *
+ * The whole page is one rectangle of one height, and every part of it scrolls inside itself, so
+ * the page itself never scrolls and nothing has to be hunted for below the fold.
  */
 .panes {
     display: grid;
@@ -147,10 +152,10 @@ select {
     gap: 1rem;
 }
 
-@media (min-width: 76rem) {
+@media (min-width: 62rem) {
     .panes {
-        grid-template-columns: minmax(0, 48rem) minmax(0, 1fr);
-        height: clamp(32rem, calc(100vh - 7rem), 58rem);
+        grid-template-rows: auto minmax(0, 1fr);
+        height: clamp(38rem, calc(100vh - 7rem), 64rem);
     }
 }
 
@@ -161,9 +166,16 @@ select {
     min-height: 0;
 }
 
-/* The editor takes the height; what `analyze` says about the schema is a caption under it. */
+/* The editor at its measured width, and the shape of the schema in the room beside it. */
 #text {
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 48rem);
+}
+
+@media (min-width: 62rem) {
+    #text {
+        grid-template-columns: minmax(0, 48rem) minmax(0, 1fr);
+        gap: 1.25rem;
+    }
 }
 
 .shape {

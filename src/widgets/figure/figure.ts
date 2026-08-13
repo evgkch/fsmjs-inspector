@@ -16,6 +16,8 @@ export type Figure = {
   readonly node: HTMLElement;
   /** Draw it again, because the machine moved or the schema changed. */
   readonly draw: (start: string) => void;
+  /** How wide the board it drew is, whole — what it would take not to scroll. */
+  readonly width: () => number;
   readonly stop: () => void;
 };
 
@@ -56,6 +58,10 @@ export function newFigure(w: Wiring): Figure {
       node.replaceChildren(wrap);
       redress = dress;
     },
+    // Measured and not computed: what a schema needs is the schema's business, and the box has
+    // already worked it out by the time anybody asks.
+    width: () => node.scrollWidth,
+
     stop: () => {
       for (const it of off) it();
       redress = null;

@@ -7,7 +7,7 @@
 .history {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    max-height: 20rem;
+    max-height: 100%;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
@@ -72,7 +72,10 @@
     cursor: default;
 }
 
+/* Beside the figure this fills the column; under it, it is as tall as what is in it and no
+   taller, which is what the cap is for. */
 .log {
+    max-height: 17rem;
     display: flex;
     flex-direction: column;
     padding: 0 0 0.35rem;
