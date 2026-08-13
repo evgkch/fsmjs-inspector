@@ -77,30 +77,26 @@ select {
 /* ── panes ───────────────────────────────────────────────────────────────── */
 
 /*
- * Wide enough for the language, and no wider.
+ * Two panes when there is room for both, one column when there is not — and never a middle case
+ * where the text is squeezed into a column too narrow for a rule.
  *
- * `toRules` pads its columns so a schema reads as a table, which costs about thirty characters of
- * whitespace: the samples here run to 84 characters, and the whole right-hand half of a rule —
- * TO, WITH, EMIT, BY — is the half that falls off a narrow pane. At 12.5px monospace that is
- * 84 × 7.5px of text, plus the gutter and the padding, which is what the 45rem is. Below it the
- * editor still scrolls; above it nothing is gained, and the figure wants the rest.
+ * `toRules` pads its columns so a schema reads as a table, which costs some thirty characters of
+ * whitespace: the samples here run to 84, and the half of a rule that falls off a narrow pane is
+ * the right-hand one — TO, WITH, EMIT, BY. So the column is measured in characters and given a
+ * few to spare, since a vertical scrollbar in the editor takes two of them and a font whose
+ * advance is not exactly 0.6em takes the rest. Narrower than that, the editor goes above the
+ * figure and has the whole page to itself, which is wider than any column could be.
  */
 .panes {
     display: grid;
-    grid-template-columns: minmax(0, 45rem) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
 }
 
-@media (max-width: 78rem) {
+@media (min-width: 76rem) {
     .panes {
-        grid-template-columns: minmax(0, 32rem) minmax(0, 1fr);
-    }
-}
-
-@media (max-width: 62rem) {
-    .panes {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 48rem) minmax(0, 1fr);
     }
 }
 
@@ -139,7 +135,17 @@ select {
     align-self: center;
 }
 
+/* A row of states, each in its own colour — the same words the editor and the figure write, and
+   the same colours, because they are the same states. */
 .shape .value {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.55rem;
     font: 500 0.85rem/1.5 var(--mono-font);
     overflow-wrap: anywhere;
+}
+
+.shape .value .q {
+    color: var(--c, var(--ink));
+    font-weight: 600;
 }

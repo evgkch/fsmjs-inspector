@@ -10,9 +10,10 @@
  * leave both with several.
  */
 import type { Edge } from "@evgkch/fsmjs";
-import { hue, lanes } from "../../entities/machine/index.js";
+import { palette } from "../../entities/machine/index.js";
 import type {
   Graph,
+  Lane,
   Step,
   Subject,
   Told,
@@ -52,7 +53,7 @@ export function newTrace(
 
   // Until a graph is set, a state is written in the ink of the panel. `palette` is what gives a
   // word the colour its column has in the figure.
-  let colour = (_state: string): string => "";
+  let colour: Lane = () => undefined;
 
   /** A set of rules, written out: `FROM q ON σ → TO r EMIT λ`. */
   const sentence = (rules: Edge[]): HTMLElement => {
@@ -96,8 +97,7 @@ export function newTrace(
     node,
 
     palette: (graph, start) => {
-      const lane = new Map(lanes(graph, start).map((n, i) => [n, i]));
-      colour = (state) => hue(lane.get(state) ?? 0);
+      colour = palette(graph, start);
     },
 
     reading: (rules) =>

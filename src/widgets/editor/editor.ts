@@ -25,7 +25,7 @@
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
 import { causeOf, shows } from "../../entities/cell/index.js";
-import { hue } from "../../entities/machine/index.js";
+import type { Lane } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { make, word } from "../../shared/lib/dom.js";
 import type { Written } from "../../shared/lang/rules.js";
@@ -38,7 +38,7 @@ export type Editor = {
   /** Put a schema in it, as text. */
   readonly set: (text: string) => void;
   /** What the last reading found: where every rule is written, and the colour of every state. */
-  readonly show: (rules: readonly Written[], lane: Map<string, number>) => void;
+  readonly show: (rules: readonly Written[], colour: Lane) => void;
   /** Which lines could fire from where the machine now stands. */
   readonly mark: () => void;
   /** The line the reader is complaining about, or none. */
@@ -77,19 +77,12 @@ export function newEditor(w: Wiring): Editor {
 
   /** Where every rule is written, by line. A line holds at most one rule; most hold none. */
   let written = new Map<number, Written>();
-  let lane = new Map<string, number>();
+  let colour: Lane = () => undefined;
   let blamed: number | null = null;
 
   /** One row of the gutter and one line of the ink, by line number. */
   const rows = new Map<number, HTMLElement>();
   const lines = new Map<number, HTMLElement>();
-
-  const colour = (state: string) => {
-    // A name the figure has not drawn yet has no colour: lane 0 belongs to the start state, and a
-    // word wearing a colour it has not earned reads as an answer the figure has not given.
-    const i = lane.get(state);
-    return i === undefined ? undefined : hue(i);
-  };
 
   /**
    * The text, coloured, and the gutter beside it. Both are built line by line from the same split,
@@ -199,9 +192,9 @@ export function newEditor(w: Wiring): Editor {
       area.value = text;
       paint();
     },
-    show: (rules, colours) => {
+    show: (rules, lane) => {
       written = new Map(rules.map((r) => [r.at, r]));
-      lane = colours;
+      colour = lane;
       paint();
     },
     mark,

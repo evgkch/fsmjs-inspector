@@ -34,7 +34,7 @@
 
 .editor .ink,
 .editor textarea {
-    padding: 0.9rem 1rem;
+    padding: 0.9rem 0.75rem;
     white-space: pre;
 }
 

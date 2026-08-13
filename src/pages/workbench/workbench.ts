@@ -13,12 +13,12 @@ import { nodes } from "@evgkch/fsmjs";
 import { analyze } from "@evgkch/fsmjs/analysis";
 import type { Analysis } from "@evgkch/fsmjs/analysis";
 import { toRules } from "@evgkch/fsmjs/formatters";
-import { fromText, lanes, ruleId } from "../../entities/machine/index.js";
-import type { Graph, Text } from "../../entities/machine/index.js";
+import { fromText, palette, ruleId } from "../../entities/machine/index.js";
+import type { Graph, Lane, Text } from "../../entities/machine/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { canFire, take } from "../../features/take-rule/index.js";
-import { el } from "../../shared/lib/dom.js";
+import { el, word } from "../../shared/lib/dom.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { newEditor } from "../../widgets/editor/editor.js";
 import { mount } from "../inspector/mount.js";
@@ -67,8 +67,11 @@ export function workbench(): void {
     subject.watch(() => editor.mark());
     fillStart(graph, start);
     warn(null, null);
-    shape(analyze(graph, start));
-    editor.show(rules, new Map(lanes(graph, start).map((n, i) => [n, i])));
+    // One palette, and everything that writes a state asks it: the editor, the list below it, and
+    // the figure's own lanes are the same order of the same states.
+    const colour = palette(graph, start);
+    shape(analyze(graph, start), colour);
+    editor.show(rules, colour);
   });
 
   page.rx.on("stopped", ({ message, line }) => warn(message, line));
@@ -86,14 +89,24 @@ export function workbench(): void {
     startSel.value = start;
   }
 
-  /** What `analyze` says about the shape — the part of it no drawing shows better than a list. */
-  function shape(a: Analysis<string> | null): void {
-    const say = (list: readonly string[]) =>
-      list.length ? list.join(" ") : "—";
-    el("n-nodes").textContent = a ? say(a.nodes) : "—";
-    el("n-reachable").textContent = a ? say(a.reachable) : "—";
-    el("n-unreachable").textContent = a ? say(a.unreachable) : "—";
-    el("n-terminal").textContent = a ? say(a.terminal) : "—";
+  /**
+   * What `analyze` says about the shape — the part of it no drawing shows better than a list.
+   *
+   * A state is written in its own colour here as it is everywhere else. That is the whole point of
+   * a lane: the same word in the figure, in the text, in the history and in this list is the same
+   * colour, so a name you meet in one of them you have already met in the others. A list of plain
+   * grey words would be four places to look a state up instead of one to recognise it in.
+   */
+  function shape(a: Analysis<string> | null, colour: Lane): void {
+    const say = (id: string, list: readonly string[]) => {
+      const box = el(id);
+      if (!list.length) return void (box.textContent = "—");
+      box.replaceChildren(...list.map((q) => word(q, "q", colour(q))));
+    };
+    say("n-states", a?.nodes ?? []);
+    say("n-reachable", a?.reachable ?? []);
+    say("n-unreachable", a?.unreachable ?? []);
+    say("n-terminal", a?.terminal ?? []);
   }
 
   function load(s: Sample): void {

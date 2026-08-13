@@ -23,3 +23,18 @@ export function lanes(graph: Graph, start: string): string[] {
 
 /** The custom property that carries a state's colour, for the `style` attribute. */
 export const hue = (i: number): string => `--c: var(--lane-${i % LANES})`;
+
+/**
+ * A state's colour, ready to put on a word — or nothing at all for a name this graph does not
+ * have. Nothing is not a colour to fall back on: lane 0 belongs to the start state, and a word
+ * wearing it because it was half-typed reads as an answer the figure has not given.
+ */
+export type Lane = (state: string) => string | undefined;
+
+export function palette(graph: Graph, start: string): Lane {
+  const lane = new Map(lanes(graph, start).map((n, i) => [n, i]));
+  return (state) => {
+    const i = lane.get(state);
+    return i === undefined ? undefined : hue(i);
+  };
+}
