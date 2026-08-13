@@ -32,6 +32,7 @@ export function workbench(): void {
   const sampleSel = el<HTMLSelectElement>("sample");
   const startSel = el<HTMLSelectElement>("start");
   const flag = el<HTMLInputElement>("explore");
+  const back = el<HTMLButtonElement>("reset");
   const host = el("inspector");
 
   const focus = newFocus();
@@ -125,8 +126,22 @@ export function workbench(): void {
     page.dispatch("begin", { start: startSel.value }),
   );
 
+  /**
+   * Forget the run: the same machine, built again from the same schema and the same start.
+   *
+   * Walking back to the first slice is not this — the steps stay on the board there, and a redo
+   * takes them again, which is the whole point of a history you can move about in. This is the
+   * other thing, and it belongs to the page rather than to the figure: what it does is throw away
+   * the machine and make another, which is what the page does whenever the schema changes.
+   */
+  back.addEventListener("click", () =>
+    page.dispatch("begin", { start: startSel.value }),
+  );
+
   flag.addEventListener("change", () => {
     handle?.set({ exploring: flag.checked });
+    // Exploring, no state is current and nothing has been taken: there is no run to forget.
+    back.hidden = flag.checked;
     editor.mark();
   });
 

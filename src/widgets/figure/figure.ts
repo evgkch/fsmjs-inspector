@@ -69,7 +69,7 @@ export function newFigure(w: Wiring): Figure {
       });
       const wrap = make("div", "figure");
       wrap.append(svg);
-      node.replaceChildren(wrap);
+      node.replaceChildren(make("div", "tag", "figure"), wrap);
       redress = dress;
     },
     // What this schema would need to be shown whole: the board, and the frame around it.

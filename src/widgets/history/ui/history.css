@@ -9,7 +9,7 @@
 .history {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
     max-height: 100%;
     padding: 1rem 0 0;
     border: 1px solid var(--line);
@@ -45,11 +45,9 @@ svg.names {
  * down its middle, in the same type and the same colours. A row of a run says nothing without the
  * name of the state it is.
  */
-svg.names {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--surface);
+.history .tag {
+    grid-column: 1 / -1;
+    padding: 0 0 0.45rem 0.9rem;
 }
 
 .history text.name {
@@ -141,30 +139,4 @@ circle.maybe {
 
 .cols .step.ahead .no {
     opacity: 0.45;
-}
-
-/* One button, because there is one thing a button is better at than a click on the run itself:
-   going back to before any of it. */
-.foot {
-    grid-column: 1 / -1;
-    padding: 0.5rem 0.9rem 0.55rem;
-    border-top: 1px solid var(--line);
-}
-
-.foot button {
-    padding: 0.32rem 0.7rem;
-    border: 1px solid var(--line-firm);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--muted);
-    font: 500 0.75rem/1 var(--mono-font);
-    cursor: pointer;
-    transition:
-        border-color 0.1s,
-        color 0.1s;
-}
-
-.foot button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
 }

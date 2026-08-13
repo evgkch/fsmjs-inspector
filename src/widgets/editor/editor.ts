@@ -79,7 +79,7 @@ export function newEditor(w: Wiring): Editor {
   const note = make("p", "note");
   note.hidden = true;
   const node = make("div", "editor");
-  node.append(gutter, sheet, note);
+  node.append(make("div", "tag", "code"), gutter, sheet, note);
 
   /** Where every rule is written, by line. A line holds at most one rule; most hold none. */
   let written = new Map<number, Written>();

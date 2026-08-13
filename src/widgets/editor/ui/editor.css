@@ -18,7 +18,7 @@
     position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     height: 100%;
     /* A floor, not a height: the row it sits in is a share of the page, and it scrolls inside. */
     min-height: 14rem;
@@ -108,6 +108,11 @@
 
 .editor textarea::selection {
     background: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.editor .tag {
+    grid-column: 1 / -1;
+    padding: 0.7rem 0.9rem 0.35rem;
 }
 
 /*

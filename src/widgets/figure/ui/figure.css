@@ -14,6 +14,14 @@
     overscroll-behavior: contain;
 }
 
+/* It stays in its corner while the board scrolls under it: a name is not part of the drawing. */
+.out .tag {
+    position: sticky;
+    top: 0;
+    left: 0;
+    padding: 0 0 0.45rem;
+}
+
 /* Three blocks around two shared indices: one rectangle, as wide as the schema makes it. */
 .figure {
     display: flex;

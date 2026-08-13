@@ -62,15 +62,11 @@ export type Wiring = {
 
 export function newHistory(w: Wiring): History {
   const cols = make("div", "cols");
-  const reset = make("button", "reset", "↺ reset");
-  const foot = make("div", "foot");
-  foot.append(reset);
+  const tag = make("div", "tag", "history");
   const node = make("aside", "history");
-  node.append(cols, foot);
+  node.append(tag, cols);
   /** Rebuilt with every draw, because the names are as wide as the names are. */
   let index: SVGSVGElement | null = null;
-
-  reset.addEventListener("click", () => w.rewind(0));
 
   let graph: Graph = {};
   let row = new Map<string, number>();
@@ -246,7 +242,7 @@ export function newHistory(w: Wiring): History {
     maybe = svg("g", { class: "ahead-of" });
     board.append(maybe);
     cols.append(board);
-    node.replaceChildren(index, cols, foot);
+    node.replaceChildren(tag, index, cols);
 
     // One band per step, over its pair of columns: what is pointed at, what is clicked, what the
     // scroll snaps to, and what the number belongs to. A step is the unit, so a step is the

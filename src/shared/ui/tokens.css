@@ -84,6 +84,20 @@
 }
 
 /*
+ * What a thing is, said once and quietly: the name of a surface, or of a row in a report. Three
+ * panels wear it and it has to be the same height in all of them — the figure and the run line up
+ * row for row, and a label of two different sizes above them would put a state at two heights.
+ */
+.tag,
+.label {
+    margin: 0;
+    font: 500 0.62rem/1 var(--main-font);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+/*
  * Chrome 139+: every corner on the page, the tabs and the state chip included. The property
  * does nothing where the radius is 0, so one rule covers everything that has a frame.
  */
