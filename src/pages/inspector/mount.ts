@@ -62,10 +62,14 @@ export function mount(
     if (focus.pointer.can("leave")) focus.pointer.dispatch("leave");
   };
 
-  const history = newHistory(subject, (step) => {
-    subject.rewind?.(step);
-    forget();
-    paint();
+  const history = newHistory({
+    subject,
+    focus,
+    rewind: (step) => {
+      subject.rewind?.(step);
+      forget();
+      paint();
+    },
   });
 
   const figure = newFigure({
@@ -124,9 +128,11 @@ export function mount(
   }
 
   function paint(): void {
-    history.palette(subject.graph, start);
-    history.draw(exploring);
+    // The figure first: the history is drawn on its rows, and `head` is where the first of them
+    // sits — which is not known until the board has been laid out.
     figure.draw(start);
+    history.show(subject.graph, start, figure.head());
+    history.draw(exploring);
     fit();
   }
 
@@ -136,6 +142,7 @@ export function mount(
 
   const off: (() => void)[] = [
     figure.stop,
+    history.stop,
     () => watching.disconnect(),
     subject.watch(() => paint()),
     /**

@@ -17,11 +17,15 @@
  */
 .work {
     /*
+     * The least history worth standing beside the figure: eight slices of it, which is four
+     * steps. Narrower than that and it says less than the room it costs, so it goes underneath
+     * and takes the width of the page instead.
+     *
      * In pixels, and that is not a slip. The mount reads this to work out whether both fit, and a
-     * length it has to resolve itself is a length it will get wrong — `parseFloat("21rem")` is 21,
-     * and a test against 21 pixels says everything fits. One value, one unit, both readers.
+     * length it has to resolve itself is a length it will get wrong — `parseFloat("12rem")` is 12,
+     * and a test against 12 pixels says everything fits. One value, one unit, both readers.
      */
-    --history-min: 336px;
+    --history-min: 192px;
 
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -29,21 +33,23 @@
     gap: 0.75rem;
     min-height: 0;
     height: 100%;
-    /* Both hug what is in them: a figure with room to spare is a figure, not a field. */
+    /* Both hug what is in them vertically: a figure with room to spare is a figure, not a field. */
     align-items: start;
-    justify-content: start;
 }
 
 /*
  * Beside: the figure column is the width of the board — `--board`, which the mount sets from what
- * it drew — and the history has the width its sentences need. Anything left over is left over.
+ * it drew — and the history takes what is left. The figure is the one of the two that has a width
+ * of its own; nothing is gained by cutting the transcript short so that the page can end early.
+ *
+ * `--history-min` is the floor, and the same number the mount tested against before putting the
+ * class on: what it decided was that this much would be left, so this much is what the column
+ * cannot go under.
  */
 .work.beside {
-    grid-template-columns: var(--board, minmax(0, 1fr)) var(--history-min);
+    grid-template-columns: var(--board, minmax(0, 1fr)) minmax(
+            var(--history-min),
+            1fr
+        );
     grid-template-rows: minmax(0, 1fr);
-}
-
-/* Under: the figure has the width of the surface, because it is what did not fit. */
-.work:not(.beside) {
-    justify-content: stretch;
 }

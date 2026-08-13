@@ -17,11 +17,7 @@ import type {
   Subject,
 } from "../../../entities/machine/index.js";
 import { canFire } from "../../../features/take-rule/index.js";
-
-const CELL = 24; // one cell of any block, and with it the pitch of the lanes
-const EM = 7.2; // width of one monospace character at the size the labels use
-
-export { CELL };
+import { CELL, EM } from "../../../shared/lib/grid.js";
 
 /**
  * The grid the three blocks stand on: `on` gives block 1's columns, `q` the columns blocks 2 and

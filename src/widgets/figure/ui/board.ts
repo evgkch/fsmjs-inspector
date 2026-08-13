@@ -41,7 +41,7 @@ import {
 import type { Key } from "../../../entities/cell/index.js";
 import type { Focus } from "../../../features/focus/index.js";
 import { svg } from "../../../shared/lib/dom.js";
-import { CELL } from "../model/plan.js";
+import { CELL } from "../../../shared/lib/grid.js";
 import type { Draw } from "../model/plan.js";
 
 export type Dressed = {
