@@ -137,11 +137,10 @@ select {
  * *this* schema draws, and the inspector measures that and decides. The figure is what the tool
  * is for and is never the thing that gets cut.
  *
- * The editor's own width is measured in characters, not in columns. `toRules` pads to a table,
- * which costs some thirty characters of whitespace — the samples here run to 84 — and the half of
- * a rule that falls off a narrow pane is the right-hand one: TO, WITH, EMIT, BY. 48rem is that,
- * with a few to spare for a scrollbar; what `analyze` says about the schema sits in the room left
- * over beside it.
+ * Row 1 is the code and nothing else — full width, so the question that started all of this
+ * cannot come back. `toRules` pads to a table, which costs some thirty characters of whitespace,
+ * and on a column of any width the half of a rule that falls off is the right-hand one: TO, WITH,
+ * EMIT, BY. A row cannot fall off. What `analyze` says about the schema is a caption under it.
  *
  * The whole page is one rectangle of one height, and every part of it scrolls inside itself, so
  * the page itself never scrolls and nothing has to be hunted for below the fold.
@@ -166,16 +165,9 @@ select {
     min-height: 0;
 }
 
-/* The editor at its measured width, and the shape of the schema in the room beside it. */
+/* The editor takes the row; the shape of the schema is a caption under it. */
 #text {
-    grid-template-columns: minmax(0, 48rem);
-}
-
-@media (min-width: 62rem) {
-    #text {
-        grid-template-columns: minmax(0, 48rem) minmax(0, 1fr);
-        gap: 1.25rem;
-    }
+    grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .shape {

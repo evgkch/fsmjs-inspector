@@ -109,6 +109,7 @@ export function mount(
    */
   function fit(): void {
     const style = getComputedStyle(work);
+    // Both in pixels: the stylesheet declares the width in the unit its reader can use.
     const min = parseFloat(style.getPropertyValue("--history-min")) || 0;
     const gap = parseFloat(style.columnGap) || 0;
     work.classList.toggle(

@@ -16,7 +16,12 @@
  * Exploring, nothing fires and there is no history at all: the figure has the whole surface.
  */
 .work {
-    --history-min: 21rem;
+    /*
+     * In pixels, and that is not a slip. The mount reads this to work out whether both fit, and a
+     * length it has to resolve itself is a length it will get wrong — `parseFloat("21rem")` is 21,
+     * and a test against 21 pixels says everything fits. One value, one unit, both readers.
+     */
+    --history-min: 336px;
 
     display: grid;
     grid-template-columns: minmax(0, 1fr);
