@@ -11,7 +11,7 @@
     max-width: min(92vw, 68rem);
     max-height: 86vh;
     border: 1px solid var(--line-firm);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--ink);
     font: 400 15px/1.6 var(--main-font);
@@ -54,7 +54,7 @@
 .overlay-bar button {
     padding: 0.2rem 0.45rem;
     border: 0;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--muted);
     font: inherit;
@@ -72,11 +72,13 @@
     overscroll-behavior: contain;
 }
 
-/* Free-standing, the work surface is as wide as the figure needs and no wider. */
+/* Free-standing, the work surface is as tall as what is in it and no taller. */
 .overlay-body .work {
-    grid-template-columns: minmax(0, auto) minmax(0, 19rem);
+    height: auto;
 }
 
 .overlay-body .out {
     min-height: 0;
+    height: auto;
+    max-height: 60vh;
 }

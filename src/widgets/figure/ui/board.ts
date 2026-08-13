@@ -55,8 +55,6 @@ export type Wiring = {
   exploring: boolean;
   /** Let the whole selection go — the ground under the figure does it too. */
   forget: () => void;
-  /** What the figure has come down to, every time it is dressed. */
-  onShown: (rules: Edge[]) => void;
 };
 
 export function board(d: Draw, w: Wiring): Dressed {
@@ -165,7 +163,8 @@ export function board(d: Draw, w: Wiring): Dressed {
    * machine could get there at all, and every end already fixed says whether the choice allows
    * it. `shows` is what is being pointed at or has been fixed — and it is one predicate, not
    * two, which is the whole reason a click keeps exactly the light the pointer had. It is also
-   * not this file's: the editor asks the same question of its lines.
+   * not this file's: the editor asks the same question of its lines, which is how pointing at a
+   * cell lights the rule where it is written.
    */
   const dress = () => {
     const { fixed, shown, open } = look();
@@ -208,8 +207,6 @@ export function board(d: Draw, w: Wiring): Dressed {
         .flatMap(bands)
         .map((box) => svg("rect", { ...box, class: "lit-lane" })),
     );
-
-    w.onShown(d.rows.filter(lit));
   };
 
   /**

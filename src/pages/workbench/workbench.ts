@@ -31,7 +31,6 @@ export function workbench(): void {
   const pane = el("text");
   const sampleSel = el<HTMLSelectElement>("sample");
   const startSel = el<HTMLSelectElement>("start");
-  const parseEl = el("parse");
   const flag = el<HTMLInputElement>("explore");
   const host = el("inspector");
 
@@ -76,11 +75,9 @@ export function workbench(): void {
 
   page.rx.on("stopped", ({ message, line }) => warn(message, line));
 
-  function warn(message: string | null, line: number | null): void {
-    parseEl.textContent = message ?? "";
-    parseEl.hidden = message === null;
-    editor.blame(line);
-  }
+  /** The reader's complaint, where the reading happens: in the editor, on the line it is about. */
+  const warn = (message: string | null, line: number | null) =>
+    editor.blame(message, line);
 
   function fillStart(graph: Graph, start: string): void {
     startSel.replaceChildren(

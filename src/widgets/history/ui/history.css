@@ -1,0 +1,170 @@
+/* ── what actually happened, under the figure it happened on ─────────────── */
+
+/*
+ * A transcript, and it is only drawn when there is one: exploring, nothing fires, and a panel
+ * headed "history" with nothing under it is a promise the mode cannot keep.
+ */
+.history {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    max-height: 20rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    /* One type for the whole panel: a step and the rule it took are the same sentence. */
+    font: 400 0.85rem/1.6 var(--mono-font);
+    /* The column the step numbers stand in. Everything starts after it, so one sentence sits
+       under another whether or not the eye is following the numbers. */
+    --no: 1.9rem;
+}
+
+.history[hidden] {
+    display: none;
+}
+
+.history .tag {
+    display: grid;
+    grid-template-columns: var(--no) minmax(0, 1fr);
+    align-items: center;
+    margin: 0;
+    padding: 0.55rem 1rem 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+/* Moving along what has happened, under what has happened: the same thing a click on a row does,
+   and there is no reason for it to live at the other end of the page. A word each, because three
+   arrows in a row are three guesses. */
+.rewind {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem 0.6rem;
+    border-top: 1px solid var(--line);
+}
+
+.rewind button {
+    padding: 0.32rem 0.7rem;
+    border: 1px solid var(--line-firm);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--muted);
+    font: 500 0.75rem/1 var(--mono-font);
+    cursor: pointer;
+    transition:
+        border-color 0.1s,
+        color 0.1s;
+}
+
+.rewind button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.rewind button:disabled {
+    border-color: var(--line);
+    color: var(--faint);
+    opacity: 0.55;
+    cursor: default;
+}
+
+.log {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 0.35rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* The same sentence the editor writes, set the same way: the marker takes its two pixels out of
+   the padding so the words start on the same line down the whole panel. What separates the rows
+   is emphasis and nothing else. */
+.log .step {
+    display: grid;
+    grid-template-columns: var(--no) minmax(0, 1fr);
+    align-items: start;
+    width: 100%;
+    padding: 0.3rem 1rem 0.3rem calc(1rem - 2px);
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    opacity: 0.55;
+    transition:
+        background-color 0.1s,
+        opacity 0.1s;
+}
+
+.log .step:hover {
+    background: var(--bg);
+    opacity: 1;
+}
+
+/* Where the machine stands in what has happened. */
+.log .step.now {
+    border-left-color: var(--accent);
+    opacity: 1;
+}
+
+/* Undone, still on the board, still reachable by redo. */
+.log .step.ahead {
+    opacity: 0.25;
+}
+
+.log .step:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+/* One rule written out. The side with more than one word is not a choice — a step took exactly
+   one rule, and both sides say what that rule was. */
+.say {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+}
+
+.say .side {
+    display: grid;
+    gap: 0.1rem;
+}
+
+.say .one {
+    display: flex;
+    gap: 0.45rem;
+    white-space: nowrap;
+}
+
+/* The keywords of the rule language, kept quiet so the labels between them read. */
+.say .key,
+.say .arrow {
+    color: var(--faint);
+}
+
+.say .q {
+    color: var(--c, var(--ink));
+    font-weight: 600;
+}
+
+.say .s {
+    color: var(--ink);
+}
+
+.say .l {
+    color: var(--emit);
+}
+
+/* Which step a row is, and the head of the column it stands in. `history.jump` takes exactly
+   this number, so it is the index the rewinding is done by and not a decoration. */
+.no {
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}

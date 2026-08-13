@@ -4,7 +4,7 @@
  * they are two functions and not one.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
-import type { Edge, Off } from "@evgkch/fsmjs";
+import type { Off } from "@evgkch/fsmjs";
 import type { Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { make } from "../../shared/lib/dom.js";
@@ -23,8 +23,6 @@ export type Wiring = {
   subject: Subject;
   focus: Focus;
   exploring: () => boolean;
-  /** What the figure is about, every time it is dressed: the rules under the pointer or held. */
-  onShown: (rules: Edge[]) => void;
   /** Let the whole selection go. */
   forget: () => void;
 };
@@ -52,7 +50,6 @@ export function newFigure(w: Wiring): Figure {
         focus: w.focus,
         exploring: w.exploring(),
         forget: w.forget,
-        onShown: w.onShown,
       });
       const wrap = make("div", "figure");
       wrap.append(svg);

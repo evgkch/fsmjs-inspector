@@ -1,13 +1,18 @@
 /**
- * What the figure has come to, in words: the rule under the pointer, and every rule that was
- * taken.
+ * The transitions that were taken, in the order they were taken, and a way back to any of them.
  *
- * The words are the library's own — the same sentence `toRules` prints, the same one `rules`
- * writes for a transition, and the same one the editor is written in — so nothing on this page
- * has a vocabulary of its own. Which side of a reading has more than one line is what the figure
- * was asked: naming a cause leaves the left alone and lists what it can produce, naming an effect
- * leaves the right alone and lists what could have caused it, and pointing at a crossing can
- * leave both with several.
+ * This panel used to have a reading above it — the rule under the pointer, written out. It does
+ * not need one: pointing at a cell lights the line that rule is written on, in the text, in the
+ * language, where you can also edit it. Saying it again here was one sentence rendered twice, and
+ * the copy that was not being read was this one.
+ *
+ * What is left is what the text cannot show, because it is not in the text: what actually
+ * happened. The words are still the library's own — the same sentence `toRules` prints and the
+ * same one the editor is written in — so a step and the rule it took read alike. Rewinding does
+ * not unwrite a step: a transition happened, and an undo is one more thing that happened; it only
+ * moves where in them the machine stands.
+ *
+ * Exploring, nothing fires, so there is nothing here and the panel is not drawn at all.
  */
 import type { Edge } from "@evgkch/fsmjs";
 import { palette } from "../../entities/machine/index.js";
@@ -19,33 +24,30 @@ import type {
   Told,
 } from "../../entities/machine/index.js";
 import { make, word } from "../../shared/lib/dom.js";
-import "./ui/trace.css";
+import "./ui/history.css";
 
-export type Trace = {
+export type History = {
   readonly node: HTMLElement;
   /** The colours the sentences are written in — the figure's lanes, for the same states. */
   readonly palette: (graph: Graph, start: string) => void;
-  /** What is under the pointer, or held: overwritten every time, in both modes. */
-  readonly reading: (rules: Edge[]) => void;
-  /** The transitions that were taken, and where in them the machine stands. */
-  readonly history: (exploring: boolean) => void;
+  /** The steps, and where in them the machine stands. */
+  readonly draw: (exploring: boolean) => void;
 };
 
-export function newTrace(
+export function newHistory(
   subject: Subject,
   rewind: (step: number) => void,
-): Trace {
-  const readingEl = make("div", "reading");
+): History {
   const logEl = make("div", "log");
-  const logTag = make("h2", "tag log-tag");
-  logTag.append(make("span", "no", "#"), make("span", "", "history"));
+  const tag = make("h2", "tag");
+  tag.append(make("span", "no", "#"), make("span", "", "history"));
   const undoBtn = make("button", "", "↶ undo");
   const redoBtn = make("button", "", "↷ redo");
   const startBtn = make("button", "", "↺ start");
   const rewindEl = make("div", "rewind");
   rewindEl.append(undoBtn, redoBtn, startBtn);
-  const node = make("aside", "trace");
-  node.append(make("h2", "tag", "reading"), readingEl, logTag, logEl, rewindEl);
+  const node = make("aside", "history");
+  node.append(tag, logEl, rewindEl);
 
   undoBtn.addEventListener("click", () => rewind(subject.step - 1));
   redoBtn.addEventListener("click", () => rewind(subject.step + 1));
@@ -55,9 +57,10 @@ export function newTrace(
   // word the colour its column has in the figure.
   let colour: Lane = () => undefined;
 
-  /** A set of rules, written out: `FROM q ON σ → TO r EMIT λ`. */
-  const sentence = (rules: Edge[]): HTMLElement => {
-    const say = (r: Edge, out: boolean): HTMLElement => {
+  /** One rule, written out: `FROM q ON σ → TO r EMIT λ`. */
+  const sentence = (r: Edge): HTMLElement => {
+    const side = (out: boolean): HTMLElement => {
+      const column = make("div", "side");
       const row = make("div", "one");
       const q = out ? r.to : r.from;
       row.append(word(out ? "TO" : "FROM", "key"), word(q, "q", colour(q)));
@@ -65,18 +68,7 @@ export function newTrace(
         if (r.emit !== undefined)
           row.append(word("EMIT", "key"), word(r.emit, "l"));
       } else row.append(word("ON", "key"), word(r.on, "s"));
-      return row;
-    };
-
-    const side = (out: boolean): HTMLElement => {
-      const column = make("div", "side");
-      const seen = new Set<string>();
-      for (const r of rules) {
-        const key = out ? `${r.to}\0${r.emit ?? ""}` : `${r.from}\0${r.on}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        column.append(say(r, out));
-      }
+      column.append(row);
       return column;
     };
 
@@ -100,24 +92,14 @@ export function newTrace(
       colour = palette(graph, start);
     },
 
-    reading: (rules) =>
-      readingEl.replaceChildren(
-        rules.length ? sentence(rules) : word("point at a cell", "none"),
-      ),
-
-    /**
-     * Exploring there are none, and there is nothing to keep: nothing fires, so the reading above
-     * is the whole of what the figure has to say and the next pointer movement replaces it.
-     * Running, every one of these happened, and rewinding does not unwrite what has been written —
-     * it only moves where in them the machine stands.
-     */
-    history: (exploring) => {
+    draw: (exploring) => {
       undoBtn.disabled = !subject.rewind || subject.step === 0;
       redoBtn.disabled =
         !subject.rewind || subject.step >= subject.steps.length;
       startBtn.disabled = !subject.rewind || subject.step === 0;
 
       logEl.replaceChildren();
+      node.hidden = exploring || subject.steps.length === 0;
       if (exploring) return;
       const at = subject.step;
       subject.steps.forEach((t, i) => {
@@ -128,7 +110,7 @@ export function newTrace(
         row.title = (t as Partial<Told>).line ?? "";
         // Which step this is. The machine's position is one of these numbers, and `history.jump`
         // takes exactly it, so the column is the index the rewinding is done by.
-        row.append(word(String(i + 1), "no"), sentence([asEdge(t)]));
+        row.append(word(String(i + 1), "no"), sentence(asEdge(t)));
         row.addEventListener("click", () => rewind(i + 1));
         logEl.append(row);
       });

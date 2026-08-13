@@ -9,10 +9,10 @@ body {
 }
 
 main {
-    max-width: 88rem;
+    max-width: 104rem;
     margin: 0 auto;
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 /* ── controls ────────────────────────────────────────────────────────────── */
@@ -39,10 +39,10 @@ main {
    it is more important than the rest, so nothing in it is drawn louder. */
 select,
 .bar label.flag {
-    height: 1.85rem;
-    padding: 0 0.6rem;
+    height: 2rem;
+    padding: 0 0.7rem;
     border: 1px solid var(--line-firm);
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--ink);
     font: 500 0.8rem/1 var(--mono-font);
@@ -77,26 +77,33 @@ select {
 /* ── panes ───────────────────────────────────────────────────────────────── */
 
 /*
- * Two panes when there is room for both, one column when there is not — and never a middle case
- * where the text is squeezed into a column too narrow for a rule.
+ * Two bands, and they are the same height.
  *
- * `toRules` pads its columns so a schema reads as a table, which costs some thirty characters of
- * whitespace: the samples here run to 84, and the half of a rule that falls off a narrow pane is
- * the right-hand one — TO, WITH, EMIT, BY. So the column is measured in characters and given a
- * few to spare, since a vertical scrollbar in the editor takes two of them and a font whose
- * advance is not exactly 0.6em takes the rest. Narrower than that, the editor goes above the
- * figure and has the whole page to itself, which is wider than any column could be.
+ * What the tool does is three things — write the schema, look at the figure, read what the run
+ * did — and the last of those belongs under the figure rather than at the far edge of the page,
+ * so the page is two columns and not four. The source is on the left because that is where the
+ * machine comes from; the figure is on the right because that is what it becomes.
+ *
+ * They share one height and each scrolls inside itself, so the page never scrolls and the two
+ * never disagree about where the bottom is. That is the whole of the composition: one rectangle,
+ * divided once.
+ *
+ * The left column is measured in characters. `toRules` pads its columns so a schema reads as a
+ * table, which costs some thirty characters of whitespace: the samples here run to 84, and the
+ * half of a rule that falls off a narrow pane is the right-hand one — TO, WITH, EMIT, BY. 48rem
+ * is that, with a few to spare for a scrollbar. Narrower than the two columns need, the source
+ * goes above the figure and has the width of the page, which is wider than any column.
  */
 .panes {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 1.25rem;
-    align-items: start;
+    gap: 1rem;
 }
 
 @media (min-width: 76rem) {
     .panes {
         grid-template-columns: minmax(0, 48rem) minmax(0, 1fr);
+        height: clamp(32rem, calc(100vh - 7rem), 58rem);
     }
 }
 
@@ -104,21 +111,20 @@ select {
     display: grid;
     gap: 0.6rem;
     min-width: 0;
+    min-height: 0;
 }
 
-/* What the reader would not read. The gutter marks the line it is about; this says what it is. */
-.parse {
-    margin: 0;
-    color: var(--warn);
-    font: 400 0.82rem/1.5 var(--mono-font);
+/* The editor takes the height; what `analyze` says about the schema is a caption under it. */
+#text {
+    grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .shape {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.15rem 0.75rem;
+    gap: 0.2rem 0.85rem;
     margin: 0;
-    padding: 0;
+    padding: 0.1rem 0.25rem;
     list-style: none;
 }
 

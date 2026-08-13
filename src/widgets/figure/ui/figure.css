@@ -1,11 +1,13 @@
 /* ── the figure: three blocks around a shared index ──────────────────────── */
 
+/* The figure's own box: it fills the band it is in and scrolls inside itself, so a schema too
+   wide or too tall for the page never makes the page itself scroll. */
 .out {
-    min-height: 26rem;
-    max-height: 40rem;
-    padding: 0.9rem 1rem;
+    min-height: 18rem;
+    height: 100%;
+    padding: 1rem 1.1rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
     overflow: auto;

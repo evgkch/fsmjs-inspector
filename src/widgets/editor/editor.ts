@@ -41,8 +41,12 @@ export type Editor = {
   readonly show: (rules: readonly Written[], colour: Lane) => void;
   /** Which lines could fire from where the machine now stands. */
   readonly mark: () => void;
-  /** The line the reader is complaining about, or none. */
-  readonly blame: (line: number | null) => void;
+  /**
+   * What the reader would not read, and which line it is about. It is shown inside the editor's
+   * own frame: a message that appears between the editor and whatever is under it moves the page
+   * on every keystroke that does not parse, which is most of them while a rule is being typed.
+   */
+  readonly blame: (message: string | null, line: number | null) => void;
   readonly stop: () => void;
 };
 
@@ -72,8 +76,10 @@ export function newEditor(w: Wiring): Editor {
   const gutter = make("div", "gutter");
   const sheet = make("div", "sheet");
   sheet.append(ink, area);
+  const note = make("p", "note");
+  note.hidden = true;
   const node = make("div", "editor");
-  node.append(gutter, sheet);
+  node.append(gutter, sheet, note);
 
   /** Where every rule is written, by line. A line holds at most one rule; most hold none. */
   let written = new Map<number, Written>();
@@ -198,8 +204,10 @@ export function newEditor(w: Wiring): Editor {
       paint();
     },
     mark,
-    blame: (line) => {
+    blame: (message, line) => {
       blamed = line;
+      note.textContent = message ?? "";
+      note.hidden = message === null;
       mark();
     },
     stop: () => {

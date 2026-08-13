@@ -2,20 +2,23 @@
 .fsmjs-inspector {
     display: grid;
     min-width: 0;
+    min-height: 0;
+    height: 100%;
 }
 
-/* The figure, and beside it what the figure has come to. One is read by looking, the other by
-   reading, and they answer the same question — so they are two halves of one surface rather
-   than one thing above another. */
+/*
+ * The figure, and under it what happened on it.
+ *
+ * Under, and not beside. The figure is looked at; the history is read afterwards, and only when
+ * there is one — exploring, nothing fires and the panel is not drawn, so the figure has the whole
+ * height. A transcript at the far edge of the page would be a saccade away from the thing it is a
+ * transcript of, and it would take from the figure the width a wide schema needs.
+ */
 .work {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 19rem);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 0.75rem;
-    align-items: stretch;
-}
-
-@media (max-width: 78rem) {
-    .work {
-        grid-template-columns: minmax(0, 1fr);
-    }
+    min-height: 0;
+    height: 100%;
 }

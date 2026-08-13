@@ -2,7 +2,7 @@
  * The inspector: a figure, and beside it what the figure has come to.
  *
  * What is being inspected is a `Subject` — a dump, or a machine that is running — and neither the
- * figure nor the trace ever learns which. What is being *looked at* is a `Focus`, and that one is
+ * figure nor the history ever learns which. What is being *looked at* is a `Focus`, and that one is
  * handed in from outside when there is a second surface showing the same machine: the standalone
  * page gives its editor and its figure the same focus, which is why pointing at a cell lights the
  * line the rule is written on.
@@ -14,7 +14,7 @@ import type { Focus } from "../../features/focus/index.js";
 import { between, take } from "../../features/take-rule/index.js";
 import { make } from "../../shared/lib/dom.js";
 import { newFigure } from "../../widgets/figure/figure.js";
-import { newTrace } from "../../widgets/trace/trace.js";
+import { newHistory } from "../../widgets/history/history.js";
 import "./ui/inspector.css";
 
 /** How a figure is being looked at, as opposed to what it is looking at. */
@@ -62,7 +62,7 @@ export function mount(
     if (focus.pointer.can("leave")) focus.pointer.dispatch("leave");
   };
 
-  const trace = newTrace(subject, (step) => {
+  const history = newHistory(subject, (step) => {
     subject.rewind?.(step);
     forget();
     paint();
@@ -72,20 +72,22 @@ export function mount(
     subject,
     focus,
     exploring: () => exploring,
-    onShown: trace.reading,
     forget,
   });
 
+  // The figure, and under it what happened on it. Under and not beside: the run is read after the
+  // figure is looked at, and a panel at the far edge of the page is a saccade away from the thing
+  // it is about.
   const work = make("div", "work");
-  work.append(figure.node, trace.node);
+  work.append(figure.node, history.node);
   const root = make("div", "fsmjs-inspector");
   root.append(work);
   host.append(root);
 
   function paint(): void {
     const start = subject.at || firstOf(subject.graph);
-    trace.palette(subject.graph, start);
-    trace.history(exploring);
+    history.palette(subject.graph, start);
+    history.draw(exploring);
     figure.draw(start);
   }
 

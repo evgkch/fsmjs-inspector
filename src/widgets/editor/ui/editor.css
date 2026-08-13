@@ -12,9 +12,11 @@
     position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    height: 22rem;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 100%;
+    min-height: 22rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
     overflow: hidden;
@@ -90,6 +92,28 @@
 
 .editor textarea::selection {
     background: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+/*
+ * What the reader would not read, at the foot of the thing it would not read.
+ *
+ * It lives inside the frame because it belongs to the text and because of where it is *not*: a
+ * message between the editor and whatever is under it moves the page on every keystroke that does
+ * not parse, which is most of the keystrokes in a rule. The gutter marks the line; this says what
+ * about it.
+ */
+.editor .note {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.45rem 0.75rem 0.5rem;
+    border-top: 1px solid var(--line);
+    background: color-mix(in oklab, var(--warn) 8%, transparent);
+    color: var(--warn);
+    font: 400 0.78rem/1.4 var(--mono-font);
+}
+
+.editor .note[hidden] {
+    display: none;
 }
 
 /* ── the gutter ─────────────────────────────────────────────────────────── */

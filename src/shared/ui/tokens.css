@@ -25,7 +25,15 @@
     --warn: #b45309;
     --shadow:
         0 1px 2px rgb(24 24 27 / 0.05), 0 8px 24px -12px rgb(24 24 27 / 0.18);
-    --radius: 10px;
+
+    /*
+     * Two radii and no others: one for the surfaces a pane is made of, one for the things inside
+     * them. They are generous because the corner is a superellipse and not an arc — the curve
+     * spends most of its length flat against the edge, so a radius that would read as a lozenge
+     * on a rounded rectangle reads as a square with soft corners here. Small radii waste it.
+     */
+    --radius: 18px;
+    --radius-sm: 11px;
 
     /*
      * One colour per state, cycling after eight. The matrix cell, the rail, the marker, the word
