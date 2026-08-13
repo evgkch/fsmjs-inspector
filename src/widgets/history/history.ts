@@ -26,11 +26,21 @@ import type { Graph, Step, Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between } from "../../features/take-rule/index.js";
 import { make, svg } from "../../shared/lib/dom.js";
-import { CELL } from "../../shared/lib/grid.js";
+import { CELL, EM } from "../../shared/lib/grid.js";
 import "./ui/history.css";
 
 /** The strip under the columns where the step numbers stand. */
 const FOOT = 18;
+
+/**
+ * How far along a step the curve stays level before it turns.
+ *
+ * A cubic whose control points sit at the midpoint leaves one row and arrives at the other
+ * turning the whole way, which reads as a diagonal with rounded ends. Pushed out past the middle
+ * they cross, and what that draws is what a step is: a run along one string, a turn, a run along
+ * the next. The horizontal is the state; the turn is the transition.
+ */
+const BEND = 0.82;
 
 export type History = {
   readonly node: HTMLElement;
@@ -57,6 +67,8 @@ export function newHistory(w: Wiring): History {
   foot.append(reset);
   const node = make("aside", "history");
   node.append(cols, foot);
+  /** Rebuilt with every draw, because the names are as wide as the names are. */
+  let index: SVGSVGElement | null = null;
 
   reset.addEventListener("click", () => w.rewind(0));
 
@@ -78,12 +90,13 @@ export function newHistory(w: Wiring): History {
   });
 
   /**
-   * A symmetric curve from one string to the next: the control points sit halfway along, one on
-   * each side, so the arc leaves the first row level and arrives at the second level. A step out
-   * and a step back look alike, which they are.
+   * A symmetric curve from one string to the next: the two control points are the same distance
+   * in from their own ends, so a step out and a step back look alike, which they are.
    */
-  const arc = (x0: number, y0: number, x1: number, y1: number) =>
-    `M ${x0} ${y0} C ${(x0 + x1) / 2} ${y0}, ${(x0 + x1) / 2} ${y1}, ${x1} ${y1}`;
+  const arc = (x0: number, y0: number, x1: number, y1: number) => {
+    const bend = (x1 - x0) * BEND;
+    return `M ${x0} ${y0} C ${x0 + bend} ${y0}, ${x1 - bend} ${y1}, ${x1} ${y1}`;
+  };
 
   /** The layer that changes when the pointer moves, and nothing else does. */
   let maybe: SVGGElement | null = null;
@@ -131,15 +144,43 @@ export function newHistory(w: Wiring): History {
 
   function build(): void {
     cols.replaceChildren();
+    index?.remove();
+    index = null;
     if (exploring) return;
 
     const steps = w.subject.steps.map(asEdge);
     const at = w.subject.step;
-    // Two columns per step, and the first of them is the slice the run started in. One column
-    // over on the right is left empty for what could happen next.
+    // Two columns per step, and the first of them is the slice the run started in.
     const last = steps.length ? steps.length * 2 - 1 : 0;
-    const width = (last + 2) * CELL;
+    const end = x(last) + CELL / 2;
+    // Room past the end for what could happen next, and no more: a string running on past the
+    // last thing that happened promises a run that has not been made yet.
+    const width = end + CELL;
     const height = head + row.size * CELL + FOOT;
+
+    // The names, on the left of the strings and out of the scroll: this is the same index the
+    // figure writes down its middle, and a row of the run means nothing without it.
+    const wide = 14 + Math.max(0, ...[...row.keys()].map((n) => n.length * EM));
+    index = svg("svg", {
+      class: "names",
+      width: wide,
+      height,
+      viewBox: `0 0 ${wide} ${height}`,
+    });
+    for (const [state] of row)
+      index.append(
+        svg(
+          "text",
+          {
+            x: wide - 8,
+            y: y(state) + 4,
+            class: "name",
+            "text-anchor": "end",
+            style: colour(state),
+          },
+          state,
+        ),
+      );
 
     const board = svg("svg", {
       class: "run",
@@ -155,7 +196,7 @@ export function newHistory(w: Wiring): History {
         svg("line", {
           x1: 0,
           y1: y(state),
-          x2: width,
+          x2: end,
           y2: y(state),
           class: "string",
           style: colour(state),
@@ -205,6 +246,7 @@ export function newHistory(w: Wiring): History {
     maybe = svg("g", { class: "ahead-of" });
     board.append(maybe);
     cols.append(board);
+    node.replaceChildren(index, cols, foot);
 
     // One band per step, over its pair of columns: what is pointed at, what is clicked, what the
     // scroll snaps to, and what the number belongs to. A step is the unit, so a step is the

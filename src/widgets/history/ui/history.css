@@ -8,6 +8,7 @@
  */
 .history {
     display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
     max-height: 100%;
     padding: 1rem 0 0;
@@ -34,8 +35,26 @@
     scroll-snap-type: x mandatory;
 }
 
-svg.run {
+svg.run,
+svg.names {
     display: block;
+}
+
+/*
+ * The index, on the left of the strings and out of the scroll — the same names the figure writes
+ * down its middle, in the same type and the same colours. A row of a run says nothing without the
+ * name of the state it is.
+ */
+svg.names {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+}
+
+.history text.name {
+    font: 500 0.74rem/1 var(--mono-font);
+    fill: var(--c, var(--muted));
 }
 
 /* The figure's rows, carried across: the same line, the same colour, the same weight. */
@@ -127,6 +146,7 @@ circle.maybe {
 /* One button, because there is one thing a button is better at than a click on the run itself:
    going back to before any of it. */
 .foot {
+    grid-column: 1 / -1;
     padding: 0.5rem 0.9rem 0.55rem;
     border-top: 1px solid var(--line);
 }
