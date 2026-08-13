@@ -14,12 +14,12 @@
  * has nothing else to write. What the editor shows is `toRules` of the same thing: the schema in
  * the language it is written in, which is also the language every line of the history is in.
  */
-import choice from "../schemas/the-inspectors-choice.json?raw";
-import page from "../schemas/the-inspectors-page.json?raw";
-import pointer from "../schemas/the-inspectors-pointer.json?raw";
-import problems from "../schemas/a-schema-with-problems.json?raw";
-import selection from "../schemas/selection-rectangle.json?raw";
-import upload from "../schemas/upload-with-retry.json?raw";
+import choice from "../../../../schemas/the-inspectors-choice.json?raw";
+import page from "../../../../schemas/the-inspectors-page.json?raw";
+import pointer from "../../../../schemas/the-inspectors-pointer.json?raw";
+import problems from "../../../../schemas/a-schema-with-problems.json?raw";
+import selection from "../../../../schemas/selection-rectangle.json?raw";
+import upload from "../../../../schemas/upload-with-retry.json?raw";
 
 /** A run starts at the first state the file names, which is what `nodes` returns first. */
 export type Sample = { name: string; json: string };

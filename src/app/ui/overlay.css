@@ -1,0 +1,82 @@
+/* `inspect(fsm)` with nowhere to go puts the tool on top of the page it is inspecting. It sits
+   above everything, carries its own frame, and is dragged by its bar — a panel over somebody's
+   application is always over the wrong part of it. */
+.fsmjs-overlay {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 2147483000;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-width: min(92vw, 68rem);
+    max-height: 86vh;
+    border: 1px solid var(--line-firm);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 15px/1.6 var(--main-font);
+    box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.45);
+    overflow: hidden;
+}
+
+.overlay-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.4rem 0.5rem 0.4rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    font: 500 0.75rem/1 var(--mono-font);
+    color: var(--muted);
+    cursor: grab;
+    user-select: none;
+}
+
+.overlay-bar:active {
+    cursor: grabbing;
+}
+
+.overlay-bar .flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    cursor: pointer;
+}
+
+.overlay-bar .flag input {
+    accent-color: var(--accent);
+    width: 0.85rem;
+    height: 0.85rem;
+    margin: 0;
+}
+
+.overlay-bar button {
+    padding: 0.2rem 0.45rem;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.overlay-bar button:hover {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.overlay-body {
+    padding: 0.75rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* Free-standing, the work surface is as wide as the figure needs and no wider. */
+.overlay-body .work {
+    grid-template-columns: minmax(0, auto) minmax(0, 19rem);
+}
+
+.overlay-body .out {
+    min-height: 0;
+}

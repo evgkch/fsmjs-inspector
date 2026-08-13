@@ -13,15 +13,18 @@ import { StateMachine, TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
 import { history, log, rules } from "@evgkch/fsmjs/debug";
 import type { History } from "@evgkch/fsmjs/debug";
-import type { Ctx, Ev, Graph, RuleId, Step, Subject } from "../subject.js";
+import type { Ctx, Ev, Graph, Step } from "../model/graph.js";
+import { partsOf, ruleId } from "../model/rule.js";
+import type { RuleId } from "../model/rule.js";
+import type { Subject } from "../model/subject.js";
 
-/** One transition, kept with the line `rules` wrote for it — which its row says on hover. */
+/**
+ * One transition, kept with the line `rules` wrote for it. The history shows it on hover, and it
+ * is the library's own sentence for what happened — not a second one written here.
+ */
 export type Told = Step & { line: string };
 
-export type Text = Subject & {
-  /** The lines `rules` wrote, by step. The figure shows them as titles. */
-  readonly told: readonly string[];
-};
+export type Text = Subject;
 
 export function fromText(graph: Graph, start: string): Text {
   /** Which rule the machine is being asked to take, while it is being asked. Null the rest. */
@@ -36,7 +39,7 @@ export function fromText(graph: Graph, start: string): Text {
         if (!Array.isArray(list)) continue;
         byEvent[σ] = list.map((rule: unknown, i: number) => ({
           ...(rule as object),
-          when: () => taking === null || taking === `${q}\0${σ}\0${i}`,
+          when: () => taking === null || taking === ruleId(q, σ, i),
         }));
       }
     }
@@ -68,7 +71,18 @@ export function fromText(graph: Graph, start: string): Text {
         steps.push(Object.assign(t, { line }));
       }),
     ),
-    fsm.rx.on(TRANSITION, () => changed()),
+    /**
+     * Nothing is told anything while a rule is being taken.
+     *
+     * The guard below is a question about *which rule was named*, and it is asked of every rule
+     * in the machine, `can` included. So for as long as `taking` is set, this subject answers
+     * "could you take that" and not "where do you stand" — and anything that redraws itself on
+     * the strength of the second answer while the first is being given reads a machine where
+     * nothing at all can fire. The figure did: one click and every cell on it went dim.
+     */
+    fsm.rx.on(TRANSITION, () => {
+      if (taking === null) changed();
+    }),
   ];
 
   return {
@@ -84,24 +98,23 @@ export function fromText(graph: Graph, start: string): Text {
     get step() {
       return past.index;
     },
-    get told() {
-      return steps.map((s) => s.line);
-    },
     drive: {
       // A rule fires from where the machine stands when it is the first of its cell to pass its
       // guard — which is what `can` answers and what `take` will then do.
       can: (rule) => {
-        const [from, on] = rule.split("\0");
+        const { from, on } = partsOf(rule);
         return fsm.state.type === from && fsm.can(on as never);
       },
       take: (rule) => {
-        const [, on] = rule.split("\0");
+        const { on } = partsOf(rule);
         taking = rule;
         try {
           fsm.dispatch(on as never);
         } finally {
           taking = null;
         }
+        // Now, with the naming over and the machine standing where it ended up.
+        changed();
       },
     },
     rewind: (step) => {

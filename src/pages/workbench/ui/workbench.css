@@ -1,0 +1,130 @@
+/* The standalone page: a bar of controls, and two panes under it. */
+
+body {
+    margin: 0;
+    padding: 1.25rem 1.25rem 2rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 15px/1.6 var(--main-font);
+}
+
+main {
+    max-width: 88rem;
+    margin: 0 auto;
+    display: grid;
+    gap: 1.5rem;
+}
+
+/* ── controls ────────────────────────────────────────────────────────────── */
+
+.bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    align-items: center;
+}
+
+.bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+/* Every control in the bar is the same object: same height, same frame, same type. Nothing in
+   it is more important than the rest, so nothing in it is drawn louder. */
+select,
+.bar label.flag {
+    height: 1.85rem;
+    padding: 0 0.6rem;
+    border: 1px solid var(--line-firm);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--ink);
+    font: 500 0.8rem/1 var(--mono-font);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+select {
+    padding-right: 0.3rem;
+}
+
+/* One flag, because there is one difference and it is a restriction: off, the machine stands
+   somewhere and only what it can do is in reach; on, no state is current and nothing fires. */
+.bar label.flag {
+    gap: 0.45rem;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.bar label.flag:has(:checked) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.flag input {
+    accent-color: var(--accent);
+    width: 0.85rem;
+    height: 0.85rem;
+    margin: 0;
+}
+
+/* ── panes ───────────────────────────────────────────────────────────────── */
+
+.panes {
+    display: grid;
+    grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+@media (max-width: 62rem) {
+    .panes {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.pane {
+    display: grid;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+/* What the reader would not read. The gutter marks the line it is about; this says what it is. */
+.parse {
+    margin: 0;
+    color: var(--warn);
+    font: 400 0.82rem/1.5 var(--mono-font);
+}
+
+.shape {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.15rem 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.shape li {
+    display: contents;
+}
+
+.label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--faint);
+    align-self: center;
+}
+
+.shape .value {
+    font: 500 0.85rem/1.5 var(--mono-font);
+    overflow-wrap: anywhere;
+}

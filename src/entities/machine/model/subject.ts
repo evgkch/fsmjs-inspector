@@ -6,29 +6,14 @@
  * what has happened, if anything is recording it. Nothing else. So that is an interface, and
  * every way of getting at a machine is an implementation of it:
  *
- *   fromText(graph, start)   a dump in a textarea       — the page
+ *   fromText(graph, start)   a dump in an editor        — the page
  *   fromMachine(fsm)         a machine that is running  — `inspect(fsm)`, anywhere
  *
  * The figure is written against `Subject` and never learns which one it got.
  */
-import type { Off, Transition } from "@evgkch/fsmjs";
-
-/** A schema read back from JSON: labels, and the name of every operation that was there. */
-export type Graph = Record<string, unknown>;
-
-/**
- * What JSON leaves of the three carriers: no state carries a context, no event carries a
- * payload. That is not a simplification made for the inspector. It is what a dumped schema is,
- * and it is the reason a machine can be built from one at all.
- */
-export type Ctx = Record<string, undefined>;
-export type Ev = Record<string, void>;
-
-/** One transition, in the only shape the figure reads it in. */
-export type Step = Transition<Ctx, Ev, Ev>;
-
-/** A rule, as the guards name it: its cell, and its place in that cell. */
-export type RuleId = string;
+import type { Off } from "@evgkch/fsmjs";
+import type { Graph, Step } from "./graph.js";
+import type { RuleId } from "./rule.js";
 
 /**
  * Moving the machine — and the two kinds of subject differ here, which is the whole of what makes
@@ -71,16 +56,4 @@ export type Subject = {
 
   /** Let go of whatever this subject is holding: listeners, a history, a machine of its own. */
   readonly stop: () => void;
-};
-
-/**
- * Which rule this is, as the guards name it: its cell, and its place in it. `edges` flattens a
- * cell in the order the schema wrote it, so the index here is that index.
- */
-export const idOf = (
-  all: readonly { from: string; on: string }[],
-  r: { from: string; on: string },
-): RuleId => {
-  const cell = all.filter((e) => e.from === r.from && e.on === r.on);
-  return `${r.from}\0${r.on}\0${Math.max(0, cell.indexOf(r as never))}`;
 };

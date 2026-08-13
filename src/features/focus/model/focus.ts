@@ -1,11 +1,5 @@
 /**
- * The interactive diagram: two small machines, and one function that reads them together.
- *
- * The figure draws δ×λ as three blocks. 1 is FROM × ON and 3 is TO × EMIT — the two halves of a
- * transition, and the library already names them: a `Transition` carries `source` and `input`
- * going in and `target` and `output` coming out, so one half is the **cause** and the other the
- * **effect**. 2 is FROM × TO, where the row out of a cause meets the column into an effect: not
- * a half of anything, but the **crossing** the two are connected through.
+ * What the reader is looking at: two small machines, and one function that reads them together.
  *
  * Two things go on at once and they are not the same thing. One is the *choice*: nothing held,
  * one half held, both held. The other is the *pointer*: away, or over some cell. Written as one
@@ -23,7 +17,9 @@
  *
  * There is exactly one `enter` rule and one `leave` rule on the whole page, so the pointer cannot
  * behave one way before a press and another way after: the pointer machine does not know a press
- * happened. Where the two meet is `look`, in one line, and that line is the only place that can
+ * happened. Nor does it know *what* moved it — the figure's own cells and the editor's gutter
+ * dispatch the same `enter`, which is why a rule lights the same way whichever of the two you are
+ * over. Where the machines meet is `look`, in one line, and that line is the only place that can
  * ever decide what the pointer adds to what is held.
  *
  * The choice is three states because it carries three different things, and its guards are the
@@ -49,36 +45,14 @@
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
-
-/** The two halves of a transition, and the crossing they meet at. */
-export const CAUSE = "cause";
-export const CORNER = "corner";
-export const EFFECT = "effect";
-
-export type Kind = typeof CAUSE | typeof CORNER | typeof EFFECT;
-
-/**
- * One cell of the figure, as a key that survives a redraw — every `edges` call builds fresh rows,
- * so holding the rows themselves would go stale. What a key is comes first:
- *
- *   `cause\0from\0on`    block 1 — a transition's source and input, the pair `dispatch` takes
- *   `effect\0emit\0to`   block 3 — its output and target, an empty emit being no output at all
- *   `corner\0from\0to`   block 2 — the crossing, which is shown and pointed at, never held
- */
-export type Key = `${Kind}\0${string}\0${string}`;
-
-export const keyOf = (kind: Kind, a: string, b: string): Key =>
-  `${kind}\0${a}\0${b}`;
-
-export const kindOf = (key: Key): Kind => key.split("\0")[0] as Kind;
-
-/** The other half of a transition. A crossing is not a half and has no other. */
-const MIRROR: Partial<Record<Kind, Kind>> = {
-  [CAUSE]: EFFECT,
-  [EFFECT]: CAUSE,
-};
-
-const HALVES: Kind[] = [CAUSE, EFFECT];
+import {
+  CAUSE,
+  EFFECT,
+  HALVES,
+  MIRROR,
+  kindOf,
+} from "../../../entities/cell/index.js";
+import type { Key, Kind } from "../../../entities/cell/index.js";
 
 // ── the choice: which halves of a transition are held ────────────────────────
 
@@ -143,18 +117,6 @@ const choosing: Schema<Held, Pressing, Took> = {
   },
 };
 
-/**
- * One diagram per figure, not one per page. Two inspectors on a screen — the tool beside the
- * thing it is inspecting — are two of these, and a pointer over one of them says nothing about
- * the other. Module-level machines would have made that impossible to write and hard to see.
- */
-export type Diagram = {
-  readonly choice: StateMachine<Held, Pressing, Took>;
-  readonly pointer: StateMachine<Where, Moving, Record<string, never>>;
-  /** How the figure looks right now. */
-  readonly look: () => Look;
-};
-
 // ── the pointer: which cell it is over ───────────────────────────────────────
 
 export type Where = Merge<IState<"away"> | IState<"over", { at: Key }>>;
@@ -193,7 +155,20 @@ export type Look = {
   open: Kind[];
 };
 
-export function newDiagram(): Diagram {
+/**
+ * One focus per figure, not one per page — but one focus for a figure *and* the text beside it.
+ * Two inspectors on a screen are two of these, and a pointer over one of them says nothing about
+ * the other; the editor and the figure showing the same machine are one, and that is why hovering
+ * a cell lights a line.
+ */
+export type Focus = {
+  readonly choice: StateMachine<Held, Pressing, Took>;
+  readonly pointer: StateMachine<Where, Moving, Record<string, never>>;
+  /** How it looks right now. */
+  readonly look: () => Look;
+};
+
+export function newFocus(): Focus {
   const choice = new StateMachine<Held, Pressing, Took>(choosing, {
     type: "nothing",
     context: undefined,

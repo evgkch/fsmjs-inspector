@@ -16,7 +16,9 @@ import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off, StateMachine } from "@evgkch/fsmjs";
 import { history } from "@evgkch/fsmjs/debug";
 import type { History } from "@evgkch/fsmjs/debug";
-import type { Ctx, Ev, Graph, Step, Subject } from "../subject.js";
+import type { Ctx, Ev, Graph, Step } from "../model/graph.js";
+import { partsOf } from "../model/rule.js";
+import type { Subject } from "../model/subject.js";
 
 /** Any machine at all: the inspector reads labels and names, never types. */
 type Any = StateMachine<Ctx, Ev, Ev>;
@@ -66,12 +68,12 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
     },
     drive: {
       can: (rule) => {
-        const [from, on] = rule.split("\0");
+        const { from, on } = partsOf(rule);
         return fsm.state.type === from && fsm.can(on as never);
       },
       // The event, and nothing more. Which rule of the cell takes it is the machine's to decide,
       // and what it decided arrives back as a step.
-      take: (rule) => void fsm.dispatch(rule.split("\0")[1] as never),
+      take: (rule) => void fsm.dispatch(partsOf(rule).on as never),
     },
     ...(past && {
       rewind: (step: number) => {

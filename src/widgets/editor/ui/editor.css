@@ -1,0 +1,188 @@
+/*
+ * Three layers with one set of metrics between them.
+ *
+ * Underneath, a `pre` with the text in it, coloured. Over it, a textarea whose own glyphs are
+ * transparent, so what you see is the colour and what you move is the caret. Beside them, a
+ * gutter: one row per line, the same height as a line, carrying the number and the mark that says
+ * this rule can fire. Every metric below has to hold for all three at once — the same font, the
+ * same padding, the same line height, the same tab stop — or the caret drifts off the word it is
+ * on and the marks stop pointing at the lines they are about.
+ */
+.editor {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    height: 22rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.editor:focus-within {
+    border-color: var(--accent);
+}
+
+.editor .ink,
+.editor textarea,
+.editor .gutter {
+    margin: 0;
+    font: 400 12.5px/1.7 var(--mono-font);
+    tab-size: 2;
+}
+
+.editor .ink,
+.editor textarea {
+    padding: 0.9rem 1rem;
+    white-space: pre;
+}
+
+.editor .sheet {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Behind, and never in the way: only the textarea scrolls, and the other two are moved to match. */
+.editor .ink {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    color: var(--muted);
+    overflow: hidden;
+    will-change: transform;
+}
+
+/* As wide as the widest line, so a lit line is lit the whole way across it. */
+.editor .ink code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+}
+
+/*
+ * One line, one block. The height is set for the empty ones: a blank line is still a line the
+ * caret can stand on, and a block with nothing in it would be no line at all.
+ */
+.editor .line {
+    display: block;
+    min-height: 1.7em;
+}
+
+/* This line's rule is what the figure is about. The same tint the figure's own bands use, because
+   it is the same fact: one cell was pointed at, and everything it holds is lit. */
+.editor .line.lit {
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+.editor textarea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--ink);
+    resize: none;
+    overflow: auto;
+}
+
+.editor textarea::selection {
+    background: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+/* ── the gutter ─────────────────────────────────────────────────────────── */
+
+/*
+ * The line numbers the parser counts in, and — where a rule can fire from where the machine
+ * stands — the mark that says so. A debugger's gutter, and it does what one does: it says where
+ * you are in the text, and it is what you press to go one step.
+ */
+.editor .gutter {
+    padding: 0.9rem 0;
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+    user-select: none;
+    will-change: transform;
+}
+
+.editor .gutter .row {
+    display: grid;
+    grid-template-columns: minmax(1.4rem, auto) 0.8rem;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.7em;
+    padding: 0 0.4rem 0 0.55rem;
+}
+
+.editor .gutter .num {
+    color: var(--faint);
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* Nothing to fire: the column is still there, so a marked line does not shift the text. */
+.editor .gutter .run {
+    color: var(--accent);
+    visibility: hidden;
+}
+
+/* Pointing at a line points at its rule — the same event the figure's own cells send. */
+.editor .gutter .row.rule:hover {
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.editor .gutter .row.can {
+    cursor: pointer;
+}
+
+.editor .gutter .row.can .run {
+    visibility: visible;
+}
+
+.editor .gutter .row.can .num {
+    color: var(--muted);
+}
+
+/* Where the reader stopped. The message says the same thing in words, once, underneath. */
+.editor .gutter .row.blame {
+    background: color-mix(in oklab, var(--warn) 16%, transparent);
+}
+
+.editor .gutter .row.blame .num {
+    color: var(--warn);
+    font-weight: 700;
+}
+
+/* ── the words of the language, the same as under the figure and in the history ── */
+
+.ink .key {
+    color: var(--faint);
+}
+
+.ink .q {
+    color: var(--c, var(--ink));
+    font-weight: 600;
+}
+
+.ink .s {
+    color: var(--ink);
+}
+
+.ink .l {
+    color: var(--emit);
+}
+
+/* What can be said about a function: its name, or `?` for one that has none. */
+.ink .op {
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* Where the reader stops, and the colour with it. */
+.ink .c {
+    color: var(--faint);
+    font-style: italic;
+}

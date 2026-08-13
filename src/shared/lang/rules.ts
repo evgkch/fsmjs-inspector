@@ -21,11 +21,37 @@
  * comes back all the same, named by whatever arrives at it, which is how a state with nothing
  * leaving it is named anywhere else. Only a state that nothing reaches *and* nothing leaves would
  * be lost, and a schema is not saying anything by carrying one.
+ *
+ * What the reader keeps besides the graph is where every rule was written. A debugger's whole
+ * business is joining what a machine is doing to the text that says so, and that join is one
+ * number per rule — the line. Working it out afterwards would mean parsing the text twice and
+ * hoping the two readings agree.
  */
+import type { Edge } from "@evgkch/fsmjs";
 
-/** The words, in the order a rule runs. `toRules` writes them in exactly this order. */
-const WORDS = ["FROM", "ON", "WHEN", "TO", "WITH", "EMIT", "BY"] as const;
-type Word = (typeof WORDS)[number];
+/**
+ * The words, in the order a rule runs. `toRules` writes them in exactly this order.
+ *
+ * Exported because the highlighter needs the same list, and a language whose vocabulary is written
+ * down twice is two languages that happen to agree today.
+ */
+export const WORDS = [
+  "FROM",
+  "ON",
+  "WHEN",
+  "TO",
+  "WITH",
+  "EMIT",
+  "BY",
+] as const;
+export type Word = (typeof WORDS)[number];
+
+/**
+ * Where a line stops being a rule: a `#` or a `//`, at the start of the line or after a space, and
+ * everything after it. Exported for the same reason as `WORDS` — the highlighter has to agree with
+ * the reader about what is *not* read, or it will light up the words inside a comment.
+ */
+export const COMMENT = /(^|\s)(#|\/\/).*/;
 
 const SLOT: Record<Word, string> = {
   FROM: "from",
@@ -52,15 +78,37 @@ export const looksLikeRules = (text: string): boolean =>
   !text.trimStart().startsWith("{");
 
 /**
+ * Where a rule was read: the line it was written on, and which place in its cell it took.
+ *
+ * A parser that keeps only the graph throws away the one fact a debugger most needs — *where* a
+ * rule is written. The place in the cell is the other half of naming it: a cell is a list of
+ * alternatives, and the guards count them in the order the lines came, so the index here is the
+ * index the machine's own choice runs on.
+ */
+export type Written = {
+  /** Line, counted from 1, the way the parser's complaints count them. */
+  at: number;
+  slot: number;
+  edge: Edge;
+};
+
+/** A schema, and the text it was read from, joined line by line. */
+export type Reading = {
+  graph: Record<string, unknown>;
+  rules: Written[];
+};
+
+/**
  * One schema, from one sentence per rule. Throws `RuleSyntaxError` on the first line that is not
  * one — a tool that quietly drops a line you typed is worse than one that will not read it.
  */
-export function parseRules(text: string): Record<string, unknown> {
+export function parseRules(text: string): Reading {
   const graph: Record<string, Record<string, Record<string, string>[]>> = {};
+  const rules: Written[] = [];
 
   text.split("\n").forEach((raw, i) => {
     const at = i + 1;
-    const line = raw.replace(/(^|\s)(#|\/\/).*$/, "").trim();
+    const line = raw.replace(COMMENT, "").trim();
     if (!line) return;
 
     const words = line.split(/\s+/);
@@ -94,8 +142,10 @@ export function parseRules(text: string): Record<string, unknown> {
 
     const { from, on, ...rest } = rule;
     const cells = (graph[from!] ??= {});
-    (cells[on!] ??= []).push(rest);
+    const cell = (cells[on!] ??= []);
+    rules.push({ at, slot: cell.length, edge: { ...rule, from, on } as Edge });
+    cell.push(rest);
   });
 
-  return graph;
+  return { graph, rules };
 }

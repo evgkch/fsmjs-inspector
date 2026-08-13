@@ -10,7 +10,6 @@
             href="https://fonts.googleapis.com/css2?family=Onest:wght@200..900&display=swap"
             rel="stylesheet"
         />
-        <link rel="stylesheet" href="./src/style.css" />
     </head>
     <body>
         <main>
@@ -30,14 +29,9 @@
             </div>
 
             <div class="panes">
-                <section class="pane">
-                    <textarea
-                        id="schema"
-                        spellcheck="false"
-                        autocapitalize="off"
-                        autocomplete="off"
-                        aria-label="Schema, as rules"
-                    ></textarea>
+                <!-- The editor is put in here: it is three layers that have to agree on every
+                     metric, so it is built where those metrics are, and not written out twice. -->
+                <section class="pane" id="text">
                     <p class="parse" id="parse" hidden></p>
                     <ul
                         class="shape"
@@ -67,6 +61,6 @@
             </div>
         </main>
 
-        <script type="module" src="./src/app.ts"></script>
+        <script type="module" src="./src/app/main.ts"></script>
     </body>
 </html>

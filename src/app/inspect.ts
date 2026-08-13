@@ -12,11 +12,11 @@
  * is the thing you opened this to see.
  */
 import type { StateMachine } from "@evgkch/fsmjs";
-import { mount } from "./inspector.js";
-import type { Options as LookOptions } from "./inspector.js";
-import { fromMachine } from "./subjects/machine.js";
-import type { Options as WatchOptions } from "./subjects/machine.js";
-import type { Ctx, Ev } from "./subject.js";
+import { fromMachine } from "../entities/machine/index.js";
+import type { Ctx, Ev, WatchOptions } from "../entities/machine/index.js";
+import { mount } from "../pages/inspector/mount.js";
+import type { Options as LookOptions } from "../pages/inspector/mount.js";
+import "./ui/overlay.css";
 
 export type Options = LookOptions &
   WatchOptions & {

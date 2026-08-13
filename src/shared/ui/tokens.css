@@ -1,0 +1,94 @@
+/*
+ * The palette, and the two or three facts every surface below shares. Nothing here draws
+ * anything: a token is only a name for a colour, and each slice paints with its own.
+ */
+
+:root {
+    --main-font: "Onest", "Inter", sans-serif;
+    --mono-font: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Onest has no italic — allow a synthetic slant, never a synthetic weight. */
+    font-synthesis: style;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    --bg: #fbfbfd;
+    --surface: #ffffff;
+    --ink: #18181b;
+    --muted: #71717a;
+    --faint: #a1a1aa;
+    --line: #e4e4e7;
+    --line-firm: #d4d4d8;
+    --accent: #4f46e5;
+    --accent-in: #ffffff;
+    --warn: #b45309;
+    --shadow:
+        0 1px 2px rgb(24 24 27 / 0.05), 0 8px 24px -12px rgb(24 24 27 / 0.18);
+    --radius: 10px;
+
+    /*
+     * One colour per state, cycling after eight. The matrix cell, the rail, the marker, the word
+     * in the editor and the word in the history all read the same variable, so a colour means one
+     * state everywhere in the tool and nothing has to be looked up twice.
+     */
+    --lane-0: oklch(56% 0.17 264);
+    --lane-1: oklch(58% 0.14 158);
+    --lane-2: oklch(60% 0.18 28);
+    --lane-3: oklch(56% 0.17 305);
+    --lane-4: oklch(58% 0.13 226);
+    --lane-5: oklch(62% 0.14 78);
+    --lane-6: oklch(58% 0.17 348);
+    --lane-7: oklch(56% 0.11 196);
+
+    /* Λ is the other axis and reads as one colour, whichever state produced it. */
+    --emit: oklch(62% 0.15 62);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0b0b0f;
+        --surface: #141419;
+        --ink: #f4f4f5;
+        --muted: #a1a1aa;
+        --faint: #71717a;
+        --line: #26262c;
+        --line-firm: #35353d;
+        --accent: #818cf8;
+        --accent-in: #14141a;
+        --warn: #fbbf24;
+        --shadow:
+            0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -14px rgb(0 0 0 / 0.7);
+
+        --lane-0: oklch(72% 0.14 264);
+        --lane-1: oklch(74% 0.13 158);
+        --lane-2: oklch(72% 0.15 28);
+        --lane-3: oklch(72% 0.14 305);
+        --lane-4: oklch(74% 0.11 226);
+        --lane-5: oklch(78% 0.13 78);
+        --lane-6: oklch(72% 0.14 348);
+        --lane-7: oklch(74% 0.1 196);
+
+        --emit: oklch(78% 0.13 62);
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/*
+ * Chrome 139+: every corner on the page, the tabs and the state chip included. The property
+ * does nothing where the radius is 0, so one rule covers everything that has a frame.
+ */
+@supports (corner-shape: superellipse(1.25)) {
+    * {
+        corner-shape: superellipse(1.25);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
+}
