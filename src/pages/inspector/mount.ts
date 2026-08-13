@@ -84,8 +84,22 @@ export function mount(
   root.append(work);
   host.append(root);
 
+  /**
+   * Where the run starts — fixed for as long as this mount lives, and not wherever the machine
+   * happens to be standing.
+   *
+   * Everything about the *shape* of the figure is read from it: `lanes` orders the axis breadth
+   * first from the start, and that order is the order of the columns, of the rows, and of the
+   * colours. Recomputing it from `subject.at` on every repaint, which is what this did, re-sorted
+   * the whole figure under the machine after every step — so the dot marking where it stands
+   * stayed in the same row wearing the same colour while the row underneath became a different
+   * state, and the text beside it, whose colours come from the start, disagreed with all of it.
+   *
+   * What moves when the machine moves is the mark. Nothing else has any business moving.
+   */
+  const start = subject.at || firstOf(subject.graph);
+
   function paint(): void {
-    const start = subject.at || firstOf(subject.graph);
     history.palette(subject.graph, start);
     history.draw(exploring);
     figure.draw(start);
