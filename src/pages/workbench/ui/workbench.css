@@ -54,10 +54,16 @@ select {
     padding-right: 0.3rem;
 }
 
-/* One flag, because there is one difference and it is a restriction: off, the machine stands
-   somewhere and only what it can do is in reach; on, no state is current and nothing fires. */
+/*
+ * One flag, because there is one difference and it is a restriction: off, the machine stands
+ * somewhere and only what it can do is in reach; on, no state is current and nothing fires.
+ *
+ * A switch and not a tick. A tick is for a thing you are choosing to include; this is a mode, and
+ * the tool is in one of two of them at every moment — which is what a switch is for, and it shows
+ * which one you are in without being read.
+ */
 .bar label.flag {
-    gap: 0.45rem;
+    gap: 0.5rem;
     color: var(--muted);
     cursor: pointer;
 }
@@ -67,11 +73,52 @@ select {
     color: var(--accent);
 }
 
+/* The input is what the keyboard and the screen reader work with; the track is what is seen. */
 .flag input {
-    accent-color: var(--accent);
-    width: 0.85rem;
-    height: 0.85rem;
+    position: absolute;
+    width: 1px;
+    height: 1px;
     margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.flag .track {
+    position: relative;
+    width: 1.85rem;
+    height: 1.05rem;
+    border-radius: 999px;
+    /* The two round things on the page. Everything else is a box with soft corners. */
+    corner-shape: round;
+    background: var(--line-firm);
+    transition: background-color 0.12s;
+}
+
+.flag .track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(1.05rem - 4px);
+    height: calc(1.05rem - 4px);
+    border-radius: 50%;
+    corner-shape: round;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+    transition: translate 0.12s;
+}
+
+.flag input:checked + .track {
+    background: var(--accent);
+}
+
+.flag input:checked + .track::after {
+    translate: calc(1.85rem - 1.05rem) 0;
+}
+
+.flag input:focus-visible + .track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }
 
 /* ── panes ───────────────────────────────────────────────────────────────── */

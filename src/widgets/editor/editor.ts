@@ -86,6 +86,18 @@ export function newEditor(w: Wiring): Editor {
   let colour: Lane = () => undefined;
   let blamed: number | null = null;
 
+  /**
+   * The text those lines were read from.
+   *
+   * Everything the gutter says is about the machine, and the machine was built from the text as
+   * it was last read — which is not the text on screen while you are typing into it. Insert one
+   * line at the top and every rule is one line further down than the map says: the marks point at
+   * the wrong rules, and pointing at a cell lights the wrong lines. So they say nothing at all
+   * until the reader has caught up, which it does a moment after you stop.
+   */
+  let read = "";
+  const fresh = () => area.value === read;
+
   /** One row of the gutter and one line of the ink, by line number. */
   const rows = new Map<number, HTMLElement>();
   const lines = new Map<number, HTMLElement>();
@@ -117,7 +129,7 @@ export function newEditor(w: Wiring): Editor {
       ...source.map((_, i) => {
         const at = i + 1;
         const row = make("div", "row");
-        row.append(make("span", "num", String(at)), make("span", "run", "▸"));
+        row.append(make("span", "num", String(at)), make("span", "run"));
         rows.set(at, row);
         wire(at, row);
         return row;
@@ -136,29 +148,40 @@ export function newEditor(w: Wiring): Editor {
    */
   function wire(at: number, row: HTMLElement): void {
     row.addEventListener("mouseenter", () => {
-      const rule = written.get(at);
+      const rule = fresh() ? written.get(at) : undefined;
       // Both halves: the line says where the rule starts and where it ends, so the figure says
       // both too — two bands out of block 1 and two out of block 3, crossing at the corner.
       if (rule)
         w.focus.pointer.dispatch("enter", { keys: halvesOf(rule.edge) });
     });
     row.addEventListener("mouseleave", () => {
-      if (written.has(at)) w.focus.pointer.dispatch("leave");
+      if (fresh() && written.has(at)) w.focus.pointer.dispatch("leave");
     });
     row.addEventListener("click", () => {
-      const rule = written.get(at);
+      const rule = fresh() ? written.get(at) : undefined;
       if (rule && w.fires(rule)) w.fire(rule);
     });
   }
 
-  /** Which rules can fire from where the machine stands — the only thing here the run changes. */
+  /**
+   * Where the machine stands, said in the text: a dot on every line whose rule goes out of the
+   * state it is standing in, in that state's own colour.
+   *
+   * It is the figure's mark and not a second one. The figure puts a dot on the row of the state
+   * the machine is in; these are the same dot, on the same fact, in the same lane colour — the
+   * lines you are looking at are the ones that dot is about. That they are also the lines you can
+   * click to take a step is not a second meaning: it is what standing somewhere affords.
+   */
   function mark(): void {
+    const ok = fresh();
     for (const [at, row] of rows) {
-      const rule = written.get(at);
+      const rule = ok ? written.get(at) : undefined;
       const can = rule !== undefined && w.fires(rule);
       row.classList.toggle("can", can);
       row.classList.toggle("rule", rule !== undefined);
       row.classList.toggle("blame", at === blamed);
+      if (can) row.setAttribute("style", colour(rule.edge.from) ?? "");
+      else row.removeAttribute("style");
       row.title = can ? "take this rule" : "";
     }
   }
@@ -166,8 +189,9 @@ export function newEditor(w: Wiring): Editor {
   /** What the figure is about, said of the text: the same question, asked of the same cells. */
   function dress(): void {
     const { shown } = w.focus.look();
+    const ok = fresh();
     for (const [at, line] of lines) {
-      const rule = written.get(at);
+      const rule = ok ? written.get(at) : undefined;
       line.classList.toggle(
         "lit",
         rule !== undefined && shows(shown, rule.edge),
@@ -204,6 +228,7 @@ export function newEditor(w: Wiring): Editor {
     show: (rules, lane) => {
       written = new Map(rules.map((r) => [r.at, r]));
       colour = lane;
+      read = area.value;
       paint();
     },
     mark,

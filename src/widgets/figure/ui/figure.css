@@ -143,10 +143,18 @@ text.name.hot {
     cursor: pointer;
 }
 
-/* A name is lit or it is not. Which half was held is what the bands say, and a name is one
-   coordinate — it is already saying less than the cell it belongs to. */
+/*
+ * A name is lit or it is not. Which half was held is what the bands say, and a name is one
+ * coordinate — it is already saying less than the cell it belongs to.
+ *
+ * Lit is not a colour of its own. A state's colour is the state, everywhere in the tool, and
+ * painting it in the ink of the page while the pointer is on it means the one moment you are
+ * asking about a state is the one moment it stops looking like itself — white on a dark ground,
+ * black on a light one. So the lane stays and the weight carries the emphasis. Only a name with
+ * no lane — an event, which is not a state — falls back to the ink.
+ */
 text.name.lit {
-    fill: var(--ink);
+    fill: var(--c, var(--ink));
     font-weight: 700;
 }
 

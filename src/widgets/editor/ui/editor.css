@@ -133,9 +133,9 @@
 
 .editor .gutter .row {
     display: grid;
-    grid-template-columns: minmax(1.4rem, auto) 0.8rem;
+    grid-template-columns: minmax(1.4rem, auto) 0.5rem;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.4rem;
     height: 1.7em;
     padding: 0 0.4rem 0 0.55rem;
 }
@@ -147,9 +147,20 @@
     text-align: right;
 }
 
-/* Nothing to fire: the column is still there, so a marked line does not shift the text. */
+/*
+ * The mark for "the machine is standing here", and it is the figure's mark: the same dot, the
+ * same lane colour, on the same fact. The column is always there, so a line that gains one does
+ * not shift the text sideways.
+ *
+ * A circle and not a squircle — the one shape on the page that is not a box. `corner-shape` is
+ * set on everything with a radius, and 50% of it is a superellipse unless this says otherwise.
+ */
 .editor .gutter .run {
-    color: var(--accent);
+    width: 0.44rem;
+    height: 0.44rem;
+    border-radius: 50%;
+    corner-shape: round;
+    background: var(--c, var(--accent));
     visibility: hidden;
 }
 

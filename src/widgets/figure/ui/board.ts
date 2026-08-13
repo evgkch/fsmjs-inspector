@@ -312,6 +312,9 @@ export function board(d: Draw, w: Wiring): Dressed {
             y: y + 4,
             class: "name out",
             "text-anchor": "middle",
+            // Λ is an axis of its own and reads as one colour. Quiet until it is pointed at,
+            // and then that colour — never the ink, which is the page and not a meaning.
+            style: "--c: var(--emit)",
           },
           λ,
         ),

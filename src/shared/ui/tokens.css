@@ -21,7 +21,6 @@
     --line: #e4e4e7;
     --line-firm: #d4d4d8;
     --accent: #4f46e5;
-    --accent-in: #ffffff;
     --warn: #b45309;
     --shadow:
         0 1px 2px rgb(24 24 27 / 0.05), 0 8px 24px -12px rgb(24 24 27 / 0.18);
@@ -63,7 +62,6 @@
         --line: #26262c;
         --line-firm: #35353d;
         --accent: #818cf8;
-        --accent-in: #14141a;
         --warn: #fbbf24;
         --shadow:
             0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -14px rgb(0 0 0 / 0.7);
