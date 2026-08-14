@@ -21,15 +21,15 @@ import {
 import type { Graph, Text } from "../../entities/machine/index.js";
 import { exploring, newMode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
-import { page, read } from "../../features/read-schema/index.js";
+import { page, read, shown } from "../../features/read-schema/index.js";
 import { canFire, take } from "../../features/take-rule/index.js";
 import { el } from "../../shared/lib/dom.js";
+import { looksLikeRules } from "../../shared/lang/rules.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { newEditor } from "../../widgets/editor/editor.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { SAMPLES } from "./model/samples.js";
-import type { Sample } from "./model/samples.js";
 import "./ui/workbench.css";
 
 export function workbench(): void {
@@ -38,6 +38,10 @@ export function workbench(): void {
   const startSel = el<HTMLSelectElement>("start");
   const flag = el<HTMLInputElement>("explore");
   const back = el<HTMLButtonElement>("reset");
+  const fresh = el<HTMLButtonElement>("new");
+  const opener = el<HTMLButtonElement>("open");
+  const dumper = el<HTMLButtonElement>("dump");
+  const chooser = el<HTMLInputElement>("file");
   const host = el("inspector");
 
   const focus = newFocus();
@@ -100,20 +104,101 @@ export function workbench(): void {
     startSel.value = start;
   }
 
-  function load(s: Sample): void {
-    // The files are dumps; what is shown is the language. `toRules` is the writer and `parseRules`
-    // the reader, and the editor is the one place the two meet.
-    editor.set(toRules(JSON.parse(s.json) as object));
+  /**
+   * What is on screen, when it is not one of the samples. The list has to be able to say so: a
+   * schema you opened or wrote yourself is still the subject, and a header that goes on naming the
+   * sample you started from is a header telling you about a schema that is no longer there.
+   */
+  let own = "";
+
+  function list(): void {
+    sampleSel.replaceChildren(
+      ...(own ? [new Option(own, "own", true, true)] : []),
+      ...SAMPLES.map((s, i) => new Option(s.name, String(i))),
+    );
+  }
+
+  /** A schema arriving from anywhere: written here, opened from a file, or one of the samples. */
+  function put(text: string, name: string): void {
+    own = name;
+    list();
+    editor.set(text);
     // No start to keep: a schema read fresh runs from the first state it names.
     read(editor.text(), "");
   }
 
-  sampleSel.replaceChildren(
-    ...SAMPLES.map((s, i) => new Option(s.name, String(i))),
+  function load(i: number): void {
+    // The files are dumps; what is shown is the language. `toRules` is the writer and `parseRules`
+    // the reader, and the editor is the one place the two meet.
+    put(toRules(JSON.parse(SAMPLES[i]!.json) as object), "");
+    sampleSel.value = String(i);
+  }
+
+  list();
+  sampleSel.addEventListener("change", () => {
+    // Choosing the one already on screen is not a choice.
+    if (sampleSel.value !== "own") load(Number(sampleSel.value));
+  });
+
+  /**
+   * The smallest machine there is, and the sentence it is written in.
+   *
+   * Not an empty box: a schema with no states draws nothing, says nothing about the language, and
+   * leaves the figure with an axis of none — so what `new` opens is one rule, which is a machine.
+   */
+  fresh.addEventListener("click", () =>
+    put(
+      "# one sentence per rule: FROM ON WHEN TO WITH EMIT BY\nFROM start ON go TO done\n",
+      "new schema",
+    ),
   );
-  sampleSel.addEventListener("change", () =>
-    load(SAMPLES[Number(sampleSel.value)]!),
-  );
+
+  opener.addEventListener("click", () => chooser.click());
+  chooser.addEventListener("change", () => {
+    const file = chooser.files?.[0];
+    // Cleared straight away, or opening the same file twice running is one event and then silence.
+    chooser.value = "";
+    if (!file) return;
+    void file.text().then((text) => {
+      const name = file.name.replace(/\.[^.]+$/, "");
+      // A dump or the language — the same door either way. What is *shown* is always the language:
+      // a dump is where a schema comes from, not how it is read. A file that is neither goes in as
+      // it came, and the reader says which line it stopped at, which is a better complaint than
+      // any this could make.
+      try {
+        put(
+          looksLikeRules(text) ? text : toRules(JSON.parse(text) as object),
+          name,
+        );
+      } catch {
+        put(text, name);
+      }
+    });
+  });
+
+  /**
+   * The schema on screen, as `JSON.stringify(machine)` writes it — which is what a dump is, and
+   * what the library reads back. Whatever is drawn is what is written out, so a schema typed here
+   * by hand leaves as a file the same way the samples arrived as one.
+   */
+  dumper.addEventListener("click", () => {
+    const on = shown(page.state);
+    if (!on) return;
+    const slug =
+      (own || SAMPLES[Number(sampleSel.value)]?.name || "schema")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "schema";
+    const file = new Blob([`${JSON.stringify(on.graph, null, 2)}\n`], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slug}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
 
   /**
    * Begin again, from whatever the start says.
@@ -145,5 +230,5 @@ export function workbench(): void {
     editor.mark();
   });
 
-  load(SAMPLES[0]!);
+  load(0);
 }

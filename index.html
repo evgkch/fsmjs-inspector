@@ -18,11 +18,32 @@
                     >Schema
                     <select id="sample"></select>
                 </label>
-                <label
-                    >Start
-                    <select id="start"></select>
-                </label>
+                <button id="new" title="a schema of your own, in the language">
+                    new
+                </button>
+                <button
+                    id="open"
+                    title="read a schema from a file — a dump, or the language"
+                >
+                    open
+                </button>
+                <button
+                    id="dump"
+                    title="write this schema out as JSON, the way a machine dumps itself"
+                >
+                    dump
+                </button>
+                <input
+                    type="file"
+                    id="file"
+                    accept=".json,.txt,application/json,text/plain"
+                    hidden
+                />
                 <div class="run">
+                    <label
+                        >Start
+                        <select id="start"></select>
+                    </label>
                     <button
                         id="reset"
                         class="reset"

@@ -64,8 +64,11 @@ main {
 }
 
 /*
- * Which schema, and where it starts, are about what is being looked at; the reset and the flag are
- * about how it is being run. So the bar has two ends, and the run is at the far one.
+ * The header has two ends and they are two subjects. On the left the document — which schema, and
+ * the three things you can do to one: start another, open one, write this one out. On the right the
+ * run — where it begins, forgetting it, and the mode it is read in. `START` moved across to join
+ * them: choosing another state to run from and pressing reset are the same act with one word
+ * altered, and a control belongs beside the thing it is one of.
  *
  * They are pinned as a pair and not one at a time: the flag is there in both modes and the reset
  * is not, and a control that moves sideways when its neighbour leaves is a control you have to
@@ -91,7 +94,7 @@ main {
  * like one — a switch, which shows which of two modes you are in without being read.
  */
 select,
-.bar .reset {
+.bar button {
     padding: 0;
     border: 0;
     background: none;
@@ -116,21 +119,21 @@ select {
 }
 
 select:focus-visible,
-.bar .reset:focus-visible {
+.bar button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 4px;
     border-radius: 2px;
 }
 
 /*
- * Forgetting the run is not a choice about what you are reading, so it is not set like one: it is
- * quiet until you go to it. No glyph — nothing else on this page is a picture of itself.
+ * What you *do* is not a choice about what you are reading, so it is not set like one: quiet until
+ * you go to it. No glyphs — nothing else on this page is a picture of itself.
  */
-.bar .reset {
+.bar button {
     color: var(--muted);
 }
 
-.bar .reset:hover {
+.bar button:hover {
     color: var(--accent);
 }
 
