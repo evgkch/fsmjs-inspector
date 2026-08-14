@@ -107,8 +107,16 @@
  * a blank line is still a line the caret can stand on, and a block with nothing in it would be no
  * line at all.
  */
+/*
+ * A line runs the whole width of the box it is in, and the box has padding — so the line reaches
+ * out through it and puts the padding back inside itself. Without that, a band drawn on a line
+ * starts three quarters of a rem after the gutter's edge and ends the same distance before the
+ * text's, and a highlight with a white margin down both sides is two things on one row.
+ */
 .editor .line {
     display: block;
+    margin: 0 -0.75rem;
+    padding: 0 0.75rem;
     min-height: var(--cell, 24px);
     scroll-snap-align: start;
 }
@@ -305,11 +313,12 @@
     visibility: hidden;
 }
 
-/* Pointing at a line points at its rule — the same event the figure's own cells send. */
-.editor .gutter .row.rule:hover {
-    background: color-mix(in oklab, var(--accent) var(--wash), transparent);
-}
-
+/*
+ * There is no hover rule here, and that is the point. Pointing at a row dispatches the same `enter`
+ * the figure's cells do, and what comes back is `lit` — on the row *and* on the line, one band. A
+ * second highlight for the same act would cover the gutter and stop, in a different tint, which is
+ * what a break in a stripe is made of.
+ */
 .editor .gutter .row.can {
     cursor: pointer;
 }

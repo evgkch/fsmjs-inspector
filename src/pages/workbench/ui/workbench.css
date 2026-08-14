@@ -1,27 +1,51 @@
 /* The standalone page: a bar of controls, and two panes under it. */
 
+/*
+ * One scale of space, and every distance on the page is a step of it.
+ *
+ *   0.75rem  inside a pair — the figure and the run, which are one drawing with a gap in it
+ *   1rem     between the parts of the work
+ *   1.5rem   between the header and the work, because those are two things and not four
+ *   2rem     the margin of the page, which has to be plainly larger than any gap inside it or
+ *            the whole block reads as having burst its banks
+ *
+ * The steps are 0.75 : 1 : 1.5 : 2. Before, the outer margin was 1.25 and the inner gaps were 1,
+ * which says the page is nearly as far from the window as its panels are from each other — and a
+ * reader cannot see a grouping that is four pixels deep.
+ */
 body {
     margin: 0;
-    padding: 1.25rem 1.25rem 2rem;
+    padding: 2rem 2rem 2.5rem;
     background: var(--bg);
     color: var(--ink);
     font: 400 15px/1.6 var(--main-font);
 }
 
+/*
+ * As wide as the work wants and no wider. At 104rem the source became a 1600px band with a
+ * 60-character line adrift in it; the extra width went to nothing on every panel but the run.
+ */
 main {
-    max-width: 104rem;
+    max-width: 96rem;
     margin: 0 auto;
     display: grid;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 /* ── controls ────────────────────────────────────────────────────────────── */
 
+/*
+ * The header is inset by the same amount as every panel's own name, so the first word of the page
+ * and the first word of the panel under it stand on one line down the left edge — and the last
+ * control ends where the last panel's inside edge does. Text aligns with text; the boxes the
+ * controls are drawn as are not what a reader lines them up by.
+ */
 .bar {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem 1.25rem;
     align-items: center;
+    padding: 0 0.9rem;
 }
 
 /* The same small type every other name on the page is set in. Two sizes of quiet capitals is
@@ -196,7 +220,9 @@ select {
          * figure and the run are the subject, the text is what says so.
          */
         grid-template-rows: minmax(14rem, 0.618fr) minmax(16rem, 1fr);
-        height: clamp(38rem, calc(100vh - 7.5rem), 64rem);
+        /* The page never scrolls: the work is what is left of the window once the margins, the
+           header and the gap under it are taken — 2 + 2 + 1.5 + 2.5, which is 8. */
+        height: clamp(38rem, calc(100vh - 8rem), 64rem);
     }
 }
 
