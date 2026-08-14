@@ -113,25 +113,26 @@ export function workbench(): void {
     load(SAMPLES[Number(sampleSel.value)]!),
   );
 
-  startSel.addEventListener("change", () =>
-    page.dispatch("begin", { start: startSel.value }),
-  );
+  /**
+   * Begin again, from whatever the start says.
+   *
+   * The two controls that do this are one act with one parameter: choosing another state to run
+   * from, and running from the same one again. They were the same line written twice, which is the
+   * usual sign that they are the same thing standing in two places.
+   */
+  const begin = () => page.dispatch("begin", { start: startSel.value });
+  startSel.addEventListener("change", begin);
 
   /**
    * Forget the run: the same machine, built again from the same schema and the same start.
    *
    * Walking back to the first slice is not this — the steps stay on the board there, and a redo
    * takes them again, which is the whole point of a history you can move about in. This is the
-   * other thing, and it belongs to the page rather than to the figure: what it does is throw away
-   * the machine and make another, which is what the page does whenever the schema changes.
+   * other thing: it throws the machine away and makes another, which is what the page does
+   * whenever the schema changes, and what choosing another start does with one word altered.
    */
-  back.addEventListener("click", () =>
-    page.dispatch("begin", { start: startSel.value }),
-  );
+  back.addEventListener("click", begin);
 
-  // The switch is an input and not the fact. What it does is say what was asked for; what the
-  // page does about it hangs off the mode, so a second way of asking — a keystroke, another
-  // inspector on the same page — would not have to remember this list.
   flag.addEventListener("change", () =>
     mode.dispatch("read", { whole: flag.checked }),
   );

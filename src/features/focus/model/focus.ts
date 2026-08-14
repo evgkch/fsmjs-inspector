@@ -192,23 +192,28 @@ function look(
       : held.type === "whole"
         ? [held.context.cause, held.context.effect]
         : [];
-  // Whatever the pointer is over is shown. That is the whole rule — over a half or over a
-  // crossing, with a half held or with nothing held. The one exception is a choice with nothing
-  // left to decide: both halves are named, and a third constraint could only empty the set.
+  /**
+   * Whatever the pointer is over is shown — over a half or over a crossing, with a half held or
+   * with nothing held. There is exactly one exception, and it is the one rule in this whole tool
+   * that belongs to neither of two machines: a choice with nothing left to decide. Both halves are
+   * named, so a third cell could only empty the set, and the pointer stops adding anything.
+   *
+   * That rule is why the join exists at all, and it is written once, here, rather than folded into
+   * a merged machine — which would have to carry the pointer through every state of the choice and
+   * write every press rule twice over. Two things that go on at the same time are two machines;
+   * what is true of the pair is a reading of both, and a reading is a function.
+   */
   const over =
     held.type !== "whole" && pointer.state.type === "over"
-      ? pointer.state.context.at
-      : [];
+      ? pointer.state.context
+      : null;
   return {
     fixed,
-    offer:
-      held.type !== "whole" &&
-      pointer.state.type === "over" &&
-      pointer.state.context.offer,
+    offer: over?.offer ?? false,
     // A set, because the pointer is usually still over the cell that was just pressed: the same
     // key twice would draw the same band twice, and two translucent bands on one row are darker
     // than one for no reason a reader could ever work out.
-    shown: [...new Set([...fixed, ...over])],
+    shown: [...new Set([...fixed, ...(over?.at ?? [])])],
     open:
       held.type === "half"
         ? [MIRROR[kindOf(held.context.end)]!]

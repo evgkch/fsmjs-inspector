@@ -37,6 +37,7 @@ import type { Focus } from "../../features/focus/index.js";
 import { newWriting } from "../../features/write-rules/index.js";
 import type { Facts, Typing } from "../../features/write-rules/index.js";
 import { make, word } from "../../shared/lib/dom.js";
+import { rhythm } from "../../shared/lib/grid.js";
 import type { Vocab } from "../../shared/lang/complete.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { tokenize } from "../../shared/lang/tokens.js";
@@ -113,17 +114,33 @@ export function newEditor(w: Wiring): Editor {
   const tag = make("div", "tag");
   tag.append(make("span", "what", "code"), chip);
 
-  const note = make("p", "note");
-  note.hidden = true;
-  /** The size of the thing, and anything wrong with it that no single line is about. */
-  const sum = make("p", "sum");
+  /**
+   * One strip at the foot, and one thing said in it.
+   *
+   * It was two — the reader's complaint, and the size of the schema with whatever is wrong with
+   * it — and they cannot both be true at once. While the text does not parse, the counts are about
+   * a schema that is no longer on the screen: the last one that read. Stacking a stale caption
+   * under a live complaint is saying two things where one of them is quietly false, and it draws
+   * two rules across the foot of a box that has one foot.
+   *
+   * So: the complaint while there is one, the counts when there is not, in the same place, in the
+   * same type, never both. It is never hidden either, which is the whole reason it lives inside
+   * the frame: a strip that comes and goes moves the page on every keystroke that does not parse,
+   * and that is most of the keystrokes in a rule.
+   */
+  const say = make("p", "say");
   const node = make("div", "editor");
-  node.append(tag, sheet, note, sum);
+  node.append(tag, sheet, say);
+  // A line here is a rule, and a rule is a row of the figure: one height, from one place.
+  rhythm(node);
 
   /** Where every rule is written, by line. A line holds at most one rule; most hold none. */
   let written = new Map<number, Written>();
   let colour: Lane = () => undefined;
   let blamed: number | null = null;
+  /** What the strip at the foot has to choose between: a complaint, and the size of the thing. */
+  let wrong: string | null = null;
+  let counts = "";
   /** What `analyze` and `validate` make of the schema this text was read as. */
   let bad: Flaws | null = null;
 
@@ -206,6 +223,8 @@ export function newEditor(w: Wiring): Editor {
     mark();
     dress();
     ghostly();
+    say.textContent = wrong ?? counts;
+    say.classList.toggle("wrong", wrong !== null);
   }
 
   /**
@@ -459,12 +478,13 @@ export function newEditor(w: Wiring): Editor {
       // numbers and stops, which is how you can tell at a glance that there is nothing to report.
       const many = (n: number, one: string) =>
         `${n} ${one}${n === 1 ? "" : "s"}`;
-      sum.textContent = [
+      counts = [
         many(facts.all.length, "state"),
         many(facts.rules, "rule"),
         ...(facts.off.size ? [`${facts.off.size} nothing reaches`] : []),
         ...(facts.ends.size ? [`${facts.ends.size} nothing leaves`] : []),
       ].join(" · ");
+      wrong = null;
       // What the text has taught: every name it uses, by kind. Nothing is invented here — a
       // completion that offers a state the schema has never mentioned is a suggestion to write a
       // state nothing reaches.
@@ -489,8 +509,9 @@ export function newEditor(w: Wiring): Editor {
     mark,
     blame: (message, line) => {
       blamed = line;
-      note.textContent = message ?? "";
-      note.hidden = message === null;
+      wrong = message;
+      say.textContent = wrong ?? counts;
+      say.classList.toggle("wrong", wrong !== null);
       mark();
     },
     stop: () => {

@@ -11,7 +11,7 @@
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     max-height: 100%;
-    padding: 1rem 0 0;
+    padding: 0.85rem 0 0;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
@@ -47,7 +47,7 @@ svg.names {
  */
 .history .tag {
     grid-column: 1 / -1;
-    padding: 0 0 0.45rem 0.9rem;
+    padding: 0 0 0.4rem 0.9rem;
 }
 
 .history text.name {

@@ -18,7 +18,7 @@
 .editor {
     position: relative;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     height: 100%;
     /* A floor, not a height: the row it sits in is a share of the page, and it scrolls inside. */
     min-height: 14rem;
@@ -33,11 +33,19 @@
     border-color: var(--accent);
 }
 
+/*
+ * One module down the page.
+ *
+ * A line of the source is a rule; a row of the figure is a rule; a slice of the run is a step
+ * between two. They are the same thing seen three ways, so they are the same height — `--cell`,
+ * handed to the stylesheet by the one file that owns the number. Nothing here is a ratio chosen to
+ * look right beside a ratio chosen somewhere else.
+ */
 .editor .ink,
 .editor textarea,
 .editor .gutter {
     margin: 0;
-    font: 400 12.5px/1.7 var(--mono-font);
+    font: 400 13px/var(--cell, 24px) var(--mono-font);
     tab-size: 2;
 }
 
@@ -96,7 +104,7 @@
  */
 .editor .line {
     display: block;
-    min-height: 1.7em;
+    min-height: var(--cell, 24px);
     scroll-snap-align: start;
 }
 
@@ -123,7 +131,7 @@
 .editor textarea {
     display: block;
     width: max(100%, calc(var(--cols, 0) * 1ch + 1.5rem));
-    min-height: calc(var(--lines, 1) * 1.7em + 1.8rem);
+    min-height: calc(var(--lines, 1) * var(--cell, 24px) + 1.8rem);
     border: 0;
     /* The frame around the editor already says where the focus is. A second frame inside it says
        the same thing again, in the browser's own colour, over the text. */
@@ -139,11 +147,13 @@
     background: color-mix(in oklab, var(--accent) 28%, transparent);
 }
 
+/* Where every panel's name sits: 0.85rem down, 0.9rem in. Three panels, one position — and the
+   figure's and the run's, which stand side by side, then share a baseline as well. */
 .editor .tag {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.7rem 0.9rem 0.35rem;
+    padding: 0.85rem 0.9rem 0.4rem;
 }
 
 /*
@@ -182,42 +192,29 @@
 }
 
 /*
- * What the reader would not read, at the foot of the thing it would not read.
+ * The one strip at the foot, and the one thing it says.
  *
- * It lives inside the frame because it belongs to the text and because of where it is *not*: a
- * message between the editor and whatever is under it moves the page on every keystroke that does
- * not parse, which is most of the keystrokes in a rule. The gutter marks the line; this says what
- * about it.
+ * How big the schema is and what is wrong with it, or — while the text does not read — what the
+ * reader stopped at. Never both: the counts are about the last text that parsed, and a stale
+ * caption under a live complaint is a quiet lie in a second footer.
+ *
+ * It is inside the frame, and always there. A strip that comes and goes moves everything under it
+ * on every keystroke that does not parse, which is most of the keystrokes in a rule. Set in the
+ * mono of the language, because every word in it is about the language: states, rules, and the
+ * line the reader would not read.
  */
-.editor .note {
+.editor .say {
     margin: 0;
     padding: 0.45rem 0.75rem 0.5rem;
     border-top: 1px solid var(--line);
+    color: var(--faint);
+    font: 400 0.72rem/1.4 var(--mono-font);
+}
+
+/* The gutter marks the line; this says what about it. */
+.editor .say.wrong {
     background: color-mix(in oklab, var(--warn) 8%, transparent);
     color: var(--warn);
-    font: 400 0.78rem/1.4 var(--mono-font);
-}
-
-.editor .note[hidden] {
-    display: none;
-}
-
-/*
- * How big the thing is, and then only what is wrong with it — the whole of what a list of four rows
- * beside the text was for, minus the three rows that named words already on the screen.
- *
- * It is at the foot, in the frame, because it is about this text and nothing else. A schema with
- * nothing to report says its two numbers and stops, which is how you can see at a glance that
- * there is nothing to report.
- */
-.editor .sum {
-    margin: 0;
-    padding: 0.4rem 0.75rem 0.5rem;
-    border-top: 1px solid var(--line);
-    color: var(--faint);
-    font: 500 0.62rem/1 var(--main-font);
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
 }
 
 /* ── the gutter ─────────────────────────────────────────────────────────── */
@@ -246,7 +243,7 @@
     grid-template-columns: minmax(1.4rem, auto) 0.5rem;
     align-items: center;
     gap: 0.4rem;
-    height: 1.7em;
+    height: var(--cell, 24px);
     padding: 0 0.4rem 0 0.55rem;
 }
 

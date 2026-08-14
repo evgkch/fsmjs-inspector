@@ -8,6 +8,15 @@
  */
 export const CELL = 24;
 
+/**
+ * The same number, for the stylesheet. A line of the source, a row of the figure and a slice of
+ * the run are the same thing said three ways, so they are the same height — and the height is
+ * declared once, here, rather than written as a line-height in one file and a cell size in
+ * another and kept equal by whoever notices.
+ */
+export const rhythm = (node: HTMLElement): void =>
+  node.style.setProperty("--cell", `${CELL}px`);
+
 /** Width of one monospace character at the size the figure's labels use. */
 export const EM = 7.2;
 

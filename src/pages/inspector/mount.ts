@@ -9,7 +9,7 @@
  */
 import { TRANSITION, edges } from "@evgkch/fsmjs";
 import type { Graph, Subject } from "../../entities/machine/index.js";
-import { newMode } from "../../features/explore/index.js";
+import { exploring, newMode } from "../../features/explore/index.js";
 import type { Mode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { newSight } from "./model/showing.js";
@@ -133,7 +133,9 @@ export function mount(
       // All in pixels: the stylesheet declares the width in the unit its reader can use.
       gap: parseFloat(style.columnGap) || 0,
       min: parseFloat(style.getPropertyValue("--history-min")) || 0,
-      run: !history.node.hidden,
+      // Asked of the machine that decides it, and not of the panel it hid: a fact that travels out
+      // to the DOM and back in is a fact with two owners.
+      run: !exploring(mode),
     };
   }
 
@@ -197,9 +199,30 @@ export function mount(
     }),
   ];
 
+  /**
+   * The keys of a debugger. The run is walked by clicking its steps, and this is the same walk
+   * under the other hand — a tool you step through is a tool you step through without aiming.
+   *
+   * Not while you are typing: those keys move a caret, and the source is the other half of this
+   * page. Where the key went is a fact about the event, and it is the only thing tested here.
+   */
   const onKey = (e: KeyboardEvent) => {
     // Esc lets a selection go all at once, where pressing a named half walks it back one step.
-    if (e.key === "Escape") forget();
+    if (e.key === "Escape") return void forget();
+    const into = (e.target as HTMLElement | null)?.tagName ?? "";
+    if (into === "TEXTAREA" || into === "INPUT" || into === "SELECT") return;
+    if (!subject.rewind) return;
+    const to =
+      e.key === "ArrowLeft"
+        ? subject.step - 1
+        : e.key === "ArrowRight"
+          ? subject.step + 1
+          : null;
+    if (to === null || to < 0 || to > subject.steps.length) return;
+    e.preventDefault();
+    subject.rewind(to);
+    forget();
+    show();
   };
   document.addEventListener("keydown", onKey);
 

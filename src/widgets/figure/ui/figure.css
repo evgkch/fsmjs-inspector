@@ -5,7 +5,8 @@
 .out {
     min-height: 12rem;
     max-height: 100%;
-    padding: 1rem 1.1rem;
+    /* The same inset as the source's name and the run's, so the three read as one row of names. */
+    padding: 0.85rem 0.9rem 1rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
@@ -19,7 +20,7 @@
     position: sticky;
     top: 0;
     left: 0;
-    padding: 0 0 0.45rem;
+    padding: 0 0 0.4rem;
 }
 
 /* Three blocks around two shared indices: one rectangle, as wide as the schema makes it. */
