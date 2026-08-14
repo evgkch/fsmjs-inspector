@@ -12,6 +12,7 @@ import type { Graph, Subject } from "../../entities/machine/index.js";
 import { newMode } from "../../features/explore/index.js";
 import type { Mode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
+import { newSight } from "./model/showing.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between, take } from "../../features/take-rule/index.js";
 import { make } from "../../shared/lib/dom.js";
@@ -85,11 +86,20 @@ export function mount(
     rewind: (step) => {
       subject.rewind?.(step);
       forget();
-      paint();
+      show();
     },
   });
 
   const figure = newFigure({ subject, focus, mode, forget });
+
+  /**
+   * What is on screen and how it is arranged — the one thing here that is remembered rather than
+   * read off something else, and the reason there is no repaint function.
+   */
+  const sight = newSight();
+
+  // The room changes with the window, and what fits in it changes with the room.
+  const watching = new ResizeObserver(() => sight.dispatch("measured", room()));
 
   // The figure, and what happened on it — beside it or under it, which `fit` decides.
   const work = make("div", "work");
@@ -97,6 +107,7 @@ export function mount(
   const root = make("div", "fsmjs-inspector");
   root.append(work);
   host.append(root);
+  watching.observe(work);
 
   /**
    * Where the run starts — fixed for as long as this mount lives, and not wherever the machine
@@ -113,57 +124,60 @@ export function mount(
    */
   const start = subject.at || firstOf(subject.graph);
 
-  /**
-   * Where the history goes: beside the figure when the figure still fits whole, under it when it
-   * does not.
-   *
-   * This cannot be a media query, because the question is not how wide the window is — it is
-   * whether *this* schema fits in what is left after the history takes its column, and a schema
-   * six states wide and one thirty states wide are different answers on the same screen. So it is
-   * measured: what the board came out at, against the room there is. The figure is what the tool
-   * is for, and it is never the thing that gets cut.
-   */
-  function fit(): void {
+  /** The space there is, as it stands. Measured, never guessed: the machine is told, and decides. */
+  function room() {
     const style = getComputedStyle(work);
-    // Both in pixels: the stylesheet declares the width in the unit its reader can use.
-    const min = parseFloat(style.getPropertyValue("--history-min")) || 0;
-    const gap = parseFloat(style.columnGap) || 0;
-    const board = figure.width();
-    // The column is the board, so the figure is shown whole or not at all — a column of `1fr`
-    // would give a five-state schema the width of the page and stand the history a screen away
-    // from it.
-    work.style.setProperty("--board", `${board}px`);
-    work.classList.toggle(
-      "beside",
-      !history.node.hidden && work.clientWidth >= board + gap + min,
-    );
+    return {
+      board: figure.width(),
+      room: work.clientWidth,
+      // All in pixels: the stylesheet declares the width in the unit its reader can use.
+      gap: parseFloat(style.columnGap) || 0,
+      min: parseFloat(style.getPropertyValue("--history-min")) || 0,
+      run: !history.node.hidden,
+    };
   }
 
-  function paint(): void {
-    // The two are drawn on the same rows, in the same order, starting the same distance down —
-    // which is a constant now that the figure hangs its indices below its grid, so neither has to
-    // be laid out before the other.
-    figure.draw(start);
-    history.show(subject.graph, start);
-    history.draw();
-    fit();
-  }
-
-  // The room changes with the window, and what fits in it changes with the room.
-  const watching = new ResizeObserver(() => fit());
-  watching.observe(work);
+  /** Something the figure is about has changed. What follows from that is the machine's. */
+  const show = () => sight.dispatch("moved");
 
   const off: (() => void)[] = [
-    figure.stop,
-    history.stop,
+    // The board, redrawn, and the run with it: the two are drawn on the same rows, in the same
+    // order, starting the same distance down, so neither has to be laid out before the other.
+    sight.rx.on("redraw", () => {
+      figure.draw(start);
+      history.show(subject.graph, start);
+      history.draw();
+      // Measured after it has been laid out — and after the dispatch this arrived in, since one
+      // cannot nest inside another.
+      queueMicrotask(() => sight.dispatch("measured", room()));
+    }),
+    // The reader is looking somewhere else. Every surface showing this machine hears it, and none
+    // of them decides when: `blank` has no rule for looking, so nothing is dressed before it is
+    // drawn, and that is not a null check anywhere.
+    sight.rx.on("redress", () => {
+      figure.dress();
+      history.dress();
+    }),
+    // The column is the board, so the figure is shown whole or not at all — a column of `1fr`
+    // would give a five-state schema the width of the page and stand the run a screen away.
+    sight.rx.on("aside", ({ board }) => {
+      work.style.setProperty("--board", `${board}px`);
+      work.classList.add("beside");
+    }),
+    sight.rx.on("below", ({ board }) => {
+      work.style.setProperty("--board", `${board}px`);
+      work.classList.remove("beside");
+    }),
+    focus.choice.rx.on(TRANSITION, () => sight.dispatch("looked")),
+    focus.pointer.rx.on(TRANSITION, () => sight.dispatch("looked")),
     // The mode moved, so what is on the table did. Whatever was held names a rule in a mode that
     // is over — the same reason every other change of ground says `forget` first.
     mode.rx.on(TRANSITION, () => {
       forget();
-      paint();
+      show();
     }),
     () => watching.disconnect(),
-    subject.watch(() => paint()),
+    subject.watch(() => show()),
     /**
      * Both halves are named, so a rule has been named — and naming a rule is what takes it. The
      * choice machine says only that it happened; which rule the two cells come down to and
@@ -189,10 +203,10 @@ export function mount(
   };
   document.addEventListener("keydown", onKey);
 
-  paint();
+  show();
 
   return {
-    update: paint,
+    update: show,
     set: (opts) => {
       // One line, and no `if`: told the mode it is already in, the machine has no rule for it and
       // nothing is redrawn. Told the other, its own listener does the forgetting and the drawing.

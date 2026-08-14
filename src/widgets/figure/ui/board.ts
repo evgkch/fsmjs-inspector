@@ -384,29 +384,39 @@ export function board(d: Draw, w: Wiring): Dressed {
   if (d.outs.length) cap(g.names, g.foot + 12, "EMIT");
 
   /**
-   * A name of a column, stood on end under the grid.
+   * A name of a column, stood on end under the grid — and the two indices are turned opposite
+   * ways, because they are read in opposite directions.
    *
-   * A quarter turn clockwise, so the words run *down* the page: they hang below the grid, and a
-   * label that hangs downwards and reads upwards is read against the direction it points. Turned
-   * this way each name starts at the column it is the name of and runs away from it, and the whole
-   * band begins on one line however long the longest word is.
+   * The states of TO run *down*: they are the head of a column that carries on downwards into
+   * TO × EMIT, and a label pointing one way while reading the other is read against itself. The
+   * events of ON run *up*, back towards the grid they belong to: there is nothing below them, and
+   * a word that ends at its own column is a word that points at it.
+   *
+   * Either way the anchor is the end of the text under the turn, so every name in the band begins
+   * on the same line under the grid however long the longest of them is.
    */
-  const stood = (x: number, name: string, cls: string, hue?: string) =>
+  const stood = (
+    x: number,
+    name: string,
+    cls: string,
+    turn: 90 | -90,
+    hue?: string,
+  ) =>
     svg(
       "text",
       {
         x,
         y: g.stem,
         class: cls,
-        "text-anchor": "start",
-        transform: `rotate(90, ${x}, ${g.stem})`,
+        "text-anchor": turn === 90 ? "start" : "end",
+        transform: `rotate(${turn}, ${x}, ${g.stem})`,
         ...(hue !== undefined && { style: hue }),
       },
       name,
     );
 
   d.evs.forEach((σ, i) => {
-    root.append(mark(`on\0${σ}`, stood(g.on(i), σ, "name on")));
+    root.append(mark(`on\0${σ}`, stood(g.on(i), σ, "name on", -90)));
   });
 
   // `TO r` with nothing emitted is an outcome the grid above has no cell for — there is no output
@@ -421,6 +431,7 @@ export function board(d: Draw, w: Wiring): Dressed {
         g.q(i),
         to,
         `name to${to === d.here ? " here" : ""}${d.off.has(to) ? " off" : ""}`,
+        90,
         d.hue(to),
       ),
     );

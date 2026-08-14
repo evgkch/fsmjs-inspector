@@ -1,0 +1,85 @@
+{
+  "blank": {
+    "moved": [
+      {
+        "to": "blank",
+        "emit": "redraw"
+      }
+    ],
+    "measured": [
+      {
+        "to": "beside",
+        "emit": "aside",
+        "when": "fits",
+        "with": "sized",
+        "by": "wide"
+      },
+      {
+        "to": "under",
+        "emit": "below",
+        "with": "sized",
+        "by": "wide"
+      }
+    ]
+  },
+  "under": {
+    "moved": [
+      {
+        "to": "under",
+        "emit": "redraw"
+      }
+    ],
+    "looked": [
+      {
+        "to": "under",
+        "emit": "redress"
+      }
+    ],
+    "measured": [
+      {
+        "to": "beside",
+        "emit": "aside",
+        "when": "fits",
+        "with": "sized",
+        "by": "wide"
+      },
+      {
+        "to": "under",
+        "emit": "below",
+        "when": "grew",
+        "with": "sized",
+        "by": "wide"
+      }
+    ]
+  },
+  "beside": {
+    "moved": [
+      {
+        "to": "beside",
+        "emit": "redraw"
+      }
+    ],
+    "looked": [
+      {
+        "to": "beside",
+        "emit": "redress"
+      }
+    ],
+    "measured": [
+      {
+        "to": "under",
+        "emit": "below",
+        "when": "tight",
+        "with": "sized",
+        "by": "wide"
+      },
+      {
+        "to": "beside",
+        "emit": "aside",
+        "when": "grew",
+        "with": "sized",
+        "by": "wide"
+      }
+    ]
+  }
+}

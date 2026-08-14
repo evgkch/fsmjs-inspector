@@ -18,8 +18,7 @@
  * worth having as long as it does not pretend to be the whole thing.
  */
 import { edges } from "@evgkch/fsmjs";
-import type { Edge, Off } from "@evgkch/fsmjs";
-import { TRANSITION } from "@evgkch/fsmjs";
+import type { Edge } from "@evgkch/fsmjs";
 import { halvesOf } from "../../entities/cell/index.js";
 import { hue, lanes, partsOf } from "../../entities/machine/index.js";
 import type { Graph, Step, Subject } from "../../entities/machine/index.js";
@@ -55,7 +54,8 @@ export type History = {
    */
   readonly show: (graph: Graph, start: string) => void;
   readonly draw: () => void;
-  readonly stop: () => void;
+  /** Draw again what the rule under the pointer would do, because the pointer moved. */
+  readonly dress: () => void;
 };
 
 export type Wiring = {
@@ -285,11 +285,6 @@ export function newHistory(w: Wiring): History {
     cols.scrollLeft = cols.scrollWidth;
   }
 
-  const off: Off[] = [
-    w.focus.choice.rx.on(TRANSITION, () => preview()),
-    w.focus.pointer.rx.on(TRANSITION, () => preview()),
-  ];
-
   return {
     node,
 
@@ -303,8 +298,6 @@ export function newHistory(w: Wiring): History {
       build();
     },
 
-    stop: () => {
-      for (const it of off) it();
-    },
+    dress: () => preview(),
   };
 }

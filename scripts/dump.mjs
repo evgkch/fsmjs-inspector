@@ -38,6 +38,9 @@ const { newMode } = await vite.ssrLoadModule(
 const { newDrag } = await vite.ssrLoadModule(
   "/src/features/drag-panel/model/drag.ts",
 );
+const { newSight } = await vite.ssrLoadModule(
+  "/src/pages/inspector/model/showing.ts",
+);
 
 // One focus per figure, so there is no module-level pair to reach for: the dump asks for one
 // the same way a mount does.
@@ -52,6 +55,7 @@ for (const [file, machine] of [
   ["the-inspectors-editor.json", newWriting()],
   ["the-inspectors-mode.json", newMode()],
   ["the-inspectors-panel.json", newDrag()],
+  ["the-inspectors-sight.json", newSight()],
 ]) {
   const text = JSON.stringify(machine, null, 2) + "\n";
   writeFileSync(join(here, "..", "schemas", file), text);

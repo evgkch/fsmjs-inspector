@@ -3,8 +3,6 @@
  * somewhere else. Those are two different events and cost two different amounts, which is why
  * they are two functions and not one.
  */
-import { TRANSITION } from "@evgkch/fsmjs";
-import type { Off } from "@evgkch/fsmjs";
 import type { Subject } from "../../entities/machine/index.js";
 import { exploring } from "../../features/explore/index.js";
 import type { Mode } from "../../features/explore/index.js";
@@ -20,7 +18,8 @@ export type Figure = {
   readonly draw: (start: string) => void;
   /** How wide the board it drew is, whole — what it would take not to scroll. */
   readonly width: () => number;
-  readonly stop: () => void;
+  /** Put the classes on again, because the reader is looking somewhere else. */
+  readonly dress: () => void;
 };
 
 export type Wiring = {
@@ -35,10 +34,11 @@ export function newFigure(w: Wiring): Figure {
   const node = make("div", "out");
 
   /**
-   * How the board now on screen puts its classes on. Set by `draw`, and called from one place
-   * only — the focus's own transitions — so nothing anywhere has to remember to redress.
+   * How the board now on screen puts its classes on, set by `draw`. Nothing before the first draw
+   * has anything to dress — which is not said here with a `?.` but by the page's own machine,
+   * where `blank` has no rule for looking.
    */
-  let redress: (() => void) | null = null;
+  let redress: () => void = () => {};
 
   /**
    * How wide the board came out. The box around it says nothing about that: it is a scroll
@@ -47,15 +47,9 @@ export function newFigure(w: Wiring): Figure {
    */
   let drawn = 0;
 
-  const off: Off[] = [
-    w.focus.choice.rx.on(TRANSITION, () => redress?.()),
-    w.focus.pointer.rx.on(TRANSITION, () => redress?.()),
-  ];
-
   return {
     node,
     draw: (start) => {
-      redress = null;
       const d = plan(w.subject.graph, start, w.subject, exploring(w.mode));
       drawn = d.geo.width;
       const { node: svg, dress } = board(d, {
@@ -82,9 +76,6 @@ export function newFigure(w: Wiring): Figure {
       return drawn + frame;
     },
 
-    stop: () => {
-      for (const it of off) it();
-      redress = null;
-    },
+    dress: () => redress(),
   };
 }
