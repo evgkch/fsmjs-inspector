@@ -58,8 +58,11 @@ export function mount(
    * with them: whatever it was over is about to be rebuilt, so no `mouseleave` is coming for it.
    */
   const forget = () => {
-    if (focus.choice.can("drop")) focus.choice.dispatch("drop");
-    if (focus.pointer.can("leave")) focus.pointer.dispatch("leave");
+    // Said, not asked first. Whether there is anything to let go of is a question the schema
+    // already answers — `drop` is in every state but `nothing` — and asking it here would be that
+    // answer written down a second time, in a place that cannot be kept in step with it.
+    focus.choice.dispatch("drop");
+    focus.pointer.dispatch("leave");
   };
 
   const history = newHistory({

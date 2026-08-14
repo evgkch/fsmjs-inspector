@@ -80,6 +80,14 @@ export function board(d: Draw, w: Wiring): Dressed {
     key: Key;
     list: Edge[];
     base: string;
+    /**
+     * What `dress` last worked out about it: whether anything here is still on the table, and
+     * whether it is what the next press is being asked for. The classes say the same two things,
+     * but a class is a *drawing* of a fact — reading one back to decide whether to dispatch is
+     * asking the paint what the machine thinks.
+     */
+    live: boolean;
+    hot: boolean;
   };
   const spots: Spot[] = [];
 
@@ -184,6 +192,8 @@ export function board(d: Draw, w: Wiring): Dressed {
       const alive = s.list.some(play);
       const hot =
         fixed.includes(s.key) || (open.includes(kindOf(s.key)) && alive);
+      s.live = alive;
+      s.hot = hot;
       const cls = [s.base];
       if (s.family === "box")
         cls.push(!alive ? "dim" : s.list.some(lit) ? "lit" : "");
@@ -230,7 +240,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     // but a variant a choice has already ruled out is ruled out either way, and lighting one
     // would offer something that cannot be taken.
     const on = () => {
-      if (s.node.classList.contains("dim")) return;
+      if (!s.live) return;
       pointer.dispatch("enter", { keys: [s.key], offer: true });
     };
     const off = () => pointer.dispatch("leave");
@@ -243,7 +253,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     if (kindOf(s.key) === CORNER) return s.node;
     // What the figure offers is what `dress` lit; pressing anything else is nothing at all.
     const take = () => {
-      if (s.node.classList.contains("hot")) choose(s.key);
+      if (s.hot) choose(s.key);
     };
     s.node.setAttribute("role", "button");
     s.node.addEventListener("click", take);
@@ -345,6 +355,8 @@ export function board(d: Draw, w: Wiring): Dressed {
           key: keyOf(EFFECT, λ, to),
           list,
           base: "box shot",
+          live: false,
+          hot: false,
         }),
       );
     });
@@ -434,6 +446,8 @@ export function board(d: Draw, w: Wiring): Dressed {
         key: keyOf(EFFECT, "", to),
         list: ends,
         base: name.getAttribute("class")!,
+        live: false,
+        hot: false,
       });
       // The two are one control: the name is what is lit, the heading is what is hit.
       grab.addEventListener("mouseenter", () =>
@@ -493,7 +507,15 @@ export function board(d: Draw, w: Wiring): Dressed {
             : ""),
       ),
     );
-    wire({ node: box, family: "box", key, list, base: "box" });
+    wire({
+      node: box,
+      family: "box",
+      key,
+      list,
+      base: "box",
+      live: false,
+      hot: false,
+    });
     return box;
   };
 

@@ -33,7 +33,7 @@ import type { Off } from "@evgkch/fsmjs";
 import { halvesOf, shows } from "../../entities/cell/index.js";
 import type { Lane } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
-import { newWriting, spread } from "../../features/write-rules/index.js";
+import { newWriting } from "../../features/write-rules/index.js";
 import type { Offer } from "../../features/write-rules/index.js";
 import { make, word } from "../../shared/lib/dom.js";
 import { ahead } from "../../shared/lang/complete.js";
@@ -281,7 +281,7 @@ export function newEditor(w: Wiring): Editor {
     if (next !== undefined && next !== "\n") return null;
     const upto = area.value.slice(0, caret).split("\n");
     const found = ahead(upto[upto.length - 1] ?? "", vocab);
-    return found && { ...found, line: upto.length };
+    return found && { ...found, line: upto.length, at: caret };
   }
 
   /** The offer, drawn. Called when it changes, and again whenever the layer is rebuilt under it. */
@@ -297,7 +297,7 @@ export function newEditor(w: Wiring): Editor {
    * Write into the text, keeping the browser's own undo where the browser will have it. Assigning
    * to `value` throws that stack away, and an editor you cannot undo in is not an editor.
    */
-  function put(from: number, to: number, text: string, caret?: number): void {
+  function write(from: number, to: number, text: string, caret?: number): void {
     ours = true;
     try {
       area.setSelectionRange(from, to);
@@ -325,51 +325,19 @@ export function newEditor(w: Wiring): Editor {
       was[was.length - 1 - b] === text[text.length - 1 - b]
     )
       b++;
-    put(a, was.length - b, text.slice(a, text.length - b), caret);
+    write(a, was.length - b, text.slice(a, text.length - b), caret);
   }
 
   // ── renaming a name in every line it stands in ──────────────────────────────
 
-  /**
-   * A keystroke while the mode is on, landing in every line the word is written on.
-   *
-   * The whole text is worked out again from the text as it stood when the mode was armed, so no
-   * keystroke depends on the one before it. What is checked first is that this keystroke was
-   * *inside the word*: everything before it and everything after it must still read as it did, or
-   * the reader has gone somewhere else and the mode is over.
-   */
-  function retype(): boolean {
-    const at = writing.state;
-    // A word named and then typed over rather than armed is ordinary typing: `see` lets it go,
-    // the way it lets go of everything else the caret has moved away from.
-    if (at.type !== "renaming") return false;
-    const c = at.context;
-    const held = spread(c);
-    const caret = area.selectionStart;
-    const typed = area.value.slice(held.at, caret);
-    const sound =
-      caret >= held.at &&
-      caret === area.selectionEnd &&
-      !/\s/.test(typed) &&
-      area.value.slice(0, held.at) === held.text.slice(0, held.at) &&
-      area.value.slice(caret) === held.text.slice(held.at + c.now.length);
-    if (!sound) {
-      writing.dispatch("drop");
-      return false;
-    }
-    writing.dispatch("retype", { now: typed });
-    const next = spread(writing.state.context as typeof c);
-    patch(next.text, next.at + typed.length);
-    return true;
-  }
-
   /** What the chip says, which is the whole of the mode's face. */
   function badge(): void {
     const at = writing.state;
+    if (at.type !== "picked" && at.type !== "renaming")
+      return void (chip.hidden = true);
+    chip.hidden = false;
     const on = at.type === "renaming";
-    chip.hidden = !on && at.type !== "picked";
-    if (chip.hidden) return;
-    const { word: name } = at.context as { word: string };
+    const name = at.context.word;
     chip.classList.toggle("on", on);
     chip.textContent = on ? `renaming ${name}` : `rename ${name}`;
     chip.title = on
@@ -377,15 +345,11 @@ export function newEditor(w: Wiring): Editor {
       : `retype ${name} in every line it is written on`;
   }
 
-  chip.addEventListener("click", () => {
-    const at = writing.state;
-    if (at.type !== "picked") return void writing.dispatch("drop");
-    const { at: from, to } = at.context;
-    writing.dispatch("arm", { base: area.value });
-    // The word is left selected, so that typing replaces it — which is what the mode is for.
-    area.focus();
-    area.setSelectionRange(from, to);
-  });
+  // One button, one event. What a press means — arm the mode, or end it — is a question about
+  // where the writing is, and the machine is where that is known.
+  chip.addEventListener("click", () =>
+    writing.dispatch("press", { base: area.value }),
+  );
 
   // A word is named by double-clicking it, which is how the text is read anyway. Naming one
   // commits to nothing: the chip appears, and until it is pressed this is an ordinary editor.
@@ -404,18 +368,22 @@ export function newEditor(w: Wiring): Editor {
 
   area.addEventListener("keydown", (e) => {
     if (e.key === "Escape") return void writing.dispatch("drop");
-    const at = writing.state;
-    if (e.key !== "Tab" || at.type !== "ahead") return;
-    // The word, and the space after it: the next word is what you were going to type anyway.
-    e.preventDefault();
-    const caret = area.selectionStart;
-    put(caret - at.context.typed.length, caret, `${at.context.word} `);
+    // Whether TAB meant anything here is the machine's answer, and `dispatch` is how it gives it:
+    // false when no rule took the event, which is exactly when TAB should still move the focus.
+    if (e.key === "Tab" && writing.dispatch("take")) e.preventDefault();
   });
 
   area.addEventListener("input", () => {
-    // `put` finishes what it started; this is the keystrokes that came from a keyboard.
+    // `write` finishes what it started; this is the keystrokes that came from a keyboard.
     if (ours) return;
-    if (retype()) return;
+    // The facts, not a decision: what the text now reads and where the caret is. Whether that
+    // landed inside a name being retyped is a guard's question, and the answer comes back as an
+    // edit to perform.
+    writing.dispatch("retype", {
+      text: area.value,
+      caret: area.selectionStart,
+      end: area.selectionEnd,
+    });
     // The colour is immediate and the reading of it is not: one is a look at what you typed, the
     // other rebuilds a machine, and only the second is worth waiting a moment for.
     paint();
@@ -436,6 +404,24 @@ export function newEditor(w: Wiring): Editor {
       ghostly();
       badge();
     }),
+    // The three edits the machine asks for. Each is worked out from what it holds and arrives
+    // finished; nothing here knows which state asked, or why.
+    //
+    // After the transition and not inside it: these arrive while the machine is still
+    // dispatching, and every one of them ends in a `see` — the caret has moved, so what is on
+    // offer is a new question. The library forbids nesting dispatches, and is right to.
+    writing.rx.on("armed", ({ from, to }) =>
+      queueMicrotask(() => {
+        area.focus();
+        area.setSelectionRange(from, to);
+      }),
+    ),
+    writing.rx.on("filled", ({ from, to, text }) =>
+      queueMicrotask(() => write(from, to, text)),
+    ),
+    writing.rx.on("rewritten", ({ text, caret }) =>
+      queueMicrotask(() => patch(text, caret)),
+    ),
   ];
 
   return {

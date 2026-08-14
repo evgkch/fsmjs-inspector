@@ -1,6 +1,7 @@
-export { newWriting, spread } from "./model/writing.js";
+export { newWriting } from "./model/writing.js";
 export type {
   Offer,
+  Says,
   Rewrite,
   Typing,
   Writing,
