@@ -202,14 +202,9 @@ select {
     min-height: 0;
 }
 
-/* The name of a row in the report, in the type every other name on the page is in. */
-.shape .label {
-    align-self: center;
-}
-
-/* The editor takes the row; the shape of the schema is a caption under it. */
+/* The editor takes the whole row: what `analyze` says about the schema is drawn on the schema. */
 #text {
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
 }
 
 /*
@@ -222,32 +217,4 @@ select {
     #text .editor {
         min-height: 0;
     }
-}
-
-.shape {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.2rem 0.85rem;
-    margin: 0;
-    padding: 0.1rem 0.25rem;
-    list-style: none;
-}
-
-.shape li {
-    display: contents;
-}
-
-/* A row of states, each in its own colour — the same words the editor and the figure write, and
-   the same colours, because they are the same states. */
-.shape .value {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 0.55rem;
-    font: 500 0.85rem/1.5 var(--mono-font);
-    overflow-wrap: anywhere;
-}
-
-.shape .value .q {
-    color: var(--c, var(--ink));
-    font-weight: 600;
 }

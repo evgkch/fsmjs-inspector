@@ -4,6 +4,8 @@
  */
 export type { Ctx, Ev, Graph, Step } from "./model/graph.js";
 export { idOf, partsOf, ruleId } from "./model/rule.js";
+export { flaws } from "./model/flaws.js";
+export type { Flaws } from "./model/flaws.js";
 export type { RuleId } from "./model/rule.js";
 export { LANES, hue, lanes, palette } from "./model/lanes.js";
 export type { Lane } from "./model/lanes.js";

@@ -31,7 +31,8 @@
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
 import { halvesOf, shows } from "../../entities/cell/index.js";
-import type { Lane } from "../../entities/machine/index.js";
+import { ruleId } from "../../entities/machine/index.js";
+import type { Flaws, Lane } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { newWriting } from "../../features/write-rules/index.js";
 import type { Facts, Typing } from "../../features/write-rules/index.js";
@@ -46,8 +47,11 @@ export type Editor = {
   readonly text: () => string;
   /** Put a schema in it, as text. */
   readonly set: (text: string) => void;
-  /** What the last reading found: where every rule is written, and the colour of every state. */
-  readonly show: (rules: readonly Written[], colour: Lane) => void;
+  /**
+   * What the last reading found: where every rule is written, the colour of every state, and what
+   * is wrong with the schema — which is drawn on the words and the lines it is wrong about.
+   */
+  readonly show: (rules: readonly Written[], colour: Lane, bad: Flaws) => void;
   /** Which lines could fire from where the machine now stands. */
   readonly mark: () => void;
   /**
@@ -111,13 +115,17 @@ export function newEditor(w: Wiring): Editor {
 
   const note = make("p", "note");
   note.hidden = true;
+  /** The size of the thing, and anything wrong with it that no single line is about. */
+  const sum = make("p", "sum");
   const node = make("div", "editor");
-  node.append(tag, sheet, note);
+  node.append(tag, sheet, note, sum);
 
   /** Where every rule is written, by line. A line holds at most one rule; most hold none. */
   let written = new Map<number, Written>();
   let colour: Lane = () => undefined;
   let blamed: number | null = null;
+  /** What `analyze` and `validate` make of the schema this text was read as. */
+  let bad: Flaws | null = null;
 
   /** The names the text has already used, by kind — what completion offers. */
   let vocab: Vocab = {};
@@ -172,7 +180,11 @@ export function newEditor(w: Wiring): Editor {
         for (const t of tokenize(text))
           line.append(
             t.ink
-              ? word(t.text, t.ink, t.ink === "q" ? colour(t.text) : undefined)
+              ? word(
+                  t.text,
+                  t.ink === "q" ? `q${stranded(t.text)}` : t.ink,
+                  t.ink === "q" ? colour(t.text) : undefined,
+                )
               : document.createTextNode(t.text),
           );
         lines.set(i + 1, line);
@@ -194,6 +206,17 @@ export function newEditor(w: Wiring): Editor {
     mark();
     dress();
     ghostly();
+  }
+
+  /**
+   * What is true of a state, written on the state — the same two facts the figure draws on its own
+   * index, so the word is struck through in both places or in neither. Nothing is listed anywhere:
+   * a list of names beside a text full of those names is a lookup table for what you are looking
+   * at, and three of its four rows were about single words in it.
+   */
+  function stranded(name: string): string {
+    if (!bad) return "";
+    return `${bad.off.has(name) ? " off" : ""}${bad.ends.has(name) ? " end" : ""}`;
   }
 
   /**
@@ -236,12 +259,23 @@ export function newEditor(w: Wiring): Editor {
     for (const [at, row] of rows) {
       const rule = ok ? written.get(at) : undefined;
       const can = rule !== undefined && w.fires(rule);
+      // A rule that can never fire, whatever you do: nothing reaches the state it leaves, or an
+      // unguarded rule ahead of it in its cell always wins. The gutter is where a debugger says
+      // that, on the line it is about.
+      const gone =
+        rule !== undefined &&
+        (bad?.dead(ruleId(rule.edge.from, rule.edge.on, rule.slot)) ?? false);
       row.classList.toggle("can", can);
       row.classList.toggle("rule", rule !== undefined);
+      row.classList.toggle("dead", gone);
       row.classList.toggle("blame", at === blamed);
       if (can) row.setAttribute("style", colour(rule.edge.from) ?? "");
       else row.removeAttribute("style");
-      row.title = can ? "take this rule" : "";
+      row.title = can
+        ? "take this rule"
+        : gone
+          ? "this rule can never fire: nothing reaches the state it leaves, or a rule ahead of it in the same cell always wins"
+          : "";
     }
   }
 
@@ -416,10 +450,21 @@ export function newEditor(w: Wiring): Editor {
       writing.dispatch("drop");
       paint();
     },
-    show: (rules, lane) => {
+    show: (rules, lane, facts) => {
       written = new Map(rules.map((r) => [r.at, r]));
       colour = lane;
+      bad = facts;
       read = area.value;
+      // How big it is, and then only what is wrong. A schema with nothing to report says its two
+      // numbers and stops, which is how you can tell at a glance that there is nothing to report.
+      const many = (n: number, one: string) =>
+        `${n} ${one}${n === 1 ? "" : "s"}`;
+      sum.textContent = [
+        many(facts.all.length, "state"),
+        many(facts.rules, "rule"),
+        ...(facts.off.size ? [`${facts.off.size} nothing reaches`] : []),
+        ...(facts.ends.size ? [`${facts.ends.size} nothing leaves`] : []),
+      ].join(" · ");
       // What the text has taught: every name it uses, by kind. Nothing is invented here — a
       // completion that offers a state the schema has never mentioned is a suggestion to write a
       // state nothing reaches.

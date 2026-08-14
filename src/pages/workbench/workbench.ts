@@ -6,20 +6,24 @@
  * gutter and the figure's cells dispatch into the same pointer machine, so pointing anywhere
  * lights the rule everywhere it is written, and either surface can name a rule to fire.
  *
- * What is left here is the other half of a page — where the schema comes from, what `analyze` says
- * about its shape, and which state a run starts at.
+ * What is left here is the other half of a page — where the schema comes from, and which state a
+ * run starts at. What `analyze` and `validate` make of it is not shown here at all: it is drawn on
+ * the names and the lines it is about, in the text and in the figure.
  */
 import { TRANSITION, nodes } from "@evgkch/fsmjs";
-import { analyze } from "@evgkch/fsmjs/analysis";
-import type { Analysis } from "@evgkch/fsmjs/analysis";
 import { toRules } from "@evgkch/fsmjs/formatters";
-import { fromText, palette, ruleId } from "../../entities/machine/index.js";
-import type { Graph, Lane, Text } from "../../entities/machine/index.js";
+import {
+  flaws,
+  fromText,
+  palette,
+  ruleId,
+} from "../../entities/machine/index.js";
+import type { Graph, Text } from "../../entities/machine/index.js";
 import { exploring, newMode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { canFire, take } from "../../features/take-rule/index.js";
-import { el, word } from "../../shared/lib/dom.js";
+import { el } from "../../shared/lib/dom.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { newEditor } from "../../widgets/editor/editor.js";
 import { mount } from "../inspector/mount.js";
@@ -75,11 +79,10 @@ export function workbench(): void {
     subject.watch(() => editor.mark());
     fillStart(graph, start);
     warn(null, null);
-    // One palette, and everything that writes a state asks it: the editor, the list below it, and
-    // the figure's own lanes are the same order of the same states.
-    const colour = palette(graph, start);
-    shape(analyze(graph, start), colour);
-    editor.show(rules, colour);
+    // One palette, and everything that writes a state asks it: the text and the figure's own lanes
+    // are the same order of the same states. And one reading of what is wrong with the schema,
+    // which both of them draw on the names it is wrong about.
+    editor.show(rules, palette(graph, start), flaws(graph, start));
   });
 
   page.rx.on("stopped", ({ message, line }) => warn(message, line));
@@ -93,26 +96,6 @@ export function workbench(): void {
       ...nodes(graph).map((n) => new Option(n, n, false, n === start)),
     );
     startSel.value = start;
-  }
-
-  /**
-   * What `analyze` says about the shape — the part of it no drawing shows better than a list.
-   *
-   * A state is written in its own colour here as it is everywhere else. That is the whole point of
-   * a lane: the same word in the figure, in the text, in the history and in this list is the same
-   * colour, so a name you meet in one of them you have already met in the others. A list of plain
-   * grey words would be four places to look a state up instead of one to recognise it in.
-   */
-  function shape(a: Analysis<string> | null, colour: Lane): void {
-    const say = (id: string, list: readonly string[]) => {
-      const box = el(id);
-      if (!list.length) return void (box.textContent = "—");
-      box.replaceChildren(...list.map((q) => word(q, "q", colour(q))));
-    };
-    say("n-states", a?.nodes ?? []);
-    say("n-reachable", a?.reachable ?? []);
-    say("n-unreachable", a?.unreachable ?? []);
-    say("n-terminal", a?.terminal ?? []);
   }
 
   function load(s: Sample): void {

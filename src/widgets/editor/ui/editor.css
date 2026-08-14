@@ -18,7 +18,7 @@
 .editor {
     position: relative;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
     height: 100%;
     /* A floor, not a height: the row it sits in is a share of the page, and it scrolls inside. */
     min-height: 14rem;
@@ -202,6 +202,24 @@
     display: none;
 }
 
+/*
+ * How big the thing is, and then only what is wrong with it — the whole of what a list of four rows
+ * beside the text was for, minus the three rows that named words already on the screen.
+ *
+ * It is at the foot, in the frame, because it is about this text and nothing else. A schema with
+ * nothing to report says its two numbers and stops, which is how you can see at a glance that
+ * there is nothing to report.
+ */
+.editor .sum {
+    margin: 0;
+    padding: 0.4rem 0.75rem 0.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--faint);
+    font: 500 0.62rem/1 var(--main-font);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
 /* ── the gutter ─────────────────────────────────────────────────────────── */
 
 /*
@@ -273,6 +291,17 @@
     color: var(--muted);
 }
 
+/*
+ * A rule that can never fire, whatever you do: nothing reaches the state it leaves, or an unguarded
+ * rule ahead of it in the same cell always wins. A debugger says that in the gutter, on the line it
+ * is about — where the mark for "this one can fire right now" already is, because they are answers
+ * to the same question at two ends of it.
+ */
+.editor .gutter .row.dead .num {
+    color: var(--warn);
+    text-decoration: line-through;
+}
+
 /* Where the reader stopped. The message says the same thing in words, once, underneath. */
 .editor .gutter .row.blame {
     background: color-mix(in oklab, var(--warn) 16%, transparent);
@@ -300,6 +329,27 @@
 
 .ink .l {
     color: var(--emit);
+}
+
+/*
+ * What is true of a state, written on the state.
+ *
+ * `off` — nothing reaches it from the start, so every line it is the FROM of is dead text. It is
+ * struck through here and struck through on the figure's own index: the same fact, the same mark,
+ * and no list anywhere naming the states a third time.
+ *
+ * `end` — nothing leaves it. Not a fault: a run that arrives there stops, and that may be exactly
+ * what it is for. So it is the quietest mark on the page, an underline the colour of the state.
+ */
+.ink .q.off {
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    opacity: 0.6;
+}
+
+.ink .q.end {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
 }
 
 /* What can be said about a function: its name, or `?` for one that has none. */

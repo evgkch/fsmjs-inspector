@@ -9,8 +9,8 @@
  */
 import { edges } from "@evgkch/fsmjs";
 import type { Edge } from "@evgkch/fsmjs";
-import { analyze, validate } from "@evgkch/fsmjs/analysis";
-import { hue, idOf, lanes } from "../../../entities/machine/index.js";
+import { analyze } from "@evgkch/fsmjs/analysis";
+import { flaws, hue, idOf, lanes } from "../../../entities/machine/index.js";
 import type {
   Graph,
   RuleId,
@@ -131,7 +131,9 @@ export function plan(
 ): Draw {
   const here = exploring ? "" : subject.at || start;
   const rows = edges(graph);
-  const facts = analyze(graph, start);
+  // What is wrong with this schema, asked once for the whole tool: the text strikes the same
+  // names through and marks the same rules dead, out of this object.
+  const bad = flaws(graph, start);
   // The axis, and the palette with it: `lanes` is what the editor colours its words by too, so
   // a state is the same colour in the text as it is in the figure.
   const all = lanes(graph, start);
@@ -162,14 +164,6 @@ export function plan(
         for (const t of reach.get(row.to) ?? [])
           if (!pair.has(`${q}\0${t}`)) far.add(`${q}\0${t}`);
 
-  // A rule after an unguarded one in the same cell can never fire — in the dump. `validate`
-  // reports that per cell, and the order inside the cell says which of its rules are the ones.
-  const flagged = new Set(
-    validate(graph, start)
-      .filter((i) => i.kind === "dead-rule")
-      .map((i) => `${i.node}\0${i.event}`),
-  );
-
   const lane = new Map(all.map((n, i) => [n, i]));
   const geo = geometry(all, outs, evs);
 
@@ -180,7 +174,7 @@ export function plan(
     outs,
     geo,
     here,
-    off: new Set(facts.unreachable),
+    off: bad.off,
     rows,
     hue: (state) => hue(lane.get(state) ?? 0),
     cell,
@@ -189,8 +183,6 @@ export function plan(
     far,
     id: (r) => idOf(rows, r),
     fires: (row) => !exploring && canFire(subject, idOf(rows, row)),
-    dead: (row) =>
-      flagged.has(`${row.from}\0${row.on}`) &&
-      cell.get(`${row.from}\0${row.on}`)?.[0] !== row,
+    dead: (row) => bad.shadowed(idOf(rows, row)),
   };
 }
