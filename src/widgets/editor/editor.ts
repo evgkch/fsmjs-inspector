@@ -21,13 +21,23 @@
  *
  * None of those three is a rule of its own. Each is a surface handing the one machine the one
  * event, which is why they cannot disagree about what is being looked at.
+ *
+ * Two things here are about writing rather than reading, and both are the same idea: the tool knows
+ * the language and the schema, so it should not make you retype either. The word being typed is
+ * finished in grey where only one word could be meant, and TAB takes it. And a name double-clicked
+ * can be retyped in every line it stands in at once, because a text with no declarations has no
+ * other way of saying that twelve `locked`s are one state.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
 import { halvesOf, shows } from "../../entities/cell/index.js";
 import type { Lane } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
+import { newWriting, spread } from "../../features/write-rules/index.js";
+import type { Offer } from "../../features/write-rules/index.js";
 import { make, word } from "../../shared/lib/dom.js";
+import { ahead } from "../../shared/lang/complete.js";
+import type { Vocab } from "../../shared/lang/complete.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { tokenize } from "../../shared/lang/tokens.js";
 import "./ui/editor.css";
@@ -73,18 +83,56 @@ export function newEditor(w: Wiring): Editor {
   ink.setAttribute("aria-hidden", "true");
   ink.append(code);
 
+  /** What the word being typed would be, shown where it would go. */
+  const ghost = make("span", "ghost");
+  ghost.setAttribute("aria-hidden", "true");
+
   const gutter = make("div", "gutter");
+  const stack = make("div", "stack");
+  stack.append(ink, area);
+  /**
+   * One scrollport over the whole text, gutter included.
+   *
+   * The gutter used to be beside the scroll and moved to match it, which meant the wheel did
+   * nothing over the numbers — a strip down the side of a source where scrolling is not scrolling.
+   * Inside, it scrolls because it is on the page that scrolls, and stays put across it by sticking
+   * to the left. One less thing kept in step by hand.
+   */
+  const page = make("div", "page");
+  page.append(gutter, stack);
   const sheet = make("div", "sheet");
-  sheet.append(ink, area);
+  sheet.append(page);
+
+  /** Rename this word everywhere. Hidden until a word has been named by a double-click. */
+  const chip = make("button", "rename");
+  chip.type = "button";
+  chip.hidden = true;
+  const tag = make("div", "tag");
+  tag.append(make("span", "what", "code"), chip);
+
   const note = make("p", "note");
   note.hidden = true;
   const node = make("div", "editor");
-  node.append(make("div", "tag", "code"), gutter, sheet, note);
+  node.append(tag, sheet, note);
 
   /** Where every rule is written, by line. A line holds at most one rule; most hold none. */
   let written = new Map<number, Written>();
   let colour: Lane = () => undefined;
   let blamed: number | null = null;
+
+  /** The names the text has already used, by kind — what completion offers. */
+  let vocab: Vocab = {};
+
+  /** Whether the text is being changed from in here, so that one edit is not read as two. */
+  let ours = false;
+
+  /**
+   * What is going on in the text besides the text: a word on offer, a name named, a name being
+   * retyped everywhere. One machine, because they are modes of writing and only one of them can be
+   * true — and because the one thing that has to hold between them, that nothing is offered while
+   * a name is being retyped, is then not a rule anybody has to remember.
+   */
+  const writing = newWriting();
 
   /**
    * The text those lines were read from.
@@ -146,7 +194,7 @@ export function newEditor(w: Wiring): Editor {
 
     mark();
     dress();
-    scrolled();
+    ghostly();
   }
 
   /**
@@ -210,25 +258,184 @@ export function newEditor(w: Wiring): Editor {
     }
   }
 
+  // ── finishing the word ──────────────────────────────────────────────────────
+
   /**
-   * The sheet scrolls, and the two layers on it go with it. The gutter is not on it — it is beside
-   * it, and a row of it has to stay level with the line it is about, so it is moved to match.
+   * What would finish the word under the caret — asked of the language, answered to the machine.
+   *
+   * Only at the end of a line, and that is a rule about the two layers rather than about the
+   * language: the ghost is a node in the coloured layer, and a node in the middle of a line pushes
+   * the rest of that line sideways in one layer and not in the other, which puts the caret off the
+   * word it is on. At the end of the line there is nothing to push.
    */
-  function scrolled(): void {
-    gutter.style.transform = `translateY(${-sheet.scrollTop}px)`;
+  function hint(): void {
+    writing.dispatch("see", { at: reading() });
   }
 
-  sheet.addEventListener("scroll", scrolled);
+  /** What the caret is over, in the language's terms. Whether it is worth an offer is not asked
+      here: the machine has a state where nothing is offered whatever the caret is over. */
+  function reading(): Offer | null {
+    if (area.selectionStart !== area.selectionEnd) return null;
+    const caret = area.selectionStart;
+    const next = area.value[caret];
+    if (next !== undefined && next !== "\n") return null;
+    const upto = area.value.slice(0, caret).split("\n");
+    const found = ahead(upto[upto.length - 1] ?? "", vocab);
+    return found && { ...found, line: upto.length };
+  }
+
+  /** The offer, drawn. Called when it changes, and again whenever the layer is rebuilt under it. */
+  function ghostly(): void {
+    ghost.remove();
+    const at = writing.state;
+    if (at.type !== "ahead") return;
+    ghost.textContent = at.context.rest;
+    lines.get(at.context.line)?.append(ghost);
+  }
+
+  /**
+   * Write into the text, keeping the browser's own undo where the browser will have it. Assigning
+   * to `value` throws that stack away, and an editor you cannot undo in is not an editor.
+   */
+  function put(from: number, to: number, text: string, caret?: number): void {
+    ours = true;
+    try {
+      area.setSelectionRange(from, to);
+      if (!document.execCommand?.("insertText", false, text))
+        area.setRangeText(text, from, to, "end");
+      if (caret !== undefined) area.setSelectionRange(caret, caret);
+    } finally {
+      ours = false;
+    }
+    paint();
+    hint();
+    w.onEdit();
+  }
+
+  /** The same text, changed in the one stretch where it differs. */
+  function patch(text: string, caret: number): void {
+    const was = area.value;
+    if (was === text) return void area.setSelectionRange(caret, caret);
+    let a = 0;
+    while (a < was.length && a < text.length && was[a] === text[a]) a++;
+    let b = 0;
+    while (
+      b < was.length - a &&
+      b < text.length - a &&
+      was[was.length - 1 - b] === text[text.length - 1 - b]
+    )
+      b++;
+    put(a, was.length - b, text.slice(a, text.length - b), caret);
+  }
+
+  // ── renaming a name in every line it stands in ──────────────────────────────
+
+  /**
+   * A keystroke while the mode is on, landing in every line the word is written on.
+   *
+   * The whole text is worked out again from the text as it stood when the mode was armed, so no
+   * keystroke depends on the one before it. What is checked first is that this keystroke was
+   * *inside the word*: everything before it and everything after it must still read as it did, or
+   * the reader has gone somewhere else and the mode is over.
+   */
+  function retype(): boolean {
+    const at = writing.state;
+    // A word named and then typed over rather than armed is ordinary typing: `see` lets it go,
+    // the way it lets go of everything else the caret has moved away from.
+    if (at.type !== "renaming") return false;
+    const c = at.context;
+    const held = spread(c);
+    const caret = area.selectionStart;
+    const typed = area.value.slice(held.at, caret);
+    const sound =
+      caret >= held.at &&
+      caret === area.selectionEnd &&
+      !/\s/.test(typed) &&
+      area.value.slice(0, held.at) === held.text.slice(0, held.at) &&
+      area.value.slice(caret) === held.text.slice(held.at + c.now.length);
+    if (!sound) {
+      writing.dispatch("drop");
+      return false;
+    }
+    writing.dispatch("retype", { now: typed });
+    const next = spread(writing.state.context as typeof c);
+    patch(next.text, next.at + typed.length);
+    return true;
+  }
+
+  /** What the chip says, which is the whole of the mode's face. */
+  function badge(): void {
+    const at = writing.state;
+    const on = at.type === "renaming";
+    chip.hidden = !on && at.type !== "picked";
+    if (chip.hidden) return;
+    const { word: name } = at.context as { word: string };
+    chip.classList.toggle("on", on);
+    chip.textContent = on ? `renaming ${name}` : `rename ${name}`;
+    chip.title = on
+      ? "type the new name — every line follows. Esc to stop"
+      : `retype ${name} in every line it is written on`;
+  }
+
+  chip.addEventListener("click", () => {
+    const at = writing.state;
+    if (at.type !== "picked") return void writing.dispatch("drop");
+    const { at: from, to } = at.context;
+    writing.dispatch("arm", { base: area.value });
+    // The word is left selected, so that typing replaces it — which is what the mode is for.
+    area.focus();
+    area.setSelectionRange(from, to);
+  });
+
+  // A word is named by double-clicking it, which is how the text is read anyway. Naming one
+  // commits to nothing: the chip appears, and until it is pressed this is an ordinary editor.
+  area.addEventListener("dblclick", () => {
+    const raw = area.value.slice(area.selectionStart, area.selectionEnd);
+    const name = raw.trim();
+    const from = area.selectionStart + raw.indexOf(name);
+    writing.dispatch("pick", { word: name, at: from, to: from + name.length });
+  });
+
+  // Clicking somewhere else lets the word go — but a double-click is two clicks, and the second
+  // of them is the one that named it.
+  area.addEventListener("mousedown", (e) => {
+    if (e.detail === 1) writing.dispatch("drop");
+  });
+
+  area.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") return void writing.dispatch("drop");
+    const at = writing.state;
+    if (e.key !== "Tab" || at.type !== "ahead") return;
+    // The word, and the space after it: the next word is what you were going to type anyway.
+    e.preventDefault();
+    const caret = area.selectionStart;
+    put(caret - at.context.typed.length, caret, `${at.context.word} `);
+  });
+
   area.addEventListener("input", () => {
+    // `put` finishes what it started; this is the keystrokes that came from a keyboard.
+    if (ours) return;
+    if (retype()) return;
     // The colour is immediate and the reading of it is not: one is a look at what you typed, the
     // other rebuilds a machine, and only the second is worth waiting a moment for.
     paint();
+    hint();
     w.onEdit();
   });
+
+  // The ghost is about where the caret is, and the caret moves without the text changing.
+  for (const kind of ["keyup", "click", "focus"] as const)
+    area.addEventListener(kind, () => hint());
+  area.addEventListener("blur", () => writing.dispatch("hide"));
 
   const off: Off[] = [
     w.focus.choice.rx.on(TRANSITION, () => dress()),
     w.focus.pointer.rx.on(TRANSITION, () => dress()),
+    // One machine, so one redraw: the ghost and the chip are two faces of the same state.
+    writing.rx.on(TRANSITION, () => {
+      ghostly();
+      badge();
+    }),
   ];
 
   return {
@@ -236,12 +443,32 @@ export function newEditor(w: Wiring): Editor {
     text: () => area.value,
     set: (text) => {
       area.value = text;
+      writing.dispatch("drop");
       paint();
     },
     show: (rules, lane) => {
       written = new Map(rules.map((r) => [r.at, r]));
       colour = lane;
       read = area.value;
+      // What the text has taught: every name it uses, by kind. Nothing is invented here — a
+      // completion that offers a state the schema has never mentioned is a suggestion to write a
+      // state nothing reaches.
+      const q = new Set<string>();
+      const s = new Set<string>();
+      const l = new Set<string>();
+      const op = new Set<string>();
+      for (const { edge } of rules) {
+        q.add(edge.from);
+        q.add(edge.to);
+        s.add(edge.on);
+        if (edge.emit) l.add(edge.emit);
+        // A rule read from text carries names; one read off a live machine carries the functions
+        // themselves, and a function has no name worth offering.
+        for (const f of [edge.when, edge.with, edge.by])
+          if (typeof f === "string") op.add(f);
+      }
+      const sorted = (set: Set<string>) => [...set].sort();
+      vocab = { q: sorted(q), s: sorted(s), l: sorted(l), op: sorted(op) };
       paint();
     },
     mark,

@@ -8,16 +8,16 @@
  * same padding, the same line height, the same tab stop — or the caret drifts off the word it is
  * on and the marks stop pointing at the lines they are about.
  *
- * What scrolls is the sheet the two text layers stand on, and not the textarea. A textarea has no
- * children, so its own scroll has nothing to snap to; the sheet's children are the lines, and a
- * line is the only place in a source worth stopping at. So the textarea is given the height of
- * its text — `--lines` and `--cols`, counted where the text is counted — and does not scroll at
- * all, and the sheet scrolls both layers together, a line at a time.
+ * What scrolls is the sheet, and the sheet holds all three. A textarea has no children, so its own
+ * scroll has nothing to snap to; the sheet's children are the lines, and a line is the only place
+ * in a source worth stopping at. So the textarea is given the height of its text — `--lines` and
+ * `--cols`, counted where the text is counted — and does not scroll at all, and the sheet scrolls
+ * the whole page of them together, a line at a time. The gutter is on that page rather than beside
+ * it: the wheel works over the numbers because there is nothing there that is not the text.
  */
 .editor {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     height: 100%;
     /* A floor, not a height: the row it sits in is a share of the page, and it scrolls inside. */
@@ -48,14 +48,32 @@
 }
 
 .editor .sheet {
-    position: relative;
     overflow: auto;
     overscroll-behavior: contain;
     /* A line at a time, and there is nothing between two lines to stop at. */
     scroll-snap-type: y mandatory;
+    /* Where a line comes to rest: at the top of the text, not at the top of the box. Without it a
+       snapped line sits against the edge of the frame and under the label above it. */
+    scroll-padding-top: 0.9rem;
 }
 
-/* Behind, and never in the way. It scrolls because the sheet does, so it needs no moving. */
+/* The gutter and the text, side by side on the page that scrolls. */
+.editor .page {
+    display: flex;
+    align-items: stretch;
+    min-height: 100%;
+}
+
+/* A grid of one, so the text layer is as tall as the page and never shorter than its own text:
+   the whole box is the textarea, and clicking anywhere in it puts the caret in the source. */
+.editor .stack {
+    position: relative;
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Behind, and never in the way. It scrolls because the page does, so it needs no moving. */
 .editor .ink {
     position: absolute;
     top: 0;
@@ -89,16 +107,27 @@
 }
 
 /*
- * As tall and as wide as its text, so that it never scrolls on its own and the sheet under it
- * has something to scroll. The two counts come from the text itself; the units are the ones the
- * layer above is set in, so the two layers cannot drift.
+ * What would finish the word being typed, where it would go. Quiet, because it is not there: it is
+ * an offer, and the same quiet the figure uses for what is out of reach. TAB takes it.
+ */
+.editor .ghost {
+    color: var(--faint);
+    pointer-events: none;
+}
+
+/*
+ * As tall and as wide as its text, so that it never scrolls on its own and the page under it has
+ * something to scroll. The two counts come from the text itself; the units are the ones the layer
+ * above is set in, so the two layers cannot drift.
  */
 .editor textarea {
-    position: relative;
     display: block;
     width: max(100%, calc(var(--cols, 0) * 1ch + 1.5rem));
-    height: max(100%, calc(var(--lines, 1) * 1.7em + 1.8rem));
+    min-height: calc(var(--lines, 1) * 1.7em + 1.8rem);
     border: 0;
+    /* The frame around the editor already says where the focus is. A second frame inside it says
+       the same thing again, in the browser's own colour, over the text. */
+    outline: none;
     background: transparent;
     color: transparent;
     caret-color: var(--ink);
@@ -111,8 +140,45 @@
 }
 
 .editor .tag {
-    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     padding: 0.7rem 0.9rem 0.35rem;
+}
+
+/*
+ * Rename this name in every line it is written on.
+ *
+ * It appears when a word is double-clicked and does nothing until it is pressed, because
+ * double-clicking a word is how the text is read. Pressed, it is a mode and says so: what is typed
+ * next lands in every line at once, and there is no undoing that by eye.
+ */
+.editor .rename {
+    margin-left: auto;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.editor .rename:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.editor .rename.on {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    color: var(--accent);
+}
+
+.editor .rename[hidden] {
+    display: none;
 }
 
 /*
@@ -124,7 +190,6 @@
  * about it.
  */
 .editor .note {
-    grid-column: 1 / -1;
     margin: 0;
     padding: 0.45rem 0.75rem 0.5rem;
     border-top: 1px solid var(--line);
@@ -143,13 +208,19 @@
  * The line numbers the parser counts in, and — where a rule can fire from where the machine
  * stands — the mark that says so. A debugger's gutter, and it does what one does: it says where
  * you are in the text, and it is what you press to go one step.
+ *
+ * It stands still while the text scrolls sideways and moves with it while the text scrolls down,
+ * which is what a gutter is: the same rows, always beside their lines.
  */
 .editor .gutter {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    flex: none;
     padding: 0.9rem 0;
     border-right: 1px solid var(--line);
     background: var(--surface);
     user-select: none;
-    will-change: transform;
 }
 
 .editor .gutter .row {

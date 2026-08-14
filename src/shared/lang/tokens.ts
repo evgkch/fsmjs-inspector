@@ -23,8 +23,12 @@ export type Ink = "key" | "q" | "s" | "l" | "op" | "c" | "";
 
 export type Tok = { text: string; ink: Ink };
 
-/** What the word before it says a value is. */
-const KIND: Record<Word, Ink> = {
+/**
+ * What the word before it says a value is. Exported because completion asks the same question the
+ * colouring does — after `ON` comes the name of an event, and both the ink and the word offered
+ * follow from that one fact.
+ */
+export const KIND: Record<Word, Ink> = {
   FROM: "q",
   TO: "q",
   ON: "s",
