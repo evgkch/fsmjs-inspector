@@ -62,6 +62,7 @@
     /* Where a line comes to rest: at the top of the text, not at the top of the box. Without it a
        snapped line sits against the edge of the frame and under the label above it. */
     scroll-padding-top: 0.9rem;
+    scroll-padding-bottom: 0.9rem;
 }
 
 /* The gutter and the text, side by side on the page that scrolls. */
@@ -118,6 +119,20 @@
     padding: 0 0.75rem;
     min-height: var(--cell, 24px);
     scroll-snap-align: start;
+}
+
+/*
+ * The last line rests against the bottom instead, and without that rule the end of the source
+ * cannot be reached at all.
+ *
+ * Snapping is mandatory, so the scroll must always come to rest on a target. The targets are the
+ * tops of the lines, and the furthest of them is a whole port above the end of the text — so the
+ * final stretch, the last line and the padding under it, has no position to rest at and the scroll
+ * springs back off it. A box you cannot scroll to the bottom of reads as a broken box, and it was
+ * one.
+ */
+.editor .line:last-child {
+    scroll-snap-align: end;
 }
 
 /*

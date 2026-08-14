@@ -374,14 +374,35 @@ export function board(d: Draw, w: Wiring): Dressed {
       svg("text", { x, y, class: "cap", "text-anchor": "middle" }, word),
     );
 
-  // Every one of them is centred on what it names, and there are no exceptions to look for: the
-  // two column indices at the head of their runs, the two row indices over the middle column,
-  // which is where the names of rows are written — FROM at its head, EMIT at the head of the
-  // outputs below.
+  /**
+   * A keyword stands the way the index it names stands.
+   *
+   * `ON` and `FROM` name what is written across the page — a run of columns, a column of rows — so
+   * they are written across it too, on the one line above the grid. `TO` and `EMIT` name the
+   * bottom block, whose index is the band of words stood on end and whose columns are the rails
+   * running down through it, so they are stood on end with them, in the empty middle of that band:
+   * `TO` against the columns it names and `EMIT` at the head of the outputs it names, which are
+   * written down the middle column directly below it.
+   */
+  const stack = (x: number, word: string) =>
+    root.append(
+      svg(
+        "text",
+        {
+          x,
+          y: g.stem,
+          class: "cap",
+          "text-anchor": "start",
+          transform: `rotate(90, ${x}, ${g.stem})`,
+        },
+        word,
+      ),
+    );
+
   if (d.evs.length) cap((6 + g.spine) / 2, 13, "ON");
   cap(g.names, 13, "FROM");
-  if (d.cols.length) cap((g.q(0) + g.q(d.cols.length - 1)) / 2, 13, "TO");
-  if (d.outs.length) cap(g.names, g.foot + 12, "EMIT");
+  if (d.cols.length) stack(midL - 14, "TO");
+  if (d.outs.length) stack(g.spine + 6, "EMIT");
 
   /**
    * A name of a column, stood on end under the grid — and the two indices are turned opposite
