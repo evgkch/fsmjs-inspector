@@ -60,7 +60,7 @@ export type Wiring = {
 export function board(d: Draw, w: Wiring): Dressed {
   const { choice, pointer, look } = w.focus;
   const g = d.geo;
-  const height = g.row(d.all.length) + 8;
+  const height = g.bottom;
   const root = svg("svg", {
     class: "board",
     width: g.width,
@@ -122,9 +122,9 @@ export function board(d: Draw, w: Wiring): Dressed {
         row,
         {
           x: g.on(i) - CELL / 2,
-          y: g.crown,
+          y: 0,
           width: CELL,
-          height: height - g.crown,
+          height: g.foot,
         },
       ];
     }
@@ -282,7 +282,6 @@ export function board(d: Draw, w: Wiring): Dressed {
           style: d.hue(n),
         }),
       );
-    if (g.crown) rail(6, g.crown - 10);
     rail(g.head, height);
   });
 
@@ -348,29 +347,27 @@ export function board(d: Draw, w: Wiring): Dressed {
   });
 
   /*
-   * The names of the four indices, each standing at the head of what it names.
+   * The four indices, named — and named in the words the language names them in.
    *
-   * There are four and not three. Block 3's rows are outputs, and they were the one index on the
-   * figure with no word for what its names are — which reads as a band of labels nobody
-   * introduced. And the three that were here did not line up: `from` sat at the foot of the head
-   * band while `on` and `to` sat at the top of it, so the same kind of word came at two heights
-   * and looked like two kinds.
-   *
-   * They are one line now, at the top of the head band, each at the start of its own run:
-   * `on` over the columns of block 1, `to` over the columns block 2 and 3 share, and `from` over
-   * the middle column, which is where the names of the rows are written. `emit` stands over that
-   * same middle column higher up, above the output names — the middle column carries two indices,
-   * one above the head and one below it, and this is the figure saying so.
+   * These are not labels for a chart. FROM, ON, TO and EMIT are four of the seven words a rule is
+   * written in, and the figure's four coordinates are those four words: what a rule leaves, what
+   * it leaves on, where it arrives, what comes out. So they are set as the keywords they are —
+   * the same face, the same weight and the same quiet as `FROM` in the editor two panels over —
+   * and not as small capitals belonging to the page.
    */
-  const cap = (x: number, y: number, word: string, anchor = "start") =>
+  const cap = (x: number, y: number, word: string) =>
     root.append(
-      svg("text", { x, y, class: "cap", "text-anchor": anchor }, word),
+      svg("text", { x, y, class: "cap", "text-anchor": "middle" }, word),
     );
 
-  if (d.outs.length) cap(g.names, 13, "emit", "middle");
-  if (d.evs.length) cap(6, g.crown + 12, "on");
-  cap(g.names, g.crown + 12, "from", "middle");
-  if (d.all.length) cap(g.q(0) - CELL / 2, g.crown + 12, "to");
+  // Every one of them is centred on what it names, and there are no exceptions to look for: the
+  // two column indices over the middle of their runs, the two row indices over the middle column,
+  // which is where the names of rows are written — FROM at its head, EMIT at the head of the
+  // outputs below.
+  if (d.evs.length) cap((6 + g.spine) / 2, 13, "ON");
+  cap(g.names, 13, "FROM");
+  if (d.all.length) cap((g.q(0) + g.q(d.all.length - 1)) / 2, 13, "TO");
+  if (d.outs.length) cap(g.names, g.foot + 12, "EMIT");
 
   const stood = (
     x: number,
@@ -419,9 +416,9 @@ export function board(d: Draw, w: Wiring): Dressed {
       // page, and the name lighting up is what says it can be clicked.
       const grab = svg("rect", {
         x: g.q(i) - CELL / 2,
-        y: g.crown + 16,
+        y: 20,
         width: CELL,
-        height: g.head - g.crown - 20,
+        height: g.head - 24,
         class: "grab",
       });
       grab.append(svg("title", {}, `TO ${to}, and nothing is emitted`));

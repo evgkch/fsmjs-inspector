@@ -40,13 +40,15 @@ line.rail {
     stroke-width: 1;
 }
 
-/* The name of an index: the same quiet capitals every other name on the page is set in, and a
-   shade louder than a value, because it is what the values are. */
+/*
+ * The name of an index, which is a keyword of the language: FROM, ON, TO, EMIT are four of the
+ * seven words a rule is written in, and the figure's four coordinates are exactly those four. So
+ * they are set the way the editor sets them — the same face, the same weight, the same quiet —
+ * and a reader who has met them in the text has already met them here.
+ */
 text.cap {
-    font: 500 0.62rem/1 var(--main-font);
-    fill: var(--muted);
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
+    font: 500 0.7rem/1 var(--mono-font);
+    fill: var(--faint);
 }
 
 text.name {
