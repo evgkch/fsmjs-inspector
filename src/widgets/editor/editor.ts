@@ -37,7 +37,7 @@ import type { Focus } from "../../features/focus/index.js";
 import { newWriting } from "../../features/write-rules/index.js";
 import type { Facts, Typing } from "../../features/write-rules/index.js";
 import { make, word } from "../../shared/lib/dom.js";
-import { rhythm } from "../../shared/lib/grid.js";
+import { CELL, rhythm } from "../../shared/lib/grid.js";
 import type { Vocab } from "../../shared/lang/complete.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { tokenize } from "../../shared/lang/tokens.js";
@@ -244,28 +244,41 @@ export function newEditor(w: Wiring): Editor {
   }
 
   /**
-   * A row of the gutter is the rule on that line, so it answers the pointer the way the figure's
-   * own cells do — the same event, the same machine — and it is pressed the way the figure is
-   * pressed, except that a line names a rule outright and needs no second click.
+   * A row of the gutter is the rule on that line, and pressing it takes that rule — a line names
+   * one outright, so it needs no second click the way the figure's two halves do.
    */
   function wire(at: number, row: HTMLElement): void {
-    row.addEventListener("mouseenter", () => {
-      const rule = fresh() ? written.get(at) : undefined;
-      // Both halves: the line says where the rule starts and where it ends, so the figure says
-      // both too — two bands out of block 1 and two out of block 3, crossing at the corner. A line
-      // with no rule on it names none, which is a fact and not a reason to say nothing: the
-      // pointer machine has one guard for naming nothing, and it is the same guard the figure's
-      // out-of-reach cells meet.
-      w.focus.pointer.dispatch("enter", {
-        keys: rule ? halvesOf(rule.edge) : [],
-        offer: true,
-        alive: true,
-      });
-    });
-    row.addEventListener("mouseleave", () => w.focus.pointer.dispatch("leave"));
     row.addEventListener("click", () => {
       const rule = fresh() ? written.get(at) : undefined;
       if (rule && w.fires(rule)) w.fire(rule);
+    });
+  }
+
+  /**
+   * Which line the pointer is on, over the number and over the text alike.
+   *
+   * One source for both, because they are one row: the number and the line it is against are the
+   * same rule, and a hover that lights one of them is a band with a break in it. The gutter is on
+   * the page that scrolls, so the page is where this is asked — and the answer is arithmetic
+   * rather than a hit test, because every line is exactly one module tall and cannot wrap.
+   */
+  let over = 0;
+  function pointing(y: number): void {
+    const box = code.getBoundingClientRect();
+    const at = Math.floor((y - box.top) / CELL) + 1;
+    const on = at >= 1 && at <= lines.size ? at : 0;
+    if (on === over) return;
+    over = on;
+    const rule = on && fresh() ? written.get(on) : undefined;
+    // Both halves: the line says where the rule starts and where it ends, so the figure says both
+    // too — two bands out of block 1 and two out of block 3, crossing at the corner. A line with
+    // no rule on it names no cells, which is a fact and not a reason to say nothing: the pointer
+    // machine has one guard for naming nothing, and it is the guard the figure's out-of-reach
+    // cells meet as well.
+    w.focus.pointer.dispatch("enter", {
+      keys: rule ? halvesOf(rule.edge) : [],
+      offer: true,
+      alive: true,
     });
   }
 
@@ -415,6 +428,12 @@ export function newEditor(w: Wiring): Editor {
       ? "type the new name — every line follows. Esc to stop"
       : `retype ${name} in every line it is written on`;
   }
+
+  sheet.addEventListener("mousemove", (e) => pointing(e.clientY));
+  sheet.addEventListener("mouseleave", () => {
+    over = 0;
+    w.focus.pointer.dispatch("leave");
+  });
 
   /**
    * Every event the box has, handed over as it comes.
