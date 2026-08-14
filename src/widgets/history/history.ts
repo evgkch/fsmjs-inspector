@@ -26,7 +26,7 @@ import type { Graph, Step, Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between } from "../../features/take-rule/index.js";
 import { make, svg } from "../../shared/lib/dom.js";
-import { CELL, EM } from "../../shared/lib/grid.js";
+import { CELL, EM, HEAD } from "../../shared/lib/grid.js";
 import "./ui/history.css";
 
 /** The strip under the columns where the step numbers stand. */
@@ -45,10 +45,13 @@ const BEND = 0.82;
 export type History = {
   readonly node: HTMLElement;
   /**
-   * The rows this is drawn on: the same states in the same order as the figure, and `head` — how
-   * far down the figure's own first row sits, so the two line up across the gap between them.
+   * The rows this is drawn on: the same states in the same order as the figure.
+   *
+   * How far down they start is not asked and not passed. The figure hangs everything below its
+   * grid, so its first row is `HEAD` from the top of the board whatever the schema says, and this
+   * is drawn from the top of its own panel by the same number.
    */
-  readonly show: (graph: Graph, start: string, head: number) => void;
+  readonly show: (graph: Graph, start: string) => void;
   readonly draw: (exploring: boolean) => void;
   readonly stop: () => void;
 };
@@ -70,11 +73,10 @@ export function newHistory(w: Wiring): History {
 
   let graph: Graph = {};
   let row = new Map<string, number>();
-  let head = 0;
   let exploring = false;
 
   const x = (col: number) => col * CELL + CELL / 2;
-  const y = (state: string) => head + (row.get(state) ?? 0) * CELL + CELL / 2;
+  const y = (state: string) => HEAD + (row.get(state) ?? 0) * CELL + CELL / 2;
   const colour = (state: string) => hue(row.get(state) ?? 0);
 
   /** A transition that happened, read as the rule it took. */
@@ -152,7 +154,7 @@ export function newHistory(w: Wiring): History {
     // Room past the end for what could happen next, and no more: a string running on past the
     // last thing that happened promises a run that has not been made yet.
     const width = end + CELL;
-    const height = head + row.size * CELL + FOOT;
+    const height = HEAD + row.size * CELL + FOOT;
 
     // The names, on the left of the strings and out of the scroll: this is the same index the
     // figure writes down its middle, and a row of the run means nothing without it.
@@ -283,9 +285,8 @@ export function newHistory(w: Wiring): History {
   return {
     node,
 
-    show: (g, start, top) => {
+    show: (g, start) => {
       graph = g;
-      head = top;
       row = new Map(lanes(g, start).map((n, i) => [n, i]));
     },
 

@@ -128,10 +128,11 @@ export function mount(
   }
 
   function paint(): void {
-    // The figure first: the history is drawn on its rows, and `head` is where the first of them
-    // sits — which is not known until the board has been laid out.
+    // The two are drawn on the same rows, in the same order, starting the same distance down —
+    // which is a constant now that the figure hangs its indices below its grid, so neither has to
+    // be laid out before the other.
     figure.draw(start);
-    history.show(subject.graph, start, figure.head());
+    history.show(subject.graph, start);
     history.draw(exploring);
     fit();
   }

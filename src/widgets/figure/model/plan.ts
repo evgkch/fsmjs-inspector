@@ -17,28 +17,41 @@ import type {
   Subject,
 } from "../../../entities/machine/index.js";
 import { canFire } from "../../../features/take-rule/index.js";
-import { CELL, EM } from "../../../shared/lib/grid.js";
+import { CELL, EM, HEAD } from "../../../shared/lib/grid.js";
 
-/** The band a keyword of the language stands in, above what it is the name of. */
+/** The band a keyword of the language stands in, beside what it is the name of. */
 const CAP = 16;
+
+/** Between the grid and the words stood on end under it. */
+const GAP = 8;
 
 /**
  * The grid the three blocks stand on: `on` gives block 1's columns, `q` the columns blocks 2 and
  * 3 share, `λ` block 3's rows, and `row` the rows blocks 1 and 2 share.
  *
- * Block 3 is *under* the other two and not over them, and that is worth the paragraph.
+ * Everything hangs *downwards* from the grid, and that is worth the paragraph.
  *
- * Blocks 2 and 3 share their columns — the states a rule can arrive at. A shared index is drawn
- * once, and what hangs off it can hang either way; above, the figure began with an index nothing
- * had introduced yet and the states came third. Below, it reads in the order a rule does: the
- * pair a `dispatch` is addressed by, where it lands, and only then what comes out of it. And
- * everything that stands beside the figure — the run, drawn on these same rows — starts near the
- * top of its panel instead of below a band of outputs it has no use for.
+ * The grid is indexed twice over: down the middle by its rows, which are states, and across by its
+ * columns, which are events on the left of that middle and states on the right. The row index is
+ * written in the middle column, where it always was. The column index — every word of it, the
+ * events under block 1 and the states under block 2 — is written in one band *under* the grid, and
+ * block 3 comes under that.
+ *
+ * Which puts each index where what it indexes is. Blocks 2 and 3 share their columns, so the names
+ * of those columns end up between the two blocks they name — a shared index drawn once, in the one
+ * place that is not nearer to one of its blocks than to the other. And above the grid there is left
+ * exactly one line, the one the four indices are named on, the same height whatever the schema is:
+ * `HEAD`, which is why the run drawn on these rows no longer has to be told where they start.
  */
 export type Geo = {
   names: number;
   spine: number;
   head: number;
+  /** Under the last row of the grid, where its rails stop. */
+  grid: number;
+  /** Where the band of column names stood on end begins. */
+  stem: number;
+  /** Under that band. Block 3 hangs off this. */
   foot: number;
   width: number;
   bottom: number;
@@ -57,25 +70,38 @@ function geometry(all: string[], outs: string[], evs: string[]): Geo {
   const left = 6;
   const spine = left + evs.length * CELL;
   const mid = spine + wide;
-  // The keywords, then the names stood on end, then the grid.
-  const head = CAP + 24 + Math.max(0, ...all.map(w), ...evs.map(w));
-  const foot = head + all.length * CELL + 12;
+  const grid = HEAD + all.length * CELL;
+  // The one band of column names, holding both indices: the events under block 1 and the states
+  // under block 2, stood on end, as deep as the longest word of either.
+  const stem = grid + GAP;
+  const foot = stem + Math.max(0, ...all.map(w), ...evs.map(w));
   return {
     names: spine + wide / 2,
     spine,
-    head,
+    head: HEAD,
+    grid,
+    stem,
     foot,
     width: mid + all.length * CELL + 8,
-    bottom: (outs.length ? foot + CAP + outs.length * CELL : foot - 12) + 8,
+    bottom: (outs.length ? foot + CAP + outs.length * CELL : foot) + 8,
     on: (i) => left + i * CELL + CELL / 2,
     q: (i) => mid + i * CELL + CELL / 2,
     λ: (i) => foot + CAP + i * CELL + CELL / 2,
-    row: (j) => head + j * CELL,
+    row: (j) => HEAD + j * CELL,
   };
 }
 
 export type Draw = {
   all: string[];
+  /**
+   * The same states as the columns of blocks 2 and 3, counted the other way.
+   *
+   * A state keeps its lane and its colour — this is the order of the columns and nothing else. The
+   * rows run down from the first state, the columns run back to it, so the pair (q, q) — a rule
+   * that arrives where it started — lies along the other diagonal, and the two indices meet at the
+   * corner rather than running parallel.
+   */
+  cols: string[];
   evs: string[];
   outs: string[];
   geo: Geo;
@@ -149,6 +175,7 @@ export function plan(
 
   return {
     all,
+    cols: [...all].reverse(),
     evs,
     outs,
     geo,

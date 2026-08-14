@@ -10,3 +10,15 @@ export const CELL = 24;
 
 /** Width of one monospace character at the size the figure's labels use. */
 export const EM = 7.2;
+
+/**
+ * How far down the first row of states sits — in the figure, and in anything drawn on its rows.
+ *
+ * It is a constant and not a measurement, and that is the point. Everything the figure hangs off
+ * its indices hangs *downwards*: the names of the columns are under the grid, between the two
+ * blocks that share them, and the outputs are under those. So above the first row there is one
+ * thing only — the line the indices are named on — and its height is the same for every schema.
+ * The run beside the figure is drawn on these rows and can simply start where they start, instead
+ * of being told each time how far a band of words stood on end had pushed them down.
+ */
+export const HEAD = 24;

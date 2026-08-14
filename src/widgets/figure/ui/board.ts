@@ -1,11 +1,13 @@
 /**
  * The three blocks, drawn and then *dressed*.
  *
- *            ┌─────────────┐
+ *   ┌────────┬─────────────┐
+ *   │FROM×ON │  FROM × TO  │  1 and 2 — the rows are shared across this line
+ *   ├────────┼─────────────┤
+ *   │  σ σ σ │   q  q  q   │  the column index, stood on end, written once
+ *   └────────┼─────────────┤
  *            │  TO × EMIT  │  3 — the columns are shared down this line
- *   ┌────────┼─────────────┤
- *   │FROM×ON │  FROM × TO  │  1 and 2 — the rows are shared across this one
- *   └────────┴─────────────┘
+ *            └─────────────┘
  *
  * Block 1 is the domain of δ: a row is a state, a column an event type, one cell is one (q, σ) —
  * the pair a `dispatch` is addressed by. Block 3 is the codomain, (r, λ) — and a rule that emits
@@ -96,7 +98,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     `emit\0${r.emit ?? ""}`,
   ];
   const midL = g.q(0) - CELL / 2;
-  const midR = g.q(d.all.length - 1) + CELL / 2;
+  const midR = g.q(d.cols.length - 1) + CELL / 2;
 
   /**
    * The two bands of a cell: the lines it is the intersection of, run out to the names on both
@@ -117,7 +119,7 @@ export function board(d: Draw, w: Wiring): Dressed {
       const i = d.evs.indexOf(b!);
       if (i < 0) return [row];
       // The column is an event type, and there is no axis of those anywhere else — so it runs
-      // up to the name that says which event, and stops.
+      // down to the name that says which event, and stops.
       return [
         row,
         {
@@ -130,7 +132,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     }
     if (kind === EFFECT) {
       const column = {
-        x: g.q(d.all.indexOf(b!)) - CELL / 2,
+        x: g.q(d.cols.indexOf(b!)) - CELL / 2,
         y: 0,
         width: CELL,
         height,
@@ -268,9 +270,9 @@ export function board(d: Draw, w: Wiring): Dressed {
   root.append(floor, wash);
 
   // The lanes run through the whole figure: the columns of block 2 are the columns of block 3,
-  // and drawing them as one line is what says so. They stop for the band of names, so nothing is
-  // struck through.
-  d.all.forEach((n, i) => {
+  // and drawing them as one line is what says so. They stop for the band of names between the two
+  // blocks, so nothing is struck through.
+  d.cols.forEach((n, i) => {
     const rail = (y1: number, y2: number) =>
       root.append(
         svg("line", {
@@ -282,7 +284,9 @@ export function board(d: Draw, w: Wiring): Dressed {
           style: d.hue(n),
         }),
       );
-    rail(g.head, height);
+    rail(g.head, g.grid);
+    if (d.outs.length)
+      rail(g.λ(0) - CELL / 2, g.λ(d.outs.length - 1) + CELL / 2);
   });
 
   // Blocks 1 and 2 share their rows the way 2 and 3 share their columns, so a row is drawn as the
@@ -320,7 +324,7 @@ export function board(d: Draw, w: Wiring): Dressed {
       ),
     );
 
-    d.all.forEach((to, k) => {
+    d.cols.forEach((to, k) => {
       const list = d.shot.get(`${λ}\0${to}`);
       if (!list) return;
       const box = svg("g", { style: d.hue(to) });
@@ -361,64 +365,65 @@ export function board(d: Draw, w: Wiring): Dressed {
     );
 
   // Every one of them is centred on what it names, and there are no exceptions to look for: the
-  // two column indices over the middle of their runs, the two row indices over the middle column,
+  // two column indices at the head of their runs, the two row indices over the middle column,
   // which is where the names of rows are written — FROM at its head, EMIT at the head of the
   // outputs below.
   if (d.evs.length) cap((6 + g.spine) / 2, 13, "ON");
   cap(g.names, 13, "FROM");
-  if (d.all.length) cap((g.q(0) + g.q(d.all.length - 1)) / 2, 13, "TO");
+  if (d.cols.length) cap((g.q(0) + g.q(d.cols.length - 1)) / 2, 13, "TO");
   if (d.outs.length) cap(g.names, g.foot + 12, "EMIT");
 
-  const stood = (
-    x: number,
-    y: number,
-    name: string,
-    cls: string,
-    hue?: string,
-  ) =>
+  /**
+   * A name of a column, stood on end under the grid.
+   *
+   * A quarter turn clockwise, so the words run *down* the page: they hang below the grid, and a
+   * label that hangs downwards and reads upwards is read against the direction it points. Turned
+   * this way each name starts at the column it is the name of and runs away from it, and the whole
+   * band begins on one line however long the longest word is.
+   */
+  const stood = (x: number, name: string, cls: string, hue?: string) =>
     svg(
       "text",
       {
         x,
-        y,
+        y: g.stem,
         class: cls,
         "text-anchor": "start",
-        transform: `rotate(-90, ${x}, ${y})`,
+        transform: `rotate(90, ${x}, ${g.stem})`,
         ...(hue !== undefined && { style: hue }),
       },
       name,
     );
 
   d.evs.forEach((σ, i) => {
-    root.append(mark(`on\0${σ}`, stood(g.on(i), g.head - 8, σ, "name on")));
+    root.append(mark(`on\0${σ}`, stood(g.on(i), σ, "name on")));
   });
 
   // `TO r` with nothing emitted is an outcome the grid above has no cell for — there is no output
   // to give it one, and a row for it would be a symbol the language does not have. What the
   // figure does have is the name of the column, which is where `TO r` is written and has been all
   // along. So the name is that outcome's cell, and nothing is drawn behind it.
-  d.all.forEach((to, i) => {
+  d.cols.forEach((to, i) => {
     const ends = d.rows.filter((r) => r.emit === undefined && r.to === to);
     const name = mark(
       `to\0${to}`,
       stood(
         g.q(i),
-        g.head - 20,
         to,
-        `name${to === d.here ? " here" : ""}${d.off.has(to) ? " off" : ""}`,
+        `name to${to === d.here ? " here" : ""}${d.off.has(to) ? " off" : ""}`,
         d.hue(to),
       ),
     );
     root.append(name);
     if (ends.length) {
-      // A word stood on end is a small thing to hit, so the heading it stands in takes the
-      // pointer for it — painted as nothing at all, because what a name has behind it is the
-      // page, and the name lighting up is what says it can be clicked.
+      // A word stood on end is a small thing to hit, so the band it stands in takes the pointer
+      // for it — painted as nothing at all, because what a name has behind it is the page, and
+      // the name lighting up is what says it can be clicked.
       const grab = svg("rect", {
         x: g.q(i) - CELL / 2,
-        y: 20,
+        y: g.stem,
         width: CELL,
-        height: g.head - 24,
+        height: g.foot - g.stem,
         class: "grab",
       });
       grab.append(svg("title", {}, `TO ${to}, and nothing is emitted`));
@@ -536,7 +541,7 @@ export function board(d: Draw, w: Wiring): Dressed {
         );
     });
 
-    d.all.forEach((to, i) => {
+    d.cols.forEach((to, i) => {
       const list = d.pair.get(`${from}\0${to}`);
       if (list) {
         row.append(

@@ -18,8 +18,6 @@ export type Figure = {
   readonly draw: (start: string) => void;
   /** How wide the board it drew is, whole — what it would take not to scroll. */
   readonly width: () => number;
-  /** Where the row of the first state sits inside the board it drew. */
-  readonly head: () => number;
   readonly stop: () => void;
 };
 
@@ -47,9 +45,6 @@ export function newFigure(w: Wiring): Figure {
    */
   let drawn = 0;
 
-  /** Where the first row sits inside the board, so the history can carry its rows across. */
-  let head = 0;
-
   const off: Off[] = [
     w.focus.choice.rx.on(TRANSITION, () => redress?.()),
     w.focus.pointer.rx.on(TRANSITION, () => redress?.()),
@@ -61,7 +56,6 @@ export function newFigure(w: Wiring): Figure {
       redress = null;
       const d = plan(w.subject.graph, start, w.subject, w.exploring());
       drawn = d.geo.width;
-      head = d.geo.head;
       const { node: svg, dress } = board(d, {
         focus: w.focus,
         exploring: w.exploring(),
@@ -85,8 +79,6 @@ export function newFigure(w: Wiring): Figure {
       ).reduce((n, side) => n + (parseFloat(box[side]) || 0), 0);
       return drawn + frame;
     },
-
-    head: () => head,
 
     stop: () => {
       for (const it of off) it();
