@@ -114,128 +114,14 @@ export type Says = Merge<
   | IEvent<"rewritten", { text: string; caret: number }>
 >;
 
-// ── what the caret is over ───────────────────────────────────────────────────
-
-/**
- * What would finish the word under the caret, or nothing.
- *
- * Only where the caret is at the end of a line and holding no selection, and that is a rule about
- * the two layers the editor draws rather than about the language: the ghost is a node in the
- * coloured layer, and a node in the middle of a line pushes the rest of that line sideways in one
- * layer and not in the other, which puts the caret off the word it is on.
- */
-const offered = (p: Facts): Offer | null => {
-  if (p.caret !== p.end) return null;
-  const next = p.text[p.caret];
-  if (next !== undefined && next !== "\n") return null;
-  const upto = p.text.slice(0, p.caret).split("\n");
-  const found = ahead(upto[upto.length - 1] ?? "", p.vocab);
-  return found && { ...found, line: upto.length };
-};
-
-const nothing = (_: unknown, p: Facts) => offered(p) === null;
-const something = (_: unknown, p: Facts) => offered(p) !== null;
-const seen = (_: unknown, p: Facts) => offered(p) as Offer;
-
 /** Written once and named by every state that reads the caret, which is every state but one. */
 const looking = [
   { to: "plain" as const, when: nothing },
   { to: "ahead" as const, when: something, with: seen },
 ];
 
-/** The offered word, in place of what has been typed of it, and the space after it. */
-const filling = (c: Offer, p: Facts) => ({
-  from: p.caret - c.typed.length,
-  to: p.caret,
-  text: `${c.word} `,
-});
-
-// ── the keys and the clicks, as they come ────────────────────────────────────
-
-const escaped = (_: unknown, p: Facts) => p.key === "Escape";
-const tabbed = (_: unknown, p: Facts) => p.key === "Tab";
-/** A double-click is two clicks, and the second of them is the one that named the word. */
-const single = (_: unknown, p: Facts) => p.clicks === 1;
-
-// ── the name under the double-click ──────────────────────────────────────────
-
-/** The word the selection covers, trimmed of what a double-click sometimes takes with it. */
-const under = (p: Facts) => {
-  const raw = p.text.slice(p.caret, p.end);
-  const word = raw.trim();
-  return { word, at: p.caret + raw.indexOf(word), to: 0 };
-};
-
-/**
- * What can be renamed: a name, and not a word of the language. Renaming `FROM` would not be a
- * rename — it would be a different language, and the reader would stop at the first line.
- */
-const isName = (_: unknown, p: Facts) => {
-  const { word } = under(p);
-  return (
-    word.length > 0 &&
-    !/\s/.test(word) &&
-    !(WORDS as readonly string[]).includes(word)
-  );
-};
-
-const picking = (_: unknown, p: Facts) => {
-  const { word, at } = under(p);
-  return { word, at, to: at + word.length };
-};
-
 /** Naming a word is naming a word, wherever the reader was when they did it. */
 const naming = [{ to: "picked" as const, when: isName, with: picking }];
-
-// ── retyping it everywhere ───────────────────────────────────────────────────
-
-/** The text stops moving here: where the word stands in it is counted once, from this text. */
-const arming = (c: { word: string; at: number }, p: Facts): Rewrite => ({
-  word: c.word,
-  at: c.at,
-  before: hits(p.text, c.word).filter((i) => i < c.at).length,
-  base: p.text,
-  now: c.word,
-});
-
-/**
- * Where the word being retyped now stands, and the text it now stands in — both out of the same
- * two numbers, so the caret cannot end up somewhere the text does not say.
- */
-const spread = (r: Rewrite): { text: string; at: number } => ({
-  text: swap(r.base, r.word, r.now),
-  at: r.at + r.before * (r.now.length - r.word.length),
-});
-
-/**
- * Did this keystroke land inside the name being retyped: everything before the caret and
- * everything after it still reads as the mode last wrote it.
- */
-const inside = (c: Rewrite, p: Facts) => {
-  const held = spread(c);
-  const typed = p.text.slice(held.at, p.caret);
-  return (
-    p.caret >= held.at &&
-    p.caret === p.end &&
-    !/\s/.test(typed) &&
-    p.text.slice(0, held.at) === held.text.slice(0, held.at) &&
-    p.text.slice(p.caret) === held.text.slice(held.at + c.now.length)
-  );
-};
-
-const typing = (c: Rewrite, p: Facts): Rewrite => ({
-  ...c,
-  now: p.text.slice(spread(c).at, p.caret),
-});
-
-/** The word left selected, so that typing replaces it — which is what the mode is for. */
-const selecting = (c: Rewrite) => ({ from: c.at, to: c.at + c.word.length });
-
-/** The whole text with the name replaced everywhere, and where the caret goes in it. */
-const rewriting = (c: Rewrite) => {
-  const now = spread(c);
-  return { text: now.text, caret: now.at + c.now.length };
-};
 
 const writing: Schema<Written, Typing, Says> = {
   plain: {
@@ -290,8 +176,155 @@ const writing: Schema<Written, Typing, Says> = {
 
 export type Writing = StateMachine<Written, Typing, Says>;
 
-export const newWriting = (): Writing =>
-  new StateMachine<Written, Typing, Says>(writing, {
+export function newWriting(): Writing {
+  return new StateMachine<Written, Typing, Says>(writing, {
     type: "plain",
     context: undefined,
   });
+}
+
+// ── the operations, below the schema ─────────────────────────────────────────
+//
+// Declarations, and after the rules rather than before them, because that is the order the thing
+// was designed in: the states, then what may happen in each, then whatever those rules turned out
+// to need. A file written the other way round asks its reader to hold a dozen small functions in
+// mind before showing them what any of them is for.
+
+// ── what the caret is over ───────────────────────────────────────────────────
+
+/**
+ * What would finish the word under the caret, or nothing.
+ *
+ * Only where the caret is at the end of a line and holding no selection, and that is a rule about
+ * the two layers the editor draws rather than about the language: the ghost is a node in the
+ * coloured layer, and a node in the middle of a line pushes the rest of that line sideways in one
+ * layer and not in the other, which puts the caret off the word it is on.
+ */
+function offered(p: Facts): Offer | null {
+  if (p.caret !== p.end) return null;
+  const next = p.text[p.caret];
+  if (next !== undefined && next !== "\n") return null;
+  const upto = p.text.slice(0, p.caret).split("\n");
+  const found = ahead(upto[upto.length - 1] ?? "", p.vocab);
+  return found && { ...found, line: upto.length };
+}
+
+function nothing(_: unknown, p: Facts): boolean {
+  return offered(p) === null;
+}
+
+function something(_: unknown, p: Facts): boolean {
+  return offered(p) !== null;
+}
+
+function seen(_: unknown, p: Facts): Offer {
+  return offered(p) as Offer;
+}
+
+/** The offered word, in place of what has been typed of it, and the space after it. */
+function filling(
+  c: Offer,
+  p: Facts,
+): { from: number; to: number; text: string } {
+  return { from: p.caret - c.typed.length, to: p.caret, text: `${c.word} ` };
+}
+
+// ── the keys and the clicks, as they come ────────────────────────────────────
+
+function escaped(_: unknown, p: Facts): boolean {
+  return p.key === "Escape";
+}
+
+function tabbed(_: unknown, p: Facts): boolean {
+  return p.key === "Tab";
+}
+
+/** A double-click is two clicks, and the second of them is the one that named the word. */
+function single(_: unknown, p: Facts): boolean {
+  return p.clicks === 1;
+}
+
+// ── the name under the double-click ──────────────────────────────────────────
+
+/** The word the selection covers, trimmed of what a double-click sometimes takes with it. */
+function under(p: Facts): { word: string; at: number } {
+  const raw = p.text.slice(p.caret, p.end);
+  const word = raw.trim();
+  return { word, at: p.caret + raw.indexOf(word) };
+}
+
+/**
+ * What can be renamed: a name, and not a word of the language. Renaming `FROM` would not be a
+ * rename — it would be a different language, and the reader would stop at the first line.
+ */
+function isName(_: unknown, p: Facts): boolean {
+  const { word } = under(p);
+  return (
+    word.length > 0 &&
+    !/\s/.test(word) &&
+    !(WORDS as readonly string[]).includes(word)
+  );
+}
+
+function picking(
+  _: unknown,
+  p: Facts,
+): { word: string; at: number; to: number } {
+  const { word, at } = under(p);
+  return { word, at, to: at + word.length };
+}
+
+// ── retyping it everywhere ───────────────────────────────────────────────────
+
+/** The text stops moving here: where the word stands in it is counted once, from this text. */
+function arming(c: { word: string; at: number }, p: Facts): Rewrite {
+  return {
+    word: c.word,
+    at: c.at,
+    before: hits(p.text, c.word).filter((i) => i < c.at).length,
+    base: p.text,
+    now: c.word,
+  };
+}
+
+/**
+ * Where the word being retyped now stands, and the text it now stands in — both out of the same
+ * two numbers, so the caret cannot end up somewhere the text does not say.
+ */
+function spread(r: Rewrite): { text: string; at: number } {
+  return {
+    text: swap(r.base, r.word, r.now),
+    at: r.at + r.before * (r.now.length - r.word.length),
+  };
+}
+
+/**
+ * Did this keystroke land inside the name being retyped: everything before the caret and
+ * everything after it still reads as the mode last wrote it.
+ */
+function inside(c: Rewrite, p: Facts): boolean {
+  const held = spread(c);
+  const typed = p.text.slice(held.at, p.caret);
+  return (
+    p.caret >= held.at &&
+    p.caret === p.end &&
+    !/\s/.test(typed) &&
+    p.text.slice(0, held.at) === held.text.slice(0, held.at) &&
+    p.text.slice(p.caret) === held.text.slice(held.at + c.now.length)
+  );
+}
+
+function typing(c: Rewrite, p: Facts): Rewrite {
+  return { ...c, now: p.text.slice(spread(c).at, p.caret) };
+}
+
+/** The word left selected, so that typing replaces it — which is what the mode is for. */
+function selecting(c: Rewrite): { from: number; to: number } {
+  return { from: c.at, to: c.at + c.word.length };
+}
+
+/** The whole text with the name replaced everywhere, and where the caret goes in it. */
+function rewriting(c: Rewrite): { text: string; caret: number } {
+  const now = spread(c);
+  return { text: now.text, caret: now.at + c.now.length };
+}

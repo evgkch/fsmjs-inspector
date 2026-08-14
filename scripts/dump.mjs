@@ -1,5 +1,6 @@
 /**
- * Write the inspector's own machines into `schemas/`, as `JSON.stringify` writes them.
+ * Write the inspector's own machines into `schemas/`, as `JSON.stringify` writes them — every one
+ * of them, so that the page offers its whole self and not a chosen half.
  *
  * The page's claim is that a machine's graph is a projection of the machine itself, and the
  * shortest way to make that claim checkable is to hand the page its own machines to read. These
@@ -31,6 +32,12 @@ const { page } = await vite.ssrLoadModule(
 const { newWriting } = await vite.ssrLoadModule(
   "/src/features/write-rules/model/writing.ts",
 );
+const { newMode } = await vite.ssrLoadModule(
+  "/src/features/explore/model/mode.ts",
+);
+const { newDrag } = await vite.ssrLoadModule(
+  "/src/features/drag-panel/model/drag.ts",
+);
 
 // One focus per figure, so there is no module-level pair to reach for: the dump asks for one
 // the same way a mount does.
@@ -43,6 +50,8 @@ for (const [file, machine] of [
   ["the-inspectors-pointer.json", pointer],
   ["the-inspectors-page.json", page],
   ["the-inspectors-editor.json", newWriting()],
+  ["the-inspectors-mode.json", newMode()],
+  ["the-inspectors-panel.json", newDrag()],
 ]) {
   const text = JSON.stringify(machine, null, 2) + "\n";
   writeFileSync(join(here, "..", "schemas", file), text);

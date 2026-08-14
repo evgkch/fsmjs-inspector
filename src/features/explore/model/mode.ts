@@ -27,9 +27,6 @@ export type Read = Merge<IState<"running"> | IState<"exploring">>;
 /** Read the whole schema, or read where the machine stands. */
 export type Asked = Merge<IEvent<"read", { whole: boolean }>>;
 
-const whole = (_: unknown, p: { whole: boolean }) => p.whole;
-const part = (_: unknown, p: { whole: boolean }) => !p.whole;
-
 const reading: Schema<Read, Asked, Record<string, never>> = {
   running: { read: [{ to: "exploring", when: whole }] },
   exploring: { read: [{ to: "running", when: part }] },
@@ -37,12 +34,29 @@ const reading: Schema<Read, Asked, Record<string, never>> = {
 
 export type Mode = StateMachine<Read, Asked, Record<string, never>>;
 
-export const newMode = (): Mode =>
-  new StateMachine<Read, Asked, Record<string, never>>(reading, {
+export function newMode(): Mode {
+  return new StateMachine<Read, Asked, Record<string, never>>(reading, {
     type: "running",
     context: undefined,
   });
+}
 
 /** What every drawing asks of it, so that none of them spells the comparison out. */
-export const exploring = (mode: Mode): boolean =>
-  mode.state.type === "exploring";
+export function exploring(mode: Mode): boolean {
+  return mode.state.type === "exploring";
+}
+
+// ── the guards ───────────────────────────────────────────────────────────────
+//
+// Below the schema, and declarations rather than expressions, because that is the order the thing
+// was designed in: the states and the rules first, and then whatever the rules turned out to need.
+// A file that reads the other way round asks its reader to hold a dozen small functions in mind
+// before showing them what they are for.
+
+function whole(_: unknown, p: { whole: boolean }): boolean {
+  return p.whole;
+}
+
+function part(_: unknown, p: { whole: boolean }): boolean {
+  return !p.whole;
+}

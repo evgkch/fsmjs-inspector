@@ -1,0 +1,18 @@
+{
+  "running": {
+    "read": [
+      {
+        "to": "exploring",
+        "when": "whole"
+      }
+    ]
+  },
+  "exploring": {
+    "read": [
+      {
+        "to": "running",
+        "when": "part"
+      }
+    ]
+  }
+}

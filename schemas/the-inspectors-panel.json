@@ -1,0 +1,25 @@
+{
+  "still": {
+    "pointerdown": [
+      {
+        "to": "dragging",
+        "when": "grabbed",
+        "with": "hold"
+      }
+    ]
+  },
+  "dragging": {
+    "pointermove": [
+      {
+        "to": "dragging",
+        "emit": "put",
+        "by": "under"
+      }
+    ],
+    "pointerup": [
+      {
+        "to": "still"
+      }
+    ]
+  }
+}

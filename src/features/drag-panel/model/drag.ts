@@ -39,19 +39,6 @@ export type Pointing = Merge<
 /** Where the panel goes now. */
 export type Puts = Merge<IEvent<"put", { left: number; top: number }>>;
 
-const grabbed = (_: unknown, p: { grab: boolean }) => p.grab;
-
-/** What the pointer took hold of: where in the panel it went down, kept for the whole drag. */
-const hold = (
-  _: unknown,
-  p: { x: number; y: number; left: number; top: number },
-) => ({ dx: p.x - p.left, dy: p.y - p.top });
-
-const under = (c: { dx: number; dy: number }, p: { x: number; y: number }) => ({
-  left: p.x - c.dx,
-  top: p.y - c.dy,
-});
-
 const dragging: Schema<Held, Pointing, Puts> = {
   still: {
     pointerdown: [{ to: "dragging", when: grabbed, with: hold }],
@@ -64,8 +51,33 @@ const dragging: Schema<Held, Pointing, Puts> = {
 
 export type Drag = StateMachine<Held, Pointing, Puts>;
 
-export const newDrag = (): Drag =>
-  new StateMachine<Held, Pointing, Puts>(dragging, {
+export function newDrag(): Drag {
+  return new StateMachine<Held, Pointing, Puts>(dragging, {
     type: "still",
     context: undefined,
   });
+}
+
+// ── the guard, and the two sums ──────────────────────────────────────────────
+//
+// Below the schema, and declarations rather than expressions: the states and the rules are the
+// design, and these are what the design turned out to need.
+
+function grabbed(_: unknown, p: { grab: boolean }): boolean {
+  return p.grab;
+}
+
+/** What the pointer took hold of: where in the panel it went down, kept for the whole drag. */
+function hold(
+  _: unknown,
+  p: { x: number; y: number; left: number; top: number },
+): { dx: number; dy: number } {
+  return { dx: p.x - p.left, dy: p.y - p.top };
+}
+
+function under(
+  c: { dx: number; dy: number },
+  p: { x: number; y: number },
+): { left: number; top: number } {
+  return { left: p.x - c.dx, top: p.y - c.dy };
+}

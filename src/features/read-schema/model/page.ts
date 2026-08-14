@@ -59,44 +59,9 @@ export type Out = Merge<
   | IEvent<"stopped", { message: string; line: number | null }>
 >;
 
-/** The one guard: did the editor's text parse. */
-const readable = (_: unknown, p: { graph: Graph | null }) => p.graph !== null;
-
-/** Keep running from the same state when the edited graph still has it, else from the first. */
-const from = (graph: Graph, keep: string, rules: readonly Written[]): Shown => {
-  const all = nodes(graph);
-  return { graph, start: all.includes(keep) ? keep : (all[0] ?? ""), rules };
-};
-
-// The guard has already decided by the time `with` runs — that split is what the pair of words
-// is for, and it is why the cast here states a fact rather than a hope.
-const adopt = (
-  _: unknown,
-  p: { graph: Graph | null; keep: string; rules: readonly Written[] },
-): Shown => from(p.graph as Graph, p.keep, p.rules);
-
-const made = ({ graph, start, rules }: Shown): Shown => ({
-  graph,
-  start,
-  rules,
-});
-const told = ({ message, line }: { message: string; line: number | null }) => ({
-  message,
-  line,
-});
-
 // Named, like everything else here: a dump keeps the name of an operation and none of its code,
 // and this machine's dump is one of the schemas the page offers.
 type Broke = { message: string; line: number | null };
-
-const first = (_: unknown, p: Broke) => ({ ...p, last: null });
-const keep = (c: Shown, p: Broke) => ({ ...p, last: c });
-const still = (c: { last: Shown | null }, p: Broke) => ({ ...p, last: c.last });
-const begun = (c: Shown, p: { start: string }) => ({
-  graph: c.graph,
-  start: p.start,
-  rules: c.rules,
-});
 
 const schema: Schema<Q, In, Out> = {
   blank: {
@@ -128,9 +93,63 @@ export const page = new StateMachine<Q, In, Out>(schema, {
 });
 
 /** The graph on screen, whichever state the page is in — `broken` still shows the last good one. */
-export const shown = (at: FsmState<Q>): Shown | null =>
-  at.type === "ready"
+export function shown(at: FsmState<Q>): Shown | null {
+  return at.type === "ready"
     ? at.context
     : at.type === "broken"
       ? at.context.last
       : null;
+}
+
+// ── the operations, below the schema ─────────────────────────────────────────
+//
+// Declarations, and after the rules rather than before them: that is the order the thing was
+// designed in — the states, then what may happen in each, then whatever those rules turned out to
+// need.
+
+/** The one guard: did the editor's text parse. */
+function readable(_: unknown, p: { graph: Graph | null }): boolean {
+  return p.graph !== null;
+}
+
+/** Keep running from the same state when the edited graph still has it, else from the first. */
+function from(graph: Graph, keep: string, rules: readonly Written[]): Shown {
+  const all = nodes(graph);
+  return { graph, start: all.includes(keep) ? keep : (all[0] ?? ""), rules };
+}
+
+// The guard has already decided by the time `with` runs — that split is what the pair of words
+// is for, and it is why the cast here states a fact rather than a hope.
+function adopt(
+  _: unknown,
+  p: { graph: Graph | null; keep: string; rules: readonly Written[] },
+): Shown {
+  return from(p.graph as Graph, p.keep, p.rules);
+}
+
+function made({ graph, start, rules }: Shown): Shown {
+  return { graph, start, rules };
+}
+
+function told({ message, line }: Broke): Broke {
+  return { message, line };
+}
+
+function first(_: unknown, p: Broke): Broke & { last: null } {
+  return { ...p, last: null };
+}
+
+function keep(c: Shown, p: Broke): Broke & { last: Shown } {
+  return { ...p, last: c };
+}
+
+function still(
+  c: { last: Shown | null },
+  p: Broke,
+): Broke & { last: Shown | null } {
+  return { ...p, last: c.last };
+}
+
+function begun(c: Shown, p: { start: string }): Shown {
+  return { graph: c.graph, start: p.start, rules: c.rules };
+}

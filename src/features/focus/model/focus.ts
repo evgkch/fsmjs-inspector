@@ -40,8 +40,9 @@
  * offers, and a schema that cannot say what decides its own cells is not worth reading.
  *
  * What neither machine knows is the mode. Running and exploring differ in which cells are on the
- * table and in what happens once both halves are named, and neither is a question about the
- * figure — the first is asked of the schema, the second of `took`.
+ * table and in what happens once both halves are named, and neither is a question either of them
+ * could answer: the first depends on the subject, so it arrives with the press as `alive` and one
+ * guard reads it; the second is `took`, and what to do about it belongs to whoever is listening.
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
@@ -76,39 +77,6 @@ export type Pressing = Merge<
 
 /** Both halves are named. Which rule that is, and what to do about it, is the listener's. */
 export type Took = Merge<IEvent<"took", { cause: Key; effect: Key }>>;
-
-/**
- * A half of a transition, still on the table — a crossing is a crossing, and a crossing is not
- * something to hold; a cell out of reach is not something to name.
- */
-const isHalf = (_: unknown, p: { key: Key; alive: boolean }) =>
-  p.alive && kindOf(p.key) in MIRROR;
-const same = (c: { end: Key }, p: { key: Key }) => c.end === p.key;
-
-/** The half held is the cause and the one pressed the effect, or the other way round. */
-const causeHeld = (c: { end: Key }, p: { key: Key; alive: boolean }) =>
-  p.alive && kindOf(c.end) === CAUSE && kindOf(p.key) === EFFECT;
-const effectHeld = (c: { end: Key }, p: { key: Key; alive: boolean }) =>
-  p.alive && kindOf(c.end) === EFFECT && kindOf(p.key) === CAUSE;
-
-const isCause = (c: { cause: Key }, p: { key: Key }) => c.cause === p.key;
-const isEffect = (c: { effect: Key }, p: { key: Key }) => c.effect === p.key;
-
-const hold = (_: unknown, p: { key: Key }) => ({ end: p.key });
-const pairUp = (c: { end: Key }, p: { key: Key }) => ({
-  cause: c.end,
-  effect: p.key,
-});
-const pairDown = (c: { end: Key }, p: { key: Key }) => ({
-  cause: p.key,
-  effect: c.end,
-});
-const keepEffect = (c: { effect: Key }) => ({ end: c.effect });
-const keepCause = (c: { cause: Key }) => ({ end: c.cause });
-const both = (c: { cause: Key; effect: Key }) => ({
-  cause: c.cause,
-  effect: c.effect,
-});
 
 const choosing: Schema<Held, Pressing, Took> = {
   nothing: {
@@ -155,20 +123,6 @@ export type Moving = Merge<
   | IEvent<"enter", { keys: Key[]; offer: boolean; alive: boolean }>
   | IEvent<"leave">
 >;
-
-/**
- * Something to point at: cells, and cells that can still be reached. A row of the gutter with no
- * rule on it names nothing, and a cell out of reach does not answer the pointer — both are a move
- * onto a place there is nothing to say about, and the pointer stays where it was.
- */
-const named = (_: unknown, p: { keys: Key[]; alive: boolean }) =>
-  p.alive && p.keys.length > 0;
-
-/** The one `with` the pointer has: written once, and named by both of the rules that need it. */
-const onto = (_: unknown, p: { keys: Key[]; offer: boolean }) => ({
-  at: p.keys,
-  offer: p.offer,
-});
 
 const moving: Schema<Where, Moving, Record<string, never>> = {
   away: {
@@ -227,10 +181,10 @@ export function newFocus(): Focus {
   return { choice, pointer, look: () => look(choice, pointer) };
 }
 
-const look = (
+function look(
   choice: StateMachine<Held, Pressing, Took>,
   pointer: StateMachine<Where, Moving, Record<string, never>>,
-): Look => {
+): Look {
   const held = choice.state;
   const fixed =
     held.type === "half"
@@ -262,4 +216,84 @@ const look = (
           ? []
           : HALVES,
   };
-};
+}
+
+// ── the operations, below the two schemas ────────────────────────────────────
+//
+// Declarations, and after the rules rather than before them, because that is the order the thing
+// was designed in: the states, then what may happen in each, then whatever those rules turned out
+// to need. A file written the other way round asks its reader to hold a dozen small functions in
+// mind before showing them what any of them is for.
+
+/**
+ * A half of a transition, still on the table — a crossing is a crossing, and a crossing is not
+ * something to hold; a cell out of reach is not something to name.
+ */
+function isHalf(_: unknown, p: { key: Key; alive: boolean }): boolean {
+  return p.alive && kindOf(p.key) in MIRROR;
+}
+
+function same(c: { end: Key }, p: { key: Key }): boolean {
+  return c.end === p.key;
+}
+
+/** The half held is the cause and the one pressed the effect, or the other way round. */
+function causeHeld(c: { end: Key }, p: { key: Key; alive: boolean }): boolean {
+  return p.alive && kindOf(c.end) === CAUSE && kindOf(p.key) === EFFECT;
+}
+
+function effectHeld(c: { end: Key }, p: { key: Key; alive: boolean }): boolean {
+  return p.alive && kindOf(c.end) === EFFECT && kindOf(p.key) === CAUSE;
+}
+
+function isCause(c: { cause: Key }, p: { key: Key }): boolean {
+  return c.cause === p.key;
+}
+
+function isEffect(c: { effect: Key }, p: { key: Key }): boolean {
+  return c.effect === p.key;
+}
+
+function hold(_: unknown, p: { key: Key }): { end: Key } {
+  return { end: p.key };
+}
+
+function pairUp(c: { end: Key }, p: { key: Key }): { cause: Key; effect: Key } {
+  return { cause: c.end, effect: p.key };
+}
+
+function pairDown(
+  c: { end: Key },
+  p: { key: Key },
+): { cause: Key; effect: Key } {
+  return { cause: p.key, effect: c.end };
+}
+
+function keepEffect(c: { effect: Key }): { end: Key } {
+  return { end: c.effect };
+}
+
+function keepCause(c: { cause: Key }): { end: Key } {
+  return { end: c.cause };
+}
+
+function both(c: { cause: Key; effect: Key }): { cause: Key; effect: Key } {
+  return { cause: c.cause, effect: c.effect };
+}
+
+/**
+ * Something to point at: cells, and cells that can still be reached. A row of the gutter with no
+ * rule on it names nothing, and a cell out of reach does not answer the pointer — both are a move
+ * onto a place there is nothing to say about, and the pointer stays where it was.
+ */
+function named(_: unknown, p: { keys: Key[]; alive: boolean }): boolean {
+  return p.alive && p.keys.length > 0;
+}
+
+/** The one `with` the pointer has: written once, and named by both of the rules that need it. */
+function onto(
+  _: unknown,
+  p: { keys: Key[]; offer: boolean },
+): { at: Key[]; offer: boolean } {
+  return { at: p.keys, offer: p.offer };
+}
