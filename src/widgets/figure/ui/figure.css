@@ -40,10 +40,12 @@ line.rail {
     stroke-width: 1;
 }
 
+/* The name of an index: the same quiet capitals every other name on the page is set in, and a
+   shade louder than a value, because it is what the values are. */
 text.cap {
-    font: 500 0.66rem/1 var(--main-font);
-    fill: var(--faint);
-    letter-spacing: 0.06em;
+    font: 500 0.62rem/1 var(--main-font);
+    fill: var(--muted);
+    letter-spacing: 0.09em;
     text-transform: uppercase;
 }
 

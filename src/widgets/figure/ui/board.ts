@@ -347,30 +347,30 @@ export function board(d: Draw, w: Wiring): Dressed {
     });
   });
 
-  // ── the axes: three words, and the figure needs no others ──
-  root.append(
-    svg(
-      "text",
-      { x: g.names, y: g.head - 10, class: "cap", "text-anchor": "middle" },
-      "from",
-    ),
-  );
-  if (d.evs.length)
+  /*
+   * The names of the four indices, each standing at the head of what it names.
+   *
+   * There are four and not three. Block 3's rows are outputs, and they were the one index on the
+   * figure with no word for what its names are — which reads as a band of labels nobody
+   * introduced. And the three that were here did not line up: `from` sat at the foot of the head
+   * band while `on` and `to` sat at the top of it, so the same kind of word came at two heights
+   * and looked like two kinds.
+   *
+   * They are one line now, at the top of the head band, each at the start of its own run:
+   * `on` over the columns of block 1, `to` over the columns block 2 and 3 share, and `from` over
+   * the middle column, which is where the names of the rows are written. `emit` stands over that
+   * same middle column higher up, above the output names — the middle column carries two indices,
+   * one above the head and one below it, and this is the figure saying so.
+   */
+  const cap = (x: number, y: number, word: string, anchor = "start") =>
     root.append(
-      svg(
-        "text",
-        { x: g.on(0) - CELL / 2, y: g.crown + 12, class: "cap" },
-        "on",
-      ),
+      svg("text", { x, y, class: "cap", "text-anchor": anchor }, word),
     );
-  if (d.all.length)
-    root.append(
-      svg(
-        "text",
-        { x: g.q(0) - CELL / 2, y: g.crown + 12, class: "cap" },
-        "to",
-      ),
-    );
+
+  if (d.outs.length) cap(g.names, 13, "emit", "middle");
+  if (d.evs.length) cap(6, g.crown + 12, "on");
+  cap(g.names, g.crown + 12, "from", "middle");
+  if (d.all.length) cap(g.q(0) - CELL / 2, g.crown + 12, "to");
 
   const stood = (
     x: number,

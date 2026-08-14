@@ -36,9 +36,18 @@ main {
     color: var(--faint);
 }
 
-/* Which schema, and where it starts, are about what is being looked at; the reset and the flag
-   are about how it is being run. So the bar has two ends, and the run is at the far one. */
-.bar .reset {
+/*
+ * Which schema, and where it starts, are about what is being looked at; the reset and the flag are
+ * about how it is being run. So the bar has two ends, and the run is at the far one.
+ *
+ * They are pinned as a pair and not one at a time: the flag is there in both modes and the reset
+ * is not, and a control that moves sideways when its neighbour leaves is a control you have to
+ * find again every time you switch.
+ */
+.bar .run {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
     margin-left: auto;
 }
 

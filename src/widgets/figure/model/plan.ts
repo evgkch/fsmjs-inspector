@@ -19,6 +19,9 @@ import type {
 import { canFire } from "../../../features/take-rule/index.js";
 import { CELL, EM } from "../../../shared/lib/grid.js";
 
+/** The band a name of an axis stands in, above the values it is the name of. */
+const CAP = 16;
+
 /**
  * The grid the three blocks stand on: `on` gives block 1's columns, `q` the columns blocks 2 and
  * 3 share, `λ` block 3's rows, and `row` the rows blocks 1 and 2 share.
@@ -44,7 +47,9 @@ function geometry(all: string[], outs: string[], evs: string[]): Geo {
   const left = 6;
   const spine = left + evs.length * CELL;
   const mid = spine + wide;
-  const crown = outs.length ? 6 + outs.length * CELL + 10 : 0;
+  // Block 3's rows are outputs, and their names run down the middle column like the states' do.
+  // `emit` stands above them, so the band it stands in is part of the crown.
+  const crown = outs.length ? CAP + 6 + outs.length * CELL + 10 : 0;
   const head = crown + 32 + Math.max(0, ...all.map(w), ...evs.map(w));
   return {
     names: spine + wide / 2,
@@ -54,7 +59,7 @@ function geometry(all: string[], outs: string[], evs: string[]): Geo {
     width: mid + all.length * CELL + 8,
     on: (i) => left + i * CELL + CELL / 2,
     q: (i) => mid + i * CELL + CELL / 2,
-    λ: (i) => 6 + i * CELL + CELL / 2,
+    λ: (i) => CAP + 6 + i * CELL + CELL / 2,
     row: (j) => head + j * CELL,
   };
 }
