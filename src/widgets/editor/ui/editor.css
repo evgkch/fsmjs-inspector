@@ -106,8 +106,7 @@
  * One line, one block — and one place the scroll can stop. The height is set for the empty ones:
  * a blank line is still a line the caret can stand on, and a block with nothing in it would be no
  * line at all.
- */
-/*
+ *
  * A line runs the whole width of the box it is in, and the box has padding — so the line reaches
  * out through it and puts the padding back inside itself. Without that, a band drawn on a line
  * starts three quarters of a rem after the gutter's edge and ends the same distance before the
@@ -121,9 +120,16 @@
     scroll-snap-align: start;
 }
 
-/* This line's rule is what the figure is about. The same tint the figure's own bands use, because
-   it is the same fact: one cell was pointed at, and everything it holds is lit. */
-.editor .line.lit {
+/*
+ * This line's rule is what the figure is about — the same tint the figure's own bands use, because
+ * it is the same fact: one cell was pointed at, and everything it holds is lit.
+ *
+ * The number wears it too, so the band is one band. The gutter stands still while the text scrolls
+ * sideways under it, so a stripe that began after the gutter would be a stripe with a white bar
+ * across its left end, and the line it is about would start outside its own highlight.
+ */
+.editor .line.lit,
+.editor .gutter .row.lit {
     background: color-mix(
         in oklab,
         var(--accent) var(--wash-firm),

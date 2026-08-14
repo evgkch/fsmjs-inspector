@@ -45,6 +45,9 @@ main {
     flex-wrap: wrap;
     gap: 0.75rem 1.25rem;
     align-items: center;
+    /* The height a row of controls held when they were boxes: the header keeps its presence, and
+       the page keeps the arithmetic that stops it from ever scrolling. */
+    min-height: 2rem;
     padding: 0 0.9rem;
 }
 
@@ -75,33 +78,59 @@ main {
     margin-left: auto;
 }
 
-/* Every control in the bar is the same object: same height, same frame, same type. Nothing in
-   it is more important than the rest, so nothing in it is drawn louder. */
+/*
+ * The header is written, not built.
+ *
+ * Four bordered pills across the top were four objects competing with the three panels under them,
+ * and all four wore the same frame — so nothing in the frame said which of them choose what you are
+ * looking at and which of them do something to it. A control drawn as a box is a claim that it is a
+ * thing; these are words, and the value of one is the only ink in the line.
+ *
+ * The name is quiet and the value is not, which is the whole hierarchy: you read `SCHEMA` once and
+ * afterwards you read only what it says. What stays a control is the one thing that has to look
+ * like one — a switch, which shows which of two modes you are in without being read.
+ */
 select,
-.bar .reset,
-.bar label.flag {
-    height: 2rem;
-    padding: 0 0.7rem;
-    border: 1px solid var(--line-firm);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
+.bar .reset {
+    padding: 0;
+    border: 0;
+    background: none;
     color: var(--ink);
     font: 500 var(--name)/1 var(--mono-font);
     letter-spacing: 0;
     text-transform: none;
-}
-
-select {
-    padding-right: 0.3rem;
-}
-
-.bar .reset {
-    color: var(--muted);
     cursor: pointer;
 }
 
+select {
+    appearance: none;
+}
+
+/* The caret belongs to the field, not to the platform: one glyph, in the quiet of the name. */
+.bar label:has(select)::after {
+    content: "▾";
+    margin-left: -0.15rem;
+    color: var(--faint);
+    font-size: 0.7em;
+    pointer-events: none;
+}
+
+select:focus-visible,
+.bar .reset:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 2px;
+}
+
+/*
+ * Forgetting the run is not a choice about what you are reading, so it is not set like one: it is
+ * quiet until you go to it. No glyph — nothing else on this page is a picture of itself.
+ */
+.bar .reset {
+    color: var(--muted);
+}
+
 .bar .reset:hover {
-    border-color: var(--accent);
     color: var(--accent);
 }
 
@@ -124,7 +153,6 @@ select {
 }
 
 .bar label.flag:has(:checked) {
-    border-color: var(--accent);
     color: var(--accent);
 }
 
