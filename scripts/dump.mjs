@@ -28,6 +28,9 @@ const { newFocus } = await vite.ssrLoadModule(
 const { page } = await vite.ssrLoadModule(
   "/src/features/read-schema/model/page.ts",
 );
+const { newWriting } = await vite.ssrLoadModule(
+  "/src/features/write-rules/model/writing.ts",
+);
 
 // One focus per figure, so there is no module-level pair to reach for: the dump asks for one
 // the same way a mount does.
@@ -39,6 +42,7 @@ for (const [file, machine] of [
   ["the-inspectors-choice.json", choice],
   ["the-inspectors-pointer.json", pointer],
   ["the-inspectors-page.json", page],
+  ["the-inspectors-editor.json", newWriting()],
 ]) {
   const text = JSON.stringify(machine, null, 2) + "\n";
   writeFileSync(join(here, "..", "schemas", file), text);

@@ -11,7 +11,9 @@
  * your guards, which are real code, so the rule that fires may not be the one you pressed. That
  * is the thing you opened this to see.
  */
+import { TRANSITION } from "@evgkch/fsmjs";
 import type { StateMachine } from "@evgkch/fsmjs";
+import { newDrag } from "../features/drag-panel/index.js";
 import { fromMachine } from "../entities/machine/index.js";
 import type { Ctx, Ev, WatchOptions } from "../entities/machine/index.js";
 import { mount } from "../pages/inspector/mount.js";
@@ -73,32 +75,55 @@ export function inspect(
   const handle = mount(body, subject, options);
   box.addEventListener("change", () => handle.set({ exploring: box.checked }));
 
+  // Dragged by its bar, because a panel over an application is always over the wrong part of it.
+  const drag = newDrag();
+  const move = (e: PointerEvent) =>
+    drag.dispatch("pointermove", { x: e.clientX, y: e.clientY });
+  const up = () => drag.dispatch("pointerup");
+
+  bar.addEventListener("pointerdown", (down) => {
+    const at = panel.getBoundingClientRect();
+    // Facts, all of them: where the pointer went down, where the panel is, and whether what was
+    // under it was the bar rather than one of the controls standing on it.
+    drag.dispatch("pointerdown", {
+      x: down.clientX,
+      y: down.clientY,
+      left: at.left,
+      top: at.top,
+      grab: down.target !== shut && !flag.contains(down.target as Node),
+    });
+  });
+
+  drag.rx.on("put", ({ left, top }) => {
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+  });
+
+  // The listeners are a drawing of the state and not the state itself: the page watches the
+  // pointer while the machine is dragging, and stops when it stops. Adding one that is already
+  // there, or removing one that is not, is a no-op — so this needs no memory of its own.
+  const watching = () => {
+    const on = drag.state.type === "dragging";
+    for (const [kind, hand] of [
+      ["pointermove", move],
+      ["pointerup", up],
+    ] as const)
+      if (on) addEventListener(kind, hand);
+      else removeEventListener(kind, hand);
+  };
+  const loose = drag.rx.on(TRANSITION, watching);
+
   const close = () => {
+    loose();
+    removeEventListener("pointermove", move);
+    removeEventListener("pointerup", up);
     handle.destroy();
     subject.stop();
     panel.remove();
   };
   shut.addEventListener("click", close);
-
-  // Dragged by its bar, because a panel over an application is always over the wrong part of it.
-  bar.addEventListener("pointerdown", (down) => {
-    if (down.target === shut || flag.contains(down.target as Node)) return;
-    const box = panel.getBoundingClientRect();
-    const dx = down.clientX - box.left;
-    const dy = down.clientY - box.top;
-    const move = (e: PointerEvent) => {
-      panel.style.left = `${e.clientX - dx}px`;
-      panel.style.top = `${e.clientY - dy}px`;
-      panel.style.right = "auto";
-      panel.style.bottom = "auto";
-    };
-    const up = () => {
-      removeEventListener("pointermove", move);
-      removeEventListener("pointerup", up);
-    };
-    addEventListener("pointermove", move);
-    addEventListener("pointerup", up);
-  });
 
   return { close };
 }

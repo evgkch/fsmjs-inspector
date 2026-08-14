@@ -227,7 +227,8 @@ export function board(d: Draw, w: Wiring): Dressed {
    * diagram's own transition does the redrawing, and `took` is where a named transition is
    * taken. A press is not a place where any of that is decided.
    */
-  const choose = (key: Key) => choice.dispatch("press", { key });
+  const choose = (key: Key, alive: boolean) =>
+    choice.dispatch("press", { key, alive });
 
   /**
    * Wire a cell up. Pointing at it and pressing it are both one dispatch: the machine is told
@@ -235,14 +236,12 @@ export function board(d: Draw, w: Wiring): Dressed {
    */
   const wire = (s: Spot): SVGElement => {
     spots.push(s);
-    // A cell that is out of reach does not answer the pointer. One rule for both modes: what is
-    // out of reach differs between them — running, the machine has to be able to get there —
-    // but a variant a choice has already ruled out is ruled out either way, and lighting one
-    // would offer something that cannot be taken.
-    const on = () => {
-      if (!s.live) return;
-      pointer.dispatch("enter", { keys: [s.key], offer: true });
-    };
+    // Whether a cell is out of reach is a fact about the subject and the mode, so it is handed
+    // over with the press and with the pointing; what to do about it is one guard, in the machine
+    // that is being told. Running, the machine has to be able to get there; exploring, a variant
+    // the choice has already ruled out is out either way.
+    const on = () =>
+      pointer.dispatch("enter", { keys: [s.key], offer: true, alive: s.live });
     const off = () => pointer.dispatch("leave");
     s.node.addEventListener("mouseenter", on);
     s.node.addEventListener("mouseleave", off);
@@ -251,10 +250,9 @@ export function board(d: Draw, w: Wiring): Dressed {
     // A crossing is shown and aimed through, never held — the machine's guard says so too, but
     // there is no reason to offer a press that would be refused.
     if (kindOf(s.key) === CORNER) return s.node;
-    // What the figure offers is what `dress` lit; pressing anything else is nothing at all.
-    const take = () => {
-      if (s.hot) choose(s.key);
-    };
+    // What the figure offers is what `dress` lit, and it is lit because the same fact went into
+    // the same guards: pressing a cell nothing can be done with is a press with no rule for it.
+    const take = () => choose(s.key, s.live);
     s.node.setAttribute("role", "button");
     s.node.addEventListener("click", take);
     s.node.addEventListener("keydown", (e) => {

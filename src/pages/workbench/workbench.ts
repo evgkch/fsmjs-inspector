@@ -9,12 +9,13 @@
  * What is left here is the other half of a page — where the schema comes from, what `analyze` says
  * about its shape, and which state a run starts at.
  */
-import { nodes } from "@evgkch/fsmjs";
+import { TRANSITION, nodes } from "@evgkch/fsmjs";
 import { analyze } from "@evgkch/fsmjs/analysis";
 import type { Analysis } from "@evgkch/fsmjs/analysis";
 import { toRules } from "@evgkch/fsmjs/formatters";
 import { fromText, palette, ruleId } from "../../entities/machine/index.js";
 import type { Graph, Lane, Text } from "../../entities/machine/index.js";
+import { exploring, newMode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { canFire, take } from "../../features/take-rule/index.js";
@@ -36,6 +37,13 @@ export function workbench(): void {
   const host = el("inspector");
 
   const focus = newFocus();
+  /**
+   * The mode, once for the page and not once per mount: the inspector is thrown away and built
+   * again on every edit of the text, and how the page is being read is not something an edit
+   * changes. Everything that differs between the two modes listens to this — the figure and the
+   * run through the mount, the gutter's marks and the reset button from here.
+   */
+  const mode = newMode();
   let subject: Text | null = null;
   let handle: Handle | null = null;
 
@@ -51,7 +59,7 @@ export function workbench(): void {
     },
     // Exploring, no state is current and nothing fires — in the text as in the figure.
     fires: (r) =>
-      !flag.checked && subject !== null && canFire(subject, idOfLine(r)),
+      !exploring(mode) && subject !== null && canFire(subject, idOfLine(r)),
     fire: (r) => subject && take(subject, idOfLine(r)),
   });
   pane.prepend(editor.node);
@@ -62,7 +70,7 @@ export function workbench(): void {
     subject?.stop();
     handle?.destroy();
     subject = fromText(graph, start);
-    handle = mount(host, subject, { exploring: flag.checked, focus });
+    handle = mount(host, subject, { focus, mode });
     // The run marker in the gutter is about where the machine stands, so it follows the machine.
     subject.watch(() => editor.mark());
     fillStart(graph, start);
@@ -138,10 +146,16 @@ export function workbench(): void {
     page.dispatch("begin", { start: startSel.value }),
   );
 
-  flag.addEventListener("change", () => {
-    handle?.set({ exploring: flag.checked });
+  // The switch is an input and not the fact. What it does is say what was asked for; what the
+  // page does about it hangs off the mode, so a second way of asking — a keystroke, another
+  // inspector on the same page — would not have to remember this list.
+  flag.addEventListener("change", () =>
+    mode.dispatch("read", { whole: flag.checked }),
+  );
+
+  mode.rx.on(TRANSITION, () => {
     // Exploring, no state is current and nothing has been taken: there is no run to forget.
-    back.hidden = flag.checked;
+    back.hidden = exploring(mode);
     editor.mark();
   });
 

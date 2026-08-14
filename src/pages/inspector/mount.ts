@@ -7,8 +7,10 @@
  * page gives its editor and its figure the same focus, which is why pointing at a cell lights the
  * line the rule is written on.
  */
-import { edges } from "@evgkch/fsmjs";
+import { TRANSITION, edges } from "@evgkch/fsmjs";
 import type { Graph, Subject } from "../../entities/machine/index.js";
+import { newMode } from "../../features/explore/index.js";
+import type { Mode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between, take } from "../../features/take-rule/index.js";
@@ -23,10 +25,18 @@ export type Options = {
    * No state is current: the whole schema is on the table and nothing fires. Off, the machine
    * stands somewhere, everything out of its reach is dim and does not even answer the pointer,
    * and naming both halves of a transition takes it.
+   *
+   * Where it starts. Afterwards the mode is the machine below, and `set` moves it.
    */
   exploring?: boolean;
   /** Share the looking with something else on the page — an editor, another figure. */
   focus?: Focus;
+  /**
+   * Share the mode, for the same reason: a page with a switch of its own has other things to
+   * redraw when it moves — a button that is not offered while exploring, a gutter that marks
+   * nothing — and they should be listening to the mode rather than to the switch.
+   */
+  mode?: Mode;
 };
 
 export type Handle = {
@@ -46,7 +56,10 @@ export function mount(
   subject: Subject,
   options: Options = {},
 ): Handle {
-  let exploring = options.exploring ?? false;
+  const mode = options.mode ?? newMode();
+  // Where it starts, said as the event that would take it there. Being told what is already true
+  // is no rule of that machine, so this is a transition or it is nothing.
+  mode.dispatch("read", { whole: options.exploring ?? false });
   const focus = options.focus ?? newFocus();
 
   /**
@@ -68,6 +81,7 @@ export function mount(
   const history = newHistory({
     subject,
     focus,
+    mode,
     rewind: (step) => {
       subject.rewind?.(step);
       forget();
@@ -75,12 +89,7 @@ export function mount(
     },
   });
 
-  const figure = newFigure({
-    subject,
-    focus,
-    exploring: () => exploring,
-    forget,
-  });
+  const figure = newFigure({ subject, focus, mode, forget });
 
   // The figure, and what happened on it — beside it or under it, which `fit` decides.
   const work = make("div", "work");
@@ -136,7 +145,7 @@ export function mount(
     // be laid out before the other.
     figure.draw(start);
     history.show(subject.graph, start);
-    history.draw(exploring);
+    history.draw();
     fit();
   }
 
@@ -147,6 +156,12 @@ export function mount(
   const off: (() => void)[] = [
     figure.stop,
     history.stop,
+    // The mode moved, so what is on the table did. Whatever was held names a rule in a mode that
+    // is over — the same reason every other change of ground says `forget` first.
+    mode.rx.on(TRANSITION, () => {
+      forget();
+      paint();
+    }),
     () => watching.disconnect(),
     subject.watch(() => paint()),
     /**
@@ -179,9 +194,10 @@ export function mount(
   return {
     update: paint,
     set: (opts) => {
-      if (opts.exploring !== undefined) exploring = opts.exploring;
-      forget();
-      paint();
+      // One line, and no `if`: told the mode it is already in, the machine has no rule for it and
+      // nothing is redrawn. Told the other, its own listener does the forgetting and the drawing.
+      if (opts.exploring !== undefined)
+        mode.dispatch("read", { whole: opts.exploring });
     },
     destroy: () => {
       for (const it of off) it();

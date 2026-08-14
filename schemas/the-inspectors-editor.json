@@ -1,0 +1,185 @@
+{
+  "plain": {
+    "input": [
+      {
+        "to": "plain",
+        "when": "nothing"
+      },
+      {
+        "to": "ahead",
+        "when": "something",
+        "with": "seen"
+      }
+    ],
+    "moved": [
+      {
+        "to": "plain",
+        "when": "nothing"
+      },
+      {
+        "to": "ahead",
+        "when": "something",
+        "with": "seen"
+      }
+    ],
+    "dblclick": [
+      {
+        "to": "picked",
+        "when": "isName",
+        "with": "picking"
+      }
+    ]
+  },
+  "ahead": {
+    "input": [
+      {
+        "to": "plain",
+        "when": "nothing"
+      },
+      {
+        "to": "ahead",
+        "when": "something",
+        "with": "seen"
+      }
+    ],
+    "moved": [
+      {
+        "to": "plain",
+        "when": "nothing"
+      },
+      {
+        "to": "ahead",
+        "when": "something",
+        "with": "seen"
+      }
+    ],
+    "dblclick": [
+      {
+        "to": "picked",
+        "when": "isName",
+        "with": "picking"
+      }
+    ],
+    "blur": [
+      {
+        "to": "plain"
+      }
+    ],
+    "keydown": [
+      {
+        "to": "ahead",
+        "emit": "filled",
+        "when": "tabbed",
+        "by": "filling"
+      },
+      {
+        "to": "plain",
+        "when": "escaped"
+      }
+    ],
+    "drop": [
+      {
+        "to": "plain"
+      }
+    ]
+  },
+  "picked": {
+    "input": [
+      {
+        "to": "plain",
+        "when": "nothing"
+      },
+      {
+        "to": "ahead",
+        "when": "something",
+        "with": "seen"
+      }
+    ],
+    "moved": [
+      {
+        "to": "plain",
+        "when": "nothing"
+      },
+      {
+        "to": "ahead",
+        "when": "something",
+        "with": "seen"
+      }
+    ],
+    "dblclick": [
+      {
+        "to": "picked",
+        "when": "isName",
+        "with": "picking"
+      }
+    ],
+    "mousedown": [
+      {
+        "to": "plain",
+        "when": "single"
+      }
+    ],
+    "keydown": [
+      {
+        "to": "plain",
+        "when": "escaped"
+      }
+    ],
+    "press": [
+      {
+        "to": "renaming",
+        "emit": "armed",
+        "with": "arming",
+        "by": "selecting"
+      }
+    ],
+    "drop": [
+      {
+        "to": "plain"
+      }
+    ]
+  },
+  "renaming": {
+    "input": [
+      {
+        "to": "renaming",
+        "emit": "rewritten",
+        "when": "inside",
+        "with": "typing",
+        "by": "rewriting"
+      },
+      {
+        "to": "plain"
+      }
+    ],
+    "dblclick": [
+      {
+        "to": "picked",
+        "when": "isName",
+        "with": "picking"
+      }
+    ],
+    "mousedown": [
+      {
+        "to": "plain",
+        "when": "single"
+      }
+    ],
+    "keydown": [
+      {
+        "to": "plain",
+        "when": "escaped"
+      }
+    ],
+    "press": [
+      {
+        "to": "plain"
+      }
+    ],
+    "drop": [
+      {
+        "to": "plain"
+      }
+    ]
+  }
+}

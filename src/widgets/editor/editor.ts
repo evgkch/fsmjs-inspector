@@ -34,9 +34,8 @@ import { halvesOf, shows } from "../../entities/cell/index.js";
 import type { Lane } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { newWriting } from "../../features/write-rules/index.js";
-import type { Offer } from "../../features/write-rules/index.js";
+import type { Facts, Typing } from "../../features/write-rules/index.js";
 import { make, word } from "../../shared/lib/dom.js";
-import { ahead } from "../../shared/lang/complete.js";
 import type { Vocab } from "../../shared/lang/complete.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { tokenize } from "../../shared/lang/tokens.js";
@@ -206,16 +205,17 @@ export function newEditor(w: Wiring): Editor {
     row.addEventListener("mouseenter", () => {
       const rule = fresh() ? written.get(at) : undefined;
       // Both halves: the line says where the rule starts and where it ends, so the figure says
-      // both too — two bands out of block 1 and two out of block 3, crossing at the corner.
-      if (rule)
-        w.focus.pointer.dispatch("enter", {
-          keys: halvesOf(rule.edge),
-          offer: true,
-        });
+      // both too — two bands out of block 1 and two out of block 3, crossing at the corner. A line
+      // with no rule on it names none, which is a fact and not a reason to say nothing: the
+      // pointer machine has one guard for naming nothing, and it is the same guard the figure's
+      // out-of-reach cells meet.
+      w.focus.pointer.dispatch("enter", {
+        keys: rule ? halvesOf(rule.edge) : [],
+        offer: true,
+        alive: true,
+      });
     });
-    row.addEventListener("mouseleave", () => {
-      if (fresh() && written.has(at)) w.focus.pointer.dispatch("leave");
-    });
+    row.addEventListener("mouseleave", () => w.focus.pointer.dispatch("leave"));
     row.addEventListener("click", () => {
       const rule = fresh() ? written.get(at) : undefined;
       if (rule && w.fires(rule)) w.fire(rule);
@@ -258,31 +258,27 @@ export function newEditor(w: Wiring): Editor {
     }
   }
 
-  // ── finishing the word ──────────────────────────────────────────────────────
+  // ── what the machine is told ────────────────────────────────────────────────
 
   /**
-   * What would finish the word under the caret — asked of the language, answered to the machine.
-   *
-   * Only at the end of a line, and that is a rule about the two layers rather than about the
-   * language: the ghost is a node in the coloured layer, and a node in the middle of a line pushes
-   * the rest of that line sideways in one layer and not in the other, which puts the caret off the
-   * word it is on. At the end of the line there is nothing to push.
+   * The facts, as the DOM has them at the moment something happened. This is the whole of what
+   * the machine is handed: which key, how many clicks, what the text reads, where the caret is.
+   * Nothing here decides what any of it means — that is the schema's, and keeping it there is the
+   * difference between a machine and a handler that dispatches the conclusion it already drew.
    */
-  function hint(): void {
-    writing.dispatch("see", { at: reading() });
-  }
+  const facts = (e?: Event): Facts => ({
+    key: e && "key" in e ? String((e as KeyboardEvent).key) : "",
+    clicks:
+      e instanceof area.ownerDocument.defaultView!.MouseEvent ? e.detail : 0,
+    text: area.value,
+    caret: area.selectionStart,
+    end: area.selectionEnd,
+    vocab,
+  });
 
-  /** What the caret is over, in the language's terms. Whether it is worth an offer is not asked
-      here: the machine has a state where nothing is offered whatever the caret is over. */
-  function reading(): Offer | null {
-    if (area.selectionStart !== area.selectionEnd) return null;
-    const caret = area.selectionStart;
-    const next = area.value[caret];
-    if (next !== undefined && next !== "\n") return null;
-    const upto = area.value.slice(0, caret).split("\n");
-    const found = ahead(upto[upto.length - 1] ?? "", vocab);
-    return found && { ...found, line: upto.length, at: caret };
-  }
+  const tell = (kind: Exclude<keyof Typing, "drop">, e?: Event): boolean =>
+    // `write` finishes what it started, and its own `input` is not a keystroke.
+    ours ? false : writing.dispatch(kind, facts(e));
 
   /** The offer, drawn. Called when it changes, and again whenever the layer is rebuilt under it. */
   function ghostly(): void {
@@ -308,7 +304,8 @@ export function newEditor(w: Wiring): Editor {
       ours = false;
     }
     paint();
-    hint();
+    // The caret is somewhere new, so what is on offer is a new question.
+    tell("moved");
     w.onEdit();
   }
 
@@ -345,56 +342,42 @@ export function newEditor(w: Wiring): Editor {
       : `retype ${name} in every line it is written on`;
   }
 
-  // One button, one event. What a press means — arm the mode, or end it — is a question about
-  // where the writing is, and the machine is where that is known.
-  chip.addEventListener("click", () =>
-    writing.dispatch("press", { base: area.value }),
-  );
+  /**
+   * Every event the box has, handed over as it comes.
+   *
+   * There is no `if` here on purpose. Which of these means anything, and what — that Escape lets a
+   * word go, that one click is not two, that TAB finishes a word only where one is on offer — is
+   * written once, in the schema, where it can be read in one place and dumped as a graph like
+   * everything else this tool draws.
+   */
+  for (const kind of ["mousedown", "dblclick", "blur"] as const)
+    area.addEventListener(kind, (e) => tell(kind, e));
 
-  // A word is named by double-clicking it, which is how the text is read anyway. Naming one
-  // commits to nothing: the chip appears, and until it is pressed this is an ordinary editor.
-  area.addEventListener("dblclick", () => {
-    const raw = area.value.slice(area.selectionStart, area.selectionEnd);
-    const name = raw.trim();
-    const from = area.selectionStart + raw.indexOf(name);
-    writing.dispatch("pick", { word: name, at: from, to: from + name.length });
-  });
-
-  // Clicking somewhere else lets the word go — but a double-click is two clicks, and the second
-  // of them is the one that named it.
-  area.addEventListener("mousedown", (e) => {
-    if (e.detail === 1) writing.dispatch("drop");
-  });
-
-  area.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") return void writing.dispatch("drop");
-    // Whether TAB meant anything here is the machine's answer, and `dispatch` is how it gives it:
-    // false when no rule took the event, which is exactly when TAB should still move the focus.
-    if (e.key === "Tab" && writing.dispatch("take")) e.preventDefault();
-  });
-
-  area.addEventListener("input", () => {
-    // `write` finishes what it started; this is the keystrokes that came from a keyboard.
+  // The text changed, and two things always follow whatever it meant: the colour is redrawn now,
+  // and the reader is set going, which is slower and worth waiting a moment for.
+  area.addEventListener("input", (e) => {
     if (ours) return;
-    // The facts, not a decision: what the text now reads and where the caret is. Whether that
-    // landed inside a name being retyped is a guard's question, and the answer comes back as an
-    // edit to perform.
-    writing.dispatch("retype", {
-      text: area.value,
-      caret: area.selectionStart,
-      end: area.selectionEnd,
-    });
-    // The colour is immediate and the reading of it is not: one is a look at what you typed, the
-    // other rebuilds a machine, and only the second is worth waiting a moment for.
+    tell("input", e);
     paint();
-    hint();
     w.onEdit();
   });
 
-  // The ghost is about where the caret is, and the caret moves without the text changing.
+  // Three events of the DOM and one fact: the caret may have moved.
   for (const kind of ["keyup", "click", "focus"] as const)
-    area.addEventListener(kind, () => hint());
-  area.addEventListener("blur", () => writing.dispatch("hide"));
+    area.addEventListener(kind, (e) => tell("moved", e));
+
+  /**
+   * Set by `filled`, which is the only edit a keystroke can ask for. The key the machine consumed
+   * must not also do what the browser would do with it — and which key that was is not asked here.
+   */
+  let swallowed = false;
+  area.addEventListener("keydown", (e) => {
+    swallowed = false;
+    tell("keydown", e);
+    if (swallowed) e.preventDefault();
+  });
+
+  chip.addEventListener("click", () => tell("press"));
 
   const off: Off[] = [
     w.focus.choice.rx.on(TRANSITION, () => dress()),
@@ -416,9 +399,10 @@ export function newEditor(w: Wiring): Editor {
         area.setSelectionRange(from, to);
       }),
     ),
-    writing.rx.on("filled", ({ from, to, text }) =>
-      queueMicrotask(() => write(from, to, text)),
-    ),
+    writing.rx.on("filled", ({ from, to, text }) => {
+      swallowed = true;
+      queueMicrotask(() => write(from, to, text));
+    }),
     writing.rx.on("rewritten", ({ text, caret }) =>
       queueMicrotask(() => patch(text, caret)),
     ),

@@ -6,6 +6,8 @@
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
 import type { Subject } from "../../entities/machine/index.js";
+import { exploring } from "../../features/explore/index.js";
+import type { Mode } from "../../features/explore/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { make } from "../../shared/lib/dom.js";
 import { plan } from "./model/plan.js";
@@ -24,7 +26,7 @@ export type Figure = {
 export type Wiring = {
   subject: Subject;
   focus: Focus;
-  exploring: () => boolean;
+  mode: Mode;
   /** Let the whole selection go. */
   forget: () => void;
 };
@@ -54,11 +56,11 @@ export function newFigure(w: Wiring): Figure {
     node,
     draw: (start) => {
       redress = null;
-      const d = plan(w.subject.graph, start, w.subject, w.exploring());
+      const d = plan(w.subject.graph, start, w.subject, exploring(w.mode));
       drawn = d.geo.width;
       const { node: svg, dress } = board(d, {
         focus: w.focus,
-        exploring: w.exploring(),
+        exploring: exploring(w.mode),
         forget: w.forget,
       });
       const wrap = make("div", "figure");

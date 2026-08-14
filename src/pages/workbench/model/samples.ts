@@ -2,19 +2,22 @@
  * The schemas the page offers, read out of `schemas/` as text.
  *
  * Files rather than literals, because a schema is a document: something to open, to diff, to
- * hand to somebody. Three of them are written by hand. The other three are not written at all —
+ * hand to somebody. Three of them are written by hand. The other four are not written at all —
  * they are `JSON.stringify` of the machines this page itself runs on, produced by
  * `scripts/dump.mjs` before every build, so the page's first subject is the page.
  *
  * Open `the inspector's choice` and the figure draws the thing that was deciding what the figure
  * did while you were pointing at it — three states, one cell of three rules, and every guard by
- * name. Nothing was written twice to make that work: a dump is what a machine says about itself.
+ * name. Open `the inspector's editor` and it draws what the box on the left is doing with the
+ * keystrokes you type into it while you read it. Nothing was written twice to make either work: a
+ * dump is what a machine says about itself.
  *
  * They are kept as JSON because that is what `JSON.stringify(machine)` writes, and `dump.mjs`
  * has nothing else to write. What the editor shows is `toRules` of the same thing: the schema in
  * the language it is written in, which is also the language every line of the history is in.
  */
 import choice from "../../../../schemas/the-inspectors-choice.json?raw";
+import editor from "../../../../schemas/the-inspectors-editor.json?raw";
 import page from "../../../../schemas/the-inspectors-page.json?raw";
 import pointer from "../../../../schemas/the-inspectors-pointer.json?raw";
 import problems from "../../../../schemas/a-schema-with-problems.json?raw";
@@ -31,4 +34,5 @@ export const SAMPLES: Sample[] = [
   { name: "The inspector's choice", json: choice },
   { name: "The inspector's pointer", json: pointer },
   { name: "The inspector's page", json: page },
+  { name: "The inspector's editor", json: editor },
 ];

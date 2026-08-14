@@ -1,5 +1,6 @@
 export { newWriting } from "./model/writing.js";
 export type {
+  Facts,
   Offer,
   Says,
   Rewrite,

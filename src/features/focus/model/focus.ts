@@ -62,20 +62,34 @@ export type Held = Merge<
   | IState<"whole", { cause: Key; effect: Key }>
 >;
 
-export type Pressing = Merge<IEvent<"press", { key: Key }> | IEvent<"drop">>;
+/**
+ * A press, and whether what was pressed is still on the table.
+ *
+ * The second half is a fact the machine cannot work out and must not guess at: whether a cell is
+ * in reach depends on the subject and on the mode, and this machine knows neither. What it must
+ * not do is let the *caller* decide what to do about it — the surface says what it knows, the
+ * guards say what it means, and a cell nobody can take is a press with no rule for it.
+ */
+export type Pressing = Merge<
+  IEvent<"press", { key: Key; alive: boolean }> | IEvent<"drop">
+>;
 
 /** Both halves are named. Which rule that is, and what to do about it, is the listener's. */
 export type Took = Merge<IEvent<"took", { cause: Key; effect: Key }>>;
 
-/** A half of a transition — a crossing is a crossing, and a crossing is not something to hold. */
-const isHalf = (_: unknown, p: { key: Key }) => kindOf(p.key) in MIRROR;
+/**
+ * A half of a transition, still on the table — a crossing is a crossing, and a crossing is not
+ * something to hold; a cell out of reach is not something to name.
+ */
+const isHalf = (_: unknown, p: { key: Key; alive: boolean }) =>
+  p.alive && kindOf(p.key) in MIRROR;
 const same = (c: { end: Key }, p: { key: Key }) => c.end === p.key;
 
 /** The half held is the cause and the one pressed the effect, or the other way round. */
-const causeHeld = (c: { end: Key }, p: { key: Key }) =>
-  kindOf(c.end) === CAUSE && kindOf(p.key) === EFFECT;
-const effectHeld = (c: { end: Key }, p: { key: Key }) =>
-  kindOf(c.end) === EFFECT && kindOf(p.key) === CAUSE;
+const causeHeld = (c: { end: Key }, p: { key: Key; alive: boolean }) =>
+  p.alive && kindOf(c.end) === CAUSE && kindOf(p.key) === EFFECT;
+const effectHeld = (c: { end: Key }, p: { key: Key; alive: boolean }) =>
+  p.alive && kindOf(c.end) === EFFECT && kindOf(p.key) === CAUSE;
 
 const isCause = (c: { cause: Key }, p: { key: Key }) => c.cause === p.key;
 const isEffect = (c: { effect: Key }, p: { key: Key }) => c.effect === p.key;
@@ -138,8 +152,17 @@ export type Where = Merge<
 >;
 
 export type Moving = Merge<
-  IEvent<"enter", { keys: Key[]; offer: boolean }> | IEvent<"leave">
+  | IEvent<"enter", { keys: Key[]; offer: boolean; alive: boolean }>
+  | IEvent<"leave">
 >;
+
+/**
+ * Something to point at: cells, and cells that can still be reached. A row of the gutter with no
+ * rule on it names nothing, and a cell out of reach does not answer the pointer — both are a move
+ * onto a place there is nothing to say about, and the pointer stays where it was.
+ */
+const named = (_: unknown, p: { keys: Key[]; alive: boolean }) =>
+  p.alive && p.keys.length > 0;
 
 /** The one `with` the pointer has: written once, and named by both of the rules that need it. */
 const onto = (_: unknown, p: { keys: Key[]; offer: boolean }) => ({
@@ -149,11 +172,11 @@ const onto = (_: unknown, p: { keys: Key[]; offer: boolean }) => ({
 
 const moving: Schema<Where, Moving, Record<string, never>> = {
   away: {
-    enter: [{ to: "over", with: onto }],
+    enter: [{ to: "over", when: named, with: onto }],
   },
   over: {
     // Moving from one cell to the next is one event, not a leave and an enter.
-    enter: [{ to: "over", with: onto }],
+    enter: [{ to: "over", when: named, with: onto }],
     leave: [{ to: "away" }],
   },
 };

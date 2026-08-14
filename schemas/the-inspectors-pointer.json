@@ -3,6 +3,7 @@
     "enter": [
       {
         "to": "over",
+        "when": "named",
         "with": "onto"
       }
     ]
@@ -11,6 +12,7 @@
     "enter": [
       {
         "to": "over",
+        "when": "named",
         "with": "onto"
       }
     ],

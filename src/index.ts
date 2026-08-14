@@ -21,6 +21,9 @@ export type { Inspection, Options as InspectOptions } from "./app/inspect.js";
 export { newFocus } from "./features/focus/index.js";
 export type { Focus } from "./features/focus/index.js";
 
+export { newMode } from "./features/explore/index.js";
+export type { Mode } from "./features/explore/index.js";
+
 export {
   fromMachine,
   fromText,

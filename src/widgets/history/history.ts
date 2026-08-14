@@ -23,6 +23,8 @@ import { TRANSITION } from "@evgkch/fsmjs";
 import { halvesOf } from "../../entities/cell/index.js";
 import { hue, lanes, partsOf } from "../../entities/machine/index.js";
 import type { Graph, Step, Subject } from "../../entities/machine/index.js";
+import { exploring } from "../../features/explore/index.js";
+import type { Mode } from "../../features/explore/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between } from "../../features/take-rule/index.js";
 import { make, svg } from "../../shared/lib/dom.js";
@@ -52,13 +54,14 @@ export type History = {
    * is drawn from the top of its own panel by the same number.
    */
   readonly show: (graph: Graph, start: string) => void;
-  readonly draw: (exploring: boolean) => void;
+  readonly draw: () => void;
   readonly stop: () => void;
 };
 
 export type Wiring = {
   subject: Subject;
   focus: Focus;
+  mode: Mode;
   /** Go to a slice. Clicking a step is the whole of undo and redo. */
   rewind: (step: number) => void;
 };
@@ -73,7 +76,8 @@ export function newHistory(w: Wiring): History {
 
   let graph: Graph = {};
   let row = new Map<string, number>();
-  let exploring = false;
+  /** Exploring there is no run: no state is current, so nothing has been taken from one. */
+  const away = () => exploring(w.mode);
 
   const x = (col: number) => col * CELL + CELL / 2;
   const y = (state: string) => HEAD + (row.get(state) ?? 0) * CELL + CELL / 2;
@@ -108,7 +112,7 @@ export function newHistory(w: Wiring): History {
   function preview(): void {
     if (!maybe) return;
     maybe.replaceChildren();
-    if (exploring) return;
+    if (away()) return;
     const { shown, offer } = w.focus.look();
     // Nothing is being pointed at, or what is under the pointer is not on offer — a step of this
     // run, recalled. `between` would answer either happily: with no cells at all every rule is
@@ -144,7 +148,7 @@ export function newHistory(w: Wiring): History {
     cols.replaceChildren();
     index?.remove();
     index = null;
-    if (exploring) return;
+    if (away()) return;
 
     const steps = w.subject.steps.map(asEdge);
     const at = w.subject.step;
@@ -262,7 +266,11 @@ export function newHistory(w: Wiring): History {
       // Lit like anything else that names a rule, but not on offer: this one has been taken
       // already, and the dashes are about what could happen next.
       band.addEventListener("mouseenter", () =>
-        w.focus.pointer.dispatch("enter", { keys: halvesOf(r), offer: false }),
+        w.focus.pointer.dispatch("enter", {
+          keys: halvesOf(r),
+          offer: false,
+          alive: true,
+        }),
       );
       band.addEventListener("mouseleave", () =>
         w.focus.pointer.dispatch("leave"),
@@ -290,9 +298,8 @@ export function newHistory(w: Wiring): History {
       row = new Map(lanes(g, start).map((n, i) => [n, i]));
     },
 
-    draw: (mode) => {
-      exploring = mode;
-      node.hidden = exploring;
+    draw: () => {
+      node.hidden = away();
       build();
     },
 
