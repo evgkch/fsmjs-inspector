@@ -12,10 +12,9 @@
     grid-template-rows: auto minmax(0, 1fr);
     max-height: 100%;
     padding: 0.85rem 0 0;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
     overflow: hidden;
 }
 
@@ -51,7 +50,7 @@ svg.names {
 }
 
 .history text.name {
-    font: 500 0.74rem/1 var(--mono-font);
+    font: 500 var(--name)/1 var(--mono-font);
     fill: var(--c, var(--muted));
 }
 
@@ -119,17 +118,21 @@ circle.maybe {
 }
 
 .cols .step:hover {
-    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    background: color-mix(in oklab, var(--accent) var(--wash), transparent);
 }
 
 /* Where the machine stands in what has happened. */
 .cols .step.now {
-    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    background: color-mix(
+        in oklab,
+        var(--accent) var(--wash-firm),
+        transparent
+    );
 }
 
 .cols .step .no {
     color: var(--faint);
-    font: 500 0.62rem/1 var(--mono-font);
+    font: 500 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;
 }
 

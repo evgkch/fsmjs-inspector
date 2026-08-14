@@ -22,10 +22,9 @@
     height: 100%;
     /* A floor, not a height: the row it sits in is a share of the page, and it scrolls inside. */
     min-height: 14rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
     overflow: hidden;
 }
 
@@ -45,7 +44,7 @@
 .editor textarea,
 .editor .gutter {
     margin: 0;
-    font: 400 13px/var(--cell, 24px) var(--mono-font);
+    font: 400 var(--code)/var(--cell, 24px) var(--mono-font);
     tab-size: 2;
 }
 
@@ -111,7 +110,11 @@
 /* This line's rule is what the figure is about. The same tint the figure's own bands use, because
    it is the same fact: one cell was pointed at, and everything it holds is lit. */
 .editor .line.lit {
-    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    background: color-mix(
+        in oklab,
+        var(--accent) var(--wash-firm),
+        transparent
+    );
 }
 
 /*
@@ -144,7 +147,11 @@
 }
 
 .editor textarea::selection {
-    background: color-mix(in oklab, var(--accent) 28%, transparent);
+    background: color-mix(
+        in oklab,
+        var(--accent) var(--wash-hard),
+        transparent
+    );
 }
 
 /* Where every panel's name sits: 0.85rem down, 0.9rem in. Three panels, one position — and the
@@ -167,7 +174,7 @@
     margin-left: auto;
     padding: 0.15rem 0.5rem;
     border: 1px solid var(--line);
-    border-radius: 0.6rem;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--muted);
     font: inherit;
@@ -183,7 +190,11 @@
 
 .editor .rename.on {
     border-color: var(--accent);
-    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    background: color-mix(
+        in oklab,
+        var(--accent) var(--wash-firm),
+        transparent
+    );
     color: var(--accent);
 }
 
@@ -208,12 +219,12 @@
     padding: 0.45rem 0.75rem 0.5rem;
     border-top: 1px solid var(--line);
     color: var(--faint);
-    font: 400 0.72rem/1.4 var(--mono-font);
+    font: 400 var(--name)/1.4 var(--mono-font);
 }
 
 /* The gutter marks the line; this says what about it. */
 .editor .say.wrong {
-    background: color-mix(in oklab, var(--warn) 8%, transparent);
+    background: color-mix(in oklab, var(--warn) var(--wash), transparent);
     color: var(--warn);
 }
 
@@ -247,9 +258,11 @@
     padding: 0 0.4rem 0 0.55rem;
 }
 
+/* The number of a line is the same furniture as the number of a step in the run — the index of
+   a thing you can point at — so it is the same size in both. */
 .editor .gutter .num {
     color: var(--faint);
-    font-size: 0.85em;
+    font-size: var(--micro);
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
@@ -273,7 +286,7 @@
 
 /* Pointing at a line points at its rule — the same event the figure's own cells send. */
 .editor .gutter .row.rule:hover {
-    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    background: color-mix(in oklab, var(--accent) var(--wash), transparent);
 }
 
 .editor .gutter .row.can {
@@ -301,7 +314,7 @@
 
 /* Where the reader stopped. The message says the same thing in words, once, underneath. */
 .editor .gutter .row.blame {
-    background: color-mix(in oklab, var(--warn) 16%, transparent);
+    background: color-mix(in oklab, var(--warn) var(--wash-firm), transparent);
 }
 
 .editor .gutter .row.blame .num {

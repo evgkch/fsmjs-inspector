@@ -62,7 +62,7 @@ select,
     border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--ink);
-    font: 500 0.8rem/1 var(--mono-font);
+    font: 500 var(--name)/1 var(--mono-font);
     letter-spacing: 0;
     text-transform: none;
 }
@@ -122,7 +122,7 @@ select {
     /* The two round things on the page. Everything else is a box with soft corners. */
     corner-shape: round;
     background: var(--line-firm);
-    transition: background-color 0.12s;
+    transition: background-color var(--quick);
 }
 
 .flag .track::after {
@@ -136,7 +136,7 @@ select {
     corner-shape: round;
     background: var(--surface);
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
-    transition: translate 0.12s;
+    transition: translate var(--quick);
 }
 
 .flag input:checked + .track {
@@ -190,14 +190,20 @@ select {
  */
 @media (min-width: 62rem) {
     .panes {
-        grid-template-rows: minmax(15rem, 0.8fr) minmax(16rem, 1fr);
+        /*
+         * What you write against what it is: the source takes the smaller part of the section, and
+         * the smaller part of a section is a proportion and not a preference. 0.618 to 1 — the
+         * figure and the run are the subject, the text is what says so.
+         */
+        grid-template-rows: minmax(14rem, 0.618fr) minmax(16rem, 1fr);
         height: clamp(38rem, calc(100vh - 7.5rem), 64rem);
     }
 }
 
+/* A pane is one panel and the share of the page it stands in — nothing is stacked inside one
+   any more, so there is nothing to space. */
 .pane {
     display: grid;
-    gap: 0.6rem;
     min-width: 0;
     min-height: 0;
 }

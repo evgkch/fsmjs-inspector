@@ -69,6 +69,9 @@ export type Wiring = {
 export function newHistory(w: Wiring): History {
   const cols = make("div", "cols");
   const tag = make("div", "tag", "history");
+  // The run is walked by clicking a step, and by the two keys that mean the same thing. A control
+  // nobody can find is a control nobody has, and the name of the panel is where you would look.
+  tag.title = "← and → walk the run";
   const node = make("aside", "history");
   node.append(tag, cols);
   /** Rebuilt with every draw, because the names are as wide as the names are. */

@@ -7,10 +7,9 @@
     max-height: 100%;
     /* The same inset as the source's name and the run's, so the three read as one row of names. */
     padding: 0.85rem 0.9rem 1rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: var(--shadow);
     overflow: auto;
     overscroll-behavior: contain;
 }
@@ -48,12 +47,12 @@ line.rail {
  * and a reader who has met them in the text has already met them here.
  */
 text.cap {
-    font: 500 0.7rem/1 var(--mono-font);
+    font: 500 var(--micro)/1 var(--mono-font);
     fill: var(--faint);
 }
 
 text.name {
-    font: 500 0.74rem/1 var(--mono-font);
+    font: 500 var(--name)/1 var(--mono-font);
     fill: var(--c, var(--muted));
 }
 
@@ -61,10 +60,6 @@ text.name {
 text.name.on,
 text.name.out {
     fill: var(--muted);
-}
-
-text.name.out {
-    font-size: 0.72rem;
 }
 
 /* Nothing reaches this state from the start — the column below it is empty, and the name says
@@ -104,9 +99,9 @@ circle.mark {
     stroke: color-mix(in oklab, var(--c, var(--accent)) 32%, transparent);
     stroke-width: 1;
     transition:
-        fill 0.1s,
-        stroke 0.1s,
-        opacity 0.1s;
+        fill var(--quick),
+        stroke var(--quick),
+        opacity var(--quick);
 }
 
 .box.lit rect {
@@ -183,7 +178,7 @@ text.name.lit {
 }
 
 rect.lit-lane {
-    fill: color-mix(in oklab, var(--accent) 14%, transparent);
+    fill: color-mix(in oklab, var(--accent) var(--wash-firm), transparent);
 }
 
 /* Reachable, but not by one rule: the composition of the relation, which the text never shows
@@ -209,6 +204,6 @@ rect.grab:focus {
 }
 
 .box g:focus-visible rect {
-    stroke: var(--ink);
+    stroke: var(--accent);
     stroke-width: 2;
 }

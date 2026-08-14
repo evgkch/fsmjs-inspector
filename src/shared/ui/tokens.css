@@ -13,17 +13,56 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 
-    --bg: #fbfbfd;
+    /*
+     * Three sizes of monospace, and there are three things written in it: the source, read at
+     * length; a name in a drawing, read at a glance; and a number or a title, which is furniture.
+     * There were six, which is five decisions nobody made — 0.7 beside 0.72 beside 0.74 says that
+     * three things differ when what differs is who typed them.
+     */
+    --code: 13px;
+    --name: 0.75rem;
+    --micro: 0.62rem;
+
+    /* One duration. A page where two things answer the pointer at two speeds is two pages. */
+    --quick: 0.12s;
+
+    /*
+     * The page is a shade under the surfaces on it, and that is the whole of the layering: a
+     * border and a value step, with no shadow doing the same job a third time. What floats — the
+     * panel `inspect()` puts over somebody else's application — casts one, because it does.
+     */
+    --bg: #f4f4f7;
     --surface: #ffffff;
     --ink: #18181b;
     --muted: #71717a;
     --faint: #a1a1aa;
     --line: #e4e4e7;
     --line-firm: #d4d4d8;
-    --accent: #4f46e5;
-    --warn: #b45309;
-    --shadow:
-        0 1px 2px rgb(24 24 27 / 0.05), 0 8px 24px -12px rgb(24 24 27 / 0.18);
+
+    /*
+     * Colour means the machine. Everything the tool says about itself is grey.
+     *
+     * There were three collisions and they were all the same mistake — the tool's own colours were
+     * picked off the same wheel the states are drawn from. The accent was indigo and so is the
+     * first state, which is the one state every schema has; the amber of an output and the amber of
+     * a fault were the same amber; and the sixth lane sat sixteen degrees from the output axis. Two
+     * things in one colour meaning two kinds of thing is worse than no colour at all, because it
+     * reads as a fact.
+     *
+     * So the page is greyscale. What is pointed at, what is held, what has the focus, which mode is
+     * on — all of it is ink with a cool cast, and none of it competes with a state. The wheel is
+     * left to the subject, with the warm quadrant kept out of it for the two things that are not
+     * states: what a rule emits, and what is wrong.
+     */
+    --accent: oklch(38% 0.035 264);
+    --warn: oklch(53% 0.19 25);
+
+    /*
+     * Λ is the other axis of the subject, so it is coloured — and it is the one colour outside the
+     * band the lanes live in: warmer than any of them and darker, so eight states can be on screen
+     * and none of them is ever mistaken for an output.
+     */
+    --emit: oklch(54% 0.14 75);
 
     /*
      * Two radii and no others: one for the surfaces a pane is made of, one for the things inside
@@ -36,20 +75,31 @@
 
     /*
      * One colour per state, cycling after eight. The matrix cell, the rail, the marker, the word
-     * in the editor and the word in the history all read the same variable, so a colour means one
-     * state everywhere in the tool and nothing has to be looked up twice.
+     * in the editor and the word in the run all read the same variable, so a colour means one state
+     * everywhere in the tool and nothing has to be looked up twice.
+     *
+     * They are not evenly spread round the wheel, and that is the point of the order. Most schemas
+     * have two or three states, so the first three are as far apart as three hues can be; the rest
+     * fill in between them. And none of them is in the warm quadrant, which belongs to the output
+     * axis and to what is wrong.
      */
     --lane-0: oklch(56% 0.17 264);
     --lane-1: oklch(58% 0.14 158);
-    --lane-2: oklch(60% 0.18 28);
-    --lane-3: oklch(56% 0.17 305);
-    --lane-4: oklch(58% 0.13 226);
-    --lane-5: oklch(62% 0.14 78);
-    --lane-6: oklch(58% 0.17 348);
-    --lane-7: oklch(56% 0.11 196);
+    --lane-2: oklch(57% 0.17 345);
+    --lane-3: oklch(60% 0.12 205);
+    --lane-4: oklch(54% 0.17 300);
+    --lane-5: oklch(62% 0.13 122);
+    --lane-6: oklch(52% 0.15 240);
+    --lane-7: oklch(64% 0.1 180);
 
-    /* Λ is the other axis and reads as one colour, whichever state produced it. */
-    --emit: oklch(62% 0.15 62);
+    /*
+     * How much of a colour a wash carries. Three, and they are three because there are three
+     * strengths of saying so: this is under the pointer, this is held or current, this is selected
+     * text. A page that mixes at ten different percentages is a page with ten opinions.
+     */
+    --wash: 10%;
+    --wash-firm: 16%;
+    --wash-hard: 28%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -61,21 +111,19 @@
         --faint: #71717a;
         --line: #26262c;
         --line-firm: #35353d;
-        --accent: #818cf8;
-        --warn: #fbbf24;
-        --shadow:
-            0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -14px rgb(0 0 0 / 0.7);
+
+        --accent: oklch(90% 0.02 264);
+        --warn: oklch(76% 0.16 30);
+        --emit: oklch(84% 0.13 75);
 
         --lane-0: oklch(72% 0.14 264);
         --lane-1: oklch(74% 0.13 158);
-        --lane-2: oklch(72% 0.15 28);
-        --lane-3: oklch(72% 0.14 305);
-        --lane-4: oklch(74% 0.11 226);
-        --lane-5: oklch(78% 0.13 78);
-        --lane-6: oklch(72% 0.14 348);
-        --lane-7: oklch(74% 0.1 196);
-
-        --emit: oklch(78% 0.13 62);
+        --lane-2: oklch(74% 0.14 345);
+        --lane-3: oklch(78% 0.1 205);
+        --lane-4: oklch(72% 0.14 300);
+        --lane-5: oklch(80% 0.12 122);
+        --lane-6: oklch(70% 0.13 240);
+        --lane-7: oklch(82% 0.08 180);
     }
 }
 
@@ -91,7 +139,7 @@
 .tag,
 .label {
     margin: 0;
-    font: 500 0.62rem/1 var(--main-font);
+    font: 500 var(--micro)/1 var(--main-font);
     letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--faint);
