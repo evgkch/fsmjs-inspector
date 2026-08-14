@@ -70,6 +70,8 @@ export type Wiring = {
   onEdit: () => void;
   /** Could this rule fire from where the machine stands. */
   fires: (rule: Written) => boolean;
+  /** Where it stands, if it stands anywhere: exploring, no state is current. */
+  here: () => string;
   /** Take it. */
   fire: (rule: Written) => void;
 };
@@ -213,7 +215,10 @@ export function newEditor(w: Wiring): Editor {
       ...source.map((_, i) => {
         const at = i + 1;
         const row = make("div", "row");
-        row.append(make("span", "num", String(at)), make("span", "run"));
+        // The mark first, then the number. Where a debugger puts what you press is the outside
+        // edge — nothing is nearer the hand, and nothing else in the column moves when one
+        // appears, because the column is always there.
+        row.append(make("span", "run"), make("span", "num", String(at)));
         rows.set(at, row);
         wire(at, row);
         return row;
@@ -275,6 +280,13 @@ export function newEditor(w: Wiring): Editor {
    */
   function mark(): void {
     const ok = fresh();
+    // Where the machine stands, said on the state itself and not only on the lines that leave it.
+    // A state with nothing leaving it has no marked line at all, and a run that ends there would
+    // otherwise leave the source saying nothing about where it ended.
+    const here = w.here();
+    for (const [, line] of lines)
+      for (const q of line.querySelectorAll(".q"))
+        q.classList.toggle("here", here !== "" && q.textContent === here);
     for (const [at, row] of rows) {
       const rule = ok ? written.get(at) : undefined;
       const can = rule !== undefined && w.fires(rule);
@@ -287,6 +299,9 @@ export function newEditor(w: Wiring): Editor {
       row.classList.toggle("can", can);
       row.classList.toggle("rule", rule !== undefined);
       row.classList.toggle("dead", gone);
+      // Dead text reads as dead text, which is what every debugger does with a line that cannot
+      // run. The gutter says which fault it is; the line says not to spend time on it.
+      lines.get(at)?.classList.toggle("dead", gone);
       row.classList.toggle("blame", at === blamed);
       if (can) row.setAttribute("style", colour(rule.edge.from) ?? "");
       else row.removeAttribute("style");
@@ -298,16 +313,22 @@ export function newEditor(w: Wiring): Editor {
     }
   }
 
-  /** What the figure is about, said of the text: the same question, asked of the same cells. */
+  /**
+   * What the figure is about, said of the text: the same question, asked of the same cells.
+   *
+   * A line and its number are one row of one thing, so both wear it. The band then runs from the
+   * outside edge of the panel to the end of the text without a break in it — a highlight that
+   * starts after the gutter says the number is not part of the line, and the whole join this tool
+   * is built on is that it is.
+   */
   function dress(): void {
     const { shown } = w.focus.look();
     const ok = fresh();
     for (const [at, line] of lines) {
       const rule = ok ? written.get(at) : undefined;
-      line.classList.toggle(
-        "lit",
-        rule !== undefined && shows(shown, rule.edge),
-      );
+      const on = rule !== undefined && shows(shown, rule.edge);
+      line.classList.toggle("lit", on);
+      rows.get(at)?.classList.toggle("lit", on);
     }
   }
 

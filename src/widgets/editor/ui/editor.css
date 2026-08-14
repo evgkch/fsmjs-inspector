@@ -89,11 +89,17 @@
     color: var(--muted);
 }
 
-/* As wide as the widest line, so a lit line is lit the whole way across it. */
+/*
+ * The same box as the textarea over it, to the character: a band drawn on a line has to end where
+ * the line's own room ends, and two layers that agree on every metric but their width are two
+ * layers that disagree about where a line stops.
+ */
+.editor .ink {
+    width: max(100%, calc(var(--cols, 0) * 1ch + 1.5rem));
+}
+
 .editor .ink code {
     display: block;
-    width: max-content;
-    min-width: 100%;
 }
 
 /*
@@ -115,6 +121,14 @@
         var(--accent) var(--wash-firm),
         transparent
     );
+}
+
+/*
+ * A line that can never run, read as one. The gutter says which of the two faults it is; the line
+ * itself says only that there is no point reading it closely.
+ */
+.editor .line.dead {
+    opacity: 0.5;
 }
 
 /*
@@ -249,13 +263,15 @@
     user-select: none;
 }
 
+/* The mark, then the number: what you press is on the outside edge, where the hand goes and where
+   every debugger has put it. */
 .editor .gutter .row {
     display: grid;
-    grid-template-columns: minmax(1.4rem, auto) 0.5rem;
+    grid-template-columns: 0.44rem minmax(1.4rem, auto);
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
     height: var(--cell, 24px);
-    padding: 0 0.4rem 0 0.55rem;
+    padding: 0 0.5rem 0 0.5rem;
 }
 
 /* The number of a line is the same furniture as the number of a step in the run — the index of
@@ -265,6 +281,11 @@
     font-size: var(--micro);
     font-variant-numeric: tabular-nums;
     text-align: right;
+}
+
+/* Nothing in the column shifts when a mark appears: the room for it is always there. */
+.editor .gutter .run {
+    justify-self: center;
 }
 
 /*
@@ -331,6 +352,22 @@
 .ink .q {
     color: var(--c, var(--ink));
     font-weight: 600;
+}
+
+/*
+ * Where the machine is standing, on the state it is standing in — every line the state is written
+ * on, arriving or leaving, which is the whole of what is near you from here. The figure marks the
+ * same fact with a dot on the same state in the same colour; this is that dot, in a text.
+ */
+.ink .q.here {
+    padding: 0.1em 0.25em;
+    margin: 0 -0.25em;
+    border-radius: var(--radius-sm);
+    background: color-mix(
+        in oklab,
+        var(--c, var(--accent)) var(--wash),
+        transparent
+    );
 }
 
 .ink .s {

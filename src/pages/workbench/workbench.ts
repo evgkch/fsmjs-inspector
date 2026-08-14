@@ -64,6 +64,8 @@ export function workbench(): void {
     // Exploring, no state is current and nothing fires — in the text as in the figure.
     fires: (r) =>
       !exploring(mode) && subject !== null && canFire(subject, idOfLine(r)),
+    // Exploring, no state is current — in the text as in the figure.
+    here: () => (exploring(mode) ? "" : (subject?.at ?? "")),
     fire: (r) => subject && take(subject, idOfLine(r)),
   });
   pane.prepend(editor.node);
