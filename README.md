@@ -110,9 +110,10 @@ a peer dependency and stays out of the bundle, because a second copy is a second
 symbol and the listener would never fire.
 
 The figure can also be put on the page being debugged, rather than in a window of its own —
-`overlay(fsm)` from `@evgkch/fsmjs-inspector/ui`, with `@evgkch/fsmjs-inspector/style.css`. That
-half draws, so it costs a stylesheet, and it is the right one only when the page you want the
-figure on is the page you are debugging.
+`overlay(fsm)` from `@evgkch/fsmjs-inspector/ui`, with `@evgkch/fsmjs-inspector/style.css`. It
+takes the same recorder in the same way (`overlay(cart, { history: past })`), and it is the right
+half only when the page you want the figure on is the page you are debugging: it draws, so it
+costs a stylesheet.
 
 What crosses the wire is names: the schema as `JSON.stringify` writes it, and the four types of
 every transition. No context, no payload — an application's data does not leave it, and a context
