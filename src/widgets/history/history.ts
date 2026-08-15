@@ -426,14 +426,16 @@ export function newHistory(w: Wiring): History {
         return;
       }
       const when = w.subject.steps[c.step - 1]?.at;
-      // The library's own notation for an edge: the cause on the arrow, the effect after the
-      // slash, and the state it lands in at the point. `ready -down / draw-> resizing` — one arrow
-      // because it is one transition, and everything it is made of is written along it.
+      // The step, said the way the library says a transition and the way the figure draws one:
+      // `ready × down ⇀ resizing × draw`. The two halves are the two blocks — the cause is a pair
+      // (state, event) and the effect is a pair (state, letter) — and the harpoon is the partial
+      // arrow out of the signature, because δ is partial: not every pair on the left has a right.
+      // A step with no output is a pair on the left and a state on the right, which is what a
+      // codomain with no letter in it looks like.
       band.title = [
         when === undefined ? "" : `${clock(when)}  `,
-        `${c.edge.from} -${c.edge.on}`,
-        c.edge.emit === undefined ? "" : ` / ${c.edge.emit}`,
-        `-> ${c.edge.to}`,
+        `${c.edge.from} × ${c.edge.on} ⇀ ${c.edge.to}`,
+        c.edge.emit === undefined ? "" : ` × ${c.edge.emit}`,
         w.subject.rewind ? "\nclick to go back here" : "",
       ].join("");
       // Lit like anything else that names a rule, but not on offer: this one has been taken
