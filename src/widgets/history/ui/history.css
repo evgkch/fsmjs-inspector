@@ -246,7 +246,8 @@ path.maybe.tip {
  * The number is the step. On the elided column, which is not one step, `×N` stands in its place —
  * one of the numbers of this strip, in the same type at the same size under its own column,
  * because it is read along the row with them and anything set apart from that row reads as a
- * different kind of thing.
+ * different kind of thing. Heavier, though: it is the one label here that is not a step number,
+ * and weight is how a row of numerals says "not one of us" without leaving the row.
  *
  * Neither takes clicks: both hang over the column to the left, and which step the pointer is on is
  * a question for the columns and not for the width of a numeral.
@@ -258,6 +259,11 @@ path.maybe.tip {
     color: var(--faint);
     font: 500 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;
+}
+
+/* The one label in the strip that is not a step number. */
+.cols .step .gap {
+    font-weight: 700;
 }
 
 .cols .step.now .no {
