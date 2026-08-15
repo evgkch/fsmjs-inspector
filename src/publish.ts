@@ -17,14 +17,38 @@
  * are" a single question with several answers.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
-import type { Edge, StateMachine } from "@evgkch/fsmjs";
-import type { Ctx, Ev, Graph } from "./entities/machine/model/graph.js";
+import type { Edge } from "@evgkch/fsmjs";
+import type { Graph } from "./entities/machine/model/graph.js";
 import { isWire } from "./entities/machine/model/wire.js";
 import { newSocket } from "./shared/api/link.js";
 import type { Link } from "./shared/api/link.js";
 
-/** Any machine at all: the inspector reads labels and names, never types. */
-type Any = StateMachine<Ctx, Ev, Ev>;
+/**
+ * Any machine at all — said as what a publisher needs of one, and not as a `StateMachine` with its
+ * type parameters filled in.
+ *
+ * A real application's machine carries real contexts and real payloads, and `StateMachine<Q, Σ, Λ>`
+ * is invariant in all three: asking for the erased shape a dump has would refuse every machine
+ * worth watching and send its owner looking for a cast. What is actually read is the name of the
+ * state it is in and the channel it says its transitions on, so that is what is asked for.
+ */
+type Any = {
+  readonly state: Named;
+  readonly rx: {
+    on(msg: typeof TRANSITION, hear: (t: Told) => void): () => boolean;
+  };
+};
+
+/** A state or an event, as this file reads one: which of them it is. */
+type Named = { readonly type: string };
+
+/** A transition that happened, in the four names it is drawn from. */
+type Told = {
+  readonly source: Named;
+  readonly input: Named;
+  readonly target: Named;
+  readonly output?: Named;
+};
 
 /**
  * Where the relay listens when nobody says otherwise.
