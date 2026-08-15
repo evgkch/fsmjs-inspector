@@ -44,13 +44,13 @@
 .editor textarea,
 .editor .gutter {
     margin: 0;
-    font: 400 var(--code)/var(--cell, 24px) var(--mono-font);
+    font: 400 var(--code)/var(--cell) var(--mono-font);
     tab-size: 2;
 }
 
 .editor .ink,
 .editor textarea {
-    padding: 0.9rem 0.75rem;
+    padding: var(--step-4) var(--step-3);
     white-space: pre;
 }
 
@@ -61,8 +61,8 @@
     scroll-snap-type: y mandatory;
     /* Where a line comes to rest: at the top of the text, not at the top of the box. Without it a
        snapped line sits against the edge of the frame and under the label above it. */
-    scroll-padding-top: 0.9rem;
-    scroll-padding-bottom: 0.9rem;
+    scroll-padding-top: var(--step-4);
+    scroll-padding-bottom: var(--step-4);
 }
 
 /* The gutter and the text, side by side on the page that scrolls. */
@@ -96,7 +96,7 @@
  * layers that disagree about where a line stops.
  */
 .editor .ink {
-    width: max(100%, calc(var(--cols, 0) * 1ch + 1.5rem));
+    width: max(100%, calc(var(--cols, 0) * 1ch + var(--step-3) * 2));
 }
 
 .editor .ink code {
@@ -110,14 +110,14 @@
  *
  * A line runs the whole width of the box it is in, and the box has padding — so the line reaches
  * out through it and puts the padding back inside itself. Without that, a band drawn on a line
- * starts three quarters of a rem after the gutter's edge and ends the same distance before the
- * text's, and a highlight with a white margin down both sides is two things on one row.
+ * starts half a module after the gutter's edge and ends the same distance before the text's,
+ * and a highlight with a white margin down both sides is two things on one row.
  */
 .editor .line {
     display: block;
-    margin: 0 -0.75rem;
-    padding: 0 0.75rem;
-    min-height: var(--cell, 24px);
+    margin: 0 calc(-1 * var(--step-3));
+    padding: 0 var(--step-3);
+    min-height: var(--cell);
     scroll-snap-align: start;
 }
 
@@ -157,7 +157,7 @@
  * itself says only that there is no point reading it closely.
  */
 .editor .line.dead {
-    opacity: 0.5;
+    opacity: var(--quiet);
 }
 
 /*
@@ -176,8 +176,8 @@
  */
 .editor textarea {
     display: block;
-    width: max(100%, calc(var(--cols, 0) * 1ch + 1.5rem));
-    min-height: calc(var(--lines, 1) * var(--cell, 24px) + 1.8rem);
+    width: max(100%, calc(var(--cols, 0) * 1ch + var(--step-3) * 2));
+    min-height: calc(var(--lines, 1) * var(--cell) + var(--step-4) * 2);
     border: 0;
     /* The frame around the editor already says where the focus is. A second frame inside it says
        the same thing again, in the browser's own colour, over the text. */
@@ -197,13 +197,13 @@
     );
 }
 
-/* Where every panel's name sits: 0.85rem down, 0.9rem in. Three panels, one position — and the
-   figure's and the run's, which stand side by side, then share a baseline as well. */
+/* Where every panel's name sits: half a module down and half a module in, in all three of them
+   — and the figure's and the run's, which stand side by side, then share a baseline as well. */
 .editor .tag {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.85rem 0.9rem 0.4rem;
+    gap: var(--step-2);
+    padding: var(--step-3) var(--step-3) var(--step-2);
 }
 
 /*
@@ -215,8 +215,8 @@
  */
 .editor .rename {
     margin-left: auto;
-    padding: 0.15rem 0.5rem;
-    border: 1px solid var(--line);
+    padding: var(--step-1) var(--step-2);
+    border: 0;
     border-radius: var(--radius-sm);
     background: transparent;
     color: var(--muted);
@@ -227,12 +227,10 @@
 }
 
 .editor .rename:hover {
-    border-color: var(--accent);
     color: var(--accent);
 }
 
 .editor .rename.on {
-    border-color: var(--accent);
     background: color-mix(
         in oklab,
         var(--accent) var(--wash-firm),
@@ -259,7 +257,7 @@
  */
 .editor .say {
     margin: 0;
-    padding: 0.45rem 0.75rem 0.5rem;
+    padding: var(--step-2) var(--step-3);
     border-top: 1px solid var(--line);
     color: var(--faint);
     font: 400 var(--name)/1.4 var(--mono-font);
@@ -286,7 +284,7 @@
     left: 0;
     z-index: 1;
     flex: none;
-    padding: 0.9rem 0;
+    padding: var(--step-4) 0;
     border-right: 1px solid var(--line);
     background: var(--surface);
     user-select: none;
@@ -296,11 +294,11 @@
    every debugger has put it. */
 .editor .gutter .row {
     display: grid;
-    grid-template-columns: 0.44rem minmax(1.4rem, auto);
+    grid-template-columns: var(--step-2) minmax(1.4rem, auto);
     align-items: center;
-    gap: 0.45rem;
-    height: var(--cell, 24px);
-    padding: 0 0.5rem 0 0.5rem;
+    gap: var(--step-2);
+    height: var(--cell);
+    padding: 0 var(--step-2);
 }
 
 /* The number of a line is the same furniture as the number of a step in the run — the index of
@@ -326,8 +324,8 @@
  * set on everything with a radius, and 50% of it is a superellipse unless this says otherwise.
  */
 .editor .gutter .run {
-    width: 0.44rem;
-    height: 0.44rem;
+    width: var(--step-2);
+    height: var(--step-2);
     border-radius: 50%;
     corner-shape: round;
     background: var(--c, var(--accent));
@@ -421,7 +419,7 @@
 .ink .q.off {
     text-decoration: line-through;
     text-decoration-thickness: 1px;
-    opacity: 0.6;
+    opacity: var(--quiet);
 }
 
 .ink .q.end {

@@ -6,7 +6,7 @@
     min-height: 12rem;
     max-height: 100%;
     /* The same inset as the source's name and the run's, so the three read as one row of names. */
-    padding: 0.85rem 0.9rem 1rem;
+    padding: var(--step-3) var(--step-3) var(--step-4);
     border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
@@ -19,7 +19,7 @@
     position: sticky;
     top: 0;
     left: 0;
-    padding: 0 0 0.4rem;
+    padding: 0 0 var(--step-2);
 }
 
 /* Three blocks around two shared indices: one rectangle, as wide as the schema makes it. */
@@ -36,7 +36,11 @@ svg.board {
 
 /* The rows and the columns the blocks share, drawn once so that sharing them is visible. */
 line.rail {
-    stroke: color-mix(in oklab, var(--c, var(--line)) 18%, transparent);
+    stroke: color-mix(
+        in oklab,
+        var(--c, var(--line)) var(--wash-firm),
+        transparent
+    );
     stroke-width: 1;
 }
 
@@ -95,13 +99,21 @@ circle.mark {
  * offered to the reader, so nothing is divided up.
  */
 .box rect {
-    fill: color-mix(in oklab, var(--c, var(--accent)) 20%, transparent);
-    stroke: color-mix(in oklab, var(--c, var(--accent)) 32%, transparent);
+    fill: color-mix(
+        in oklab,
+        var(--c, var(--accent)) var(--wash-hard),
+        transparent
+    );
+    stroke: color-mix(
+        in oklab,
+        var(--c, var(--accent)) var(--wash-full),
+        transparent
+    );
     stroke-width: 1;
     transition:
-        fill var(--quick),
-        stroke var(--quick),
-        opacity var(--quick);
+        fill var(--quick) var(--ease),
+        stroke var(--quick) var(--ease),
+        opacity var(--quick) var(--ease);
 }
 
 .box.lit rect {
@@ -112,7 +124,7 @@ circle.mark {
 /* Out of reach: the machine cannot get there from where it stands, or a held half rules it out.
    What that costs is the press, so the cursor is the other half of saying it. */
 .box.dim {
-    opacity: 0.3;
+    opacity: var(--dim);
 }
 
 .box.hot {
@@ -126,8 +138,8 @@ path.flag {
 
 /* Λ is the other axis: one colour for every output, whichever state produced it. */
 .box.shot rect {
-    fill: color-mix(in oklab, var(--emit) 26%, transparent);
-    stroke: color-mix(in oklab, var(--emit) 40%, transparent);
+    fill: color-mix(in oklab, var(--emit) var(--wash-hard), transparent);
+    stroke: color-mix(in oklab, var(--emit) var(--wash-full), transparent);
 }
 
 .box.shot.lit rect {
@@ -184,7 +196,7 @@ rect.lit-lane {
 /* Reachable, but not by one rule: the composition of the relation, which the text never shows
    in any one place. On the diagonal it says the state lies on a cycle. */
 circle.far {
-    fill: color-mix(in oklab, var(--faint) 45%, transparent);
+    fill: color-mix(in oklab, var(--faint) var(--wash-full), transparent);
 }
 
 /* The outcome `TO r` with nothing emitted is named on the name of its column, and a word stood

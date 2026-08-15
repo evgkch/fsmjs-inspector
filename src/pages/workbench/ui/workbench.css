@@ -1,21 +1,21 @@
 /* The standalone page: a bar of controls, and two panes under it. */
 
 /*
- * One scale of space, and every distance on the page is a step of it.
+ * The page, and the four distances in it — every one of them the module halved or doubled.
  *
- *   0.75rem  inside a pair — the figure and the run, which are one drawing with a gap in it
- *   1rem     between the parts of the work
- *   1.5rem   between the header and the work, because those are two things and not four
- *   2rem     the margin of the page, which has to be plainly larger than any gap inside it or
- *            the whole block reads as having burst its banks
+ *   12  inside a pair — the figure and the run, which are one drawing with a gap in it
+ *   18  between the parts of the work
+ *   24  between the header and the work, because those are two things and not four
+ *   36  the margin of the page, which has to be plainly larger than any gap inside it or the
+ *       whole block reads as having burst its banks
  *
- * The steps are 0.75 : 1 : 1.5 : 2. Before, the outer margin was 1.25 and the inner gaps were 1,
- * which says the page is nearly as far from the window as its panels are from each other — and a
- * reader cannot see a grouping that is four pixels deep.
+ * 12 : 18 : 24 : 36 is 2:3:4:6 — a fourth, a fifth, an octave. What matters is not the interval
+ * but that no two of them are near enough to be mistaken: a grouping four pixels deep is a
+ * grouping a reader cannot see, and the page had two of those.
  */
 body {
     margin: 0;
-    padding: 2rem 2rem 2.5rem;
+    padding: var(--step-6);
     background: var(--bg);
     color: var(--ink);
     font: 400 15px/1.6 var(--main-font);
@@ -29,7 +29,7 @@ main {
     max-width: 96rem;
     margin: 0 auto;
     display: grid;
-    gap: 1.5rem;
+    gap: var(--step-5);
 }
 
 /* ── controls ────────────────────────────────────────────────────────────── */
@@ -43,12 +43,13 @@ main {
 .bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
+    gap: var(--step-3) var(--step-4);
     align-items: center;
-    /* The height a row of controls held when they were boxes: the header keeps its presence, and
-       the page keeps the arithmetic that stops it from ever scrolling. */
-    min-height: 2rem;
-    padding: 0 0.9rem;
+    /* One row of the same module everything else on the page is drawn on: the header is a line of
+       the page, not a band across the top of it — and the arithmetic that stops the page from
+       ever scrolling has one more number it does not have to guess. */
+    min-height: var(--cell);
+    padding: 0 var(--step-3);
 }
 
 /* The same small type every other name on the page is set in. Two sizes of quiet capitals is
@@ -56,8 +57,8 @@ main {
 .bar label {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    font: 500 0.62rem/1 var(--main-font);
+    gap: var(--step-2);
+    font: 500 var(--micro)/1 var(--main-font);
     letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--faint);
@@ -77,7 +78,7 @@ main {
 .bar .run {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--step-3);
     margin-left: auto;
 }
 
@@ -109,19 +110,26 @@ select {
     appearance: none;
 }
 
-/* The caret belongs to the field, not to the platform: one glyph, in the quiet of the name. */
+/*
+ * The caret belongs to the field, not to the platform — and it is drawn, not typed. Set as a
+ * glyph it was whatever the text face had in that slot, and the face this page is set in has no
+ * ▾ at all: what stood after every name on the header was a hyphen the fallback font lent it.
+ */
 .bar label:has(select)::after {
-    content: "▾";
-    margin-left: -0.15rem;
-    color: var(--faint);
-    font-size: 0.7em;
+    content: "";
+    width: 0;
+    height: 0;
+    margin-left: calc(-1 * var(--step-1));
+    border: var(--step-1) solid transparent;
+    border-bottom: 0;
+    border-top-color: var(--faint);
     pointer-events: none;
 }
 
 select:focus-visible,
 .bar button:focus-visible {
     outline: 2px solid var(--accent);
-    outline-offset: 4px;
+    outline-offset: var(--step-1);
     border-radius: 2px;
 }
 
@@ -150,7 +158,7 @@ select:focus-visible,
  * which one you are in without being read.
  */
 .bar label.flag {
-    gap: 0.5rem;
+    gap: var(--step-2);
     color: var(--muted);
     cursor: pointer;
 }
@@ -171,27 +179,26 @@ select:focus-visible,
 
 .flag .track {
     position: relative;
-    width: 1.85rem;
-    height: 1.05rem;
+    width: calc(var(--step-4) + var(--step-3));
+    height: var(--step-4);
     border-radius: 999px;
     /* The two round things on the page. Everything else is a box with soft corners. */
     corner-shape: round;
     background: var(--line-firm);
-    transition: background-color var(--quick);
+    transition: background-color var(--quick) var(--ease);
 }
 
 .flag .track::after {
     content: "";
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: calc(1.05rem - 4px);
-    height: calc(1.05rem - 4px);
+    top: var(--step-1);
+    left: var(--step-1);
+    width: var(--step-3);
+    height: var(--step-3);
     border-radius: 50%;
     corner-shape: round;
     background: var(--surface);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
-    transition: translate var(--quick);
+    transition: translate var(--quick) var(--ease);
 }
 
 .flag input:checked + .track {
@@ -199,12 +206,12 @@ select:focus-visible,
 }
 
 .flag input:checked + .track::after {
-    translate: calc(1.85rem - 1.05rem) 0;
+    translate: var(--step-3) 0;
 }
 
 .flag input:focus-visible + .track {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline-offset: var(--step-1);
 }
 
 /* ── panes ───────────────────────────────────────────────────────────────── */
@@ -234,7 +241,7 @@ select:focus-visible,
 .panes {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
+    gap: var(--step-4);
 }
 
 /*
@@ -246,14 +253,19 @@ select:focus-visible,
 @media (min-width: 62rem) {
     .panes {
         /*
-         * What you write against what it is: the source takes the smaller part of the section, and
-         * the smaller part of a section is a proportion and not a preference. 0.618 to 1 — the
-         * figure and the run are the subject, the text is what says so.
+         * What you write against what it is. The machine takes what it needs and the text takes
+         * the rest, which is not the same as splitting the page: a five-state schema draws a
+         * figure a third of the window tall, and cut to a share the other two thirds were a hole
+         * in the page with the source scrolling in a slot above it.
+         *
+         * `fit-content` is the whole of it. The work is as tall as the work is — and never more
+         * than the golden share of the page, at which point the figure scrolls inside itself and
+         * the source keeps a readable page of lines instead of being squeezed to its floor.
          */
-        grid-template-rows: minmax(14rem, 0.618fr) minmax(16rem, 1fr);
+        grid-template-rows: minmax(14rem, 1fr) fit-content(61.8%);
         /* The page never scrolls: the work is what is left of the window once the margins, the
-           header and the gap under it are taken — 2 + 2 + 1.5 + 2.5, which is 8. */
-        height: clamp(38rem, calc(100vh - 8rem), 64rem);
+           header and the gap under it are taken — 36 + 24 + 24 + 36, which is 120. */
+        height: clamp(38rem, calc(100vh - 120px), 64rem);
     }
 }
 

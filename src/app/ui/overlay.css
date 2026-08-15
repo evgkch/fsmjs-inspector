@@ -3,8 +3,8 @@
    application is always over the wrong part of it. */
 .fsmjs-overlay {
     position: fixed;
-    right: 1rem;
-    bottom: 1rem;
+    right: var(--step-4);
+    bottom: var(--step-4);
     z-index: 2147483000;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
@@ -15,15 +15,15 @@
     background: var(--bg);
     color: var(--ink);
     font: 400 15px/1.6 var(--main-font);
-    box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.45);
+    box-shadow: 0 var(--step-5) 60px -20px rgb(0 0 0 / 0.35);
     overflow: hidden;
 }
 
 .overlay-bar {
     display: flex;
     align-items: center;
-    gap: 0.9rem;
-    padding: 0.4rem 0.5rem 0.4rem 0.85rem;
+    gap: var(--step-3);
+    padding: var(--step-2) var(--step-2) var(--step-2) var(--step-3);
     border-bottom: 1px solid var(--line);
     background: var(--surface);
     font: 500 var(--name)/1 var(--mono-font);
@@ -39,20 +39,20 @@
 .overlay-bar .flag {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--step-2);
     margin-left: auto;
     cursor: pointer;
 }
 
 .overlay-bar .flag input {
     accent-color: var(--accent);
-    width: 0.85rem;
-    height: 0.85rem;
+    width: var(--step-3);
+    height: var(--step-3);
     margin: 0;
 }
 
 .overlay-bar button {
-    padding: 0.2rem 0.45rem;
+    padding: var(--step-1) var(--step-2);
     border: 0;
     border-radius: var(--radius-sm);
     background: transparent;
@@ -67,7 +67,7 @@
 }
 
 .overlay-body {
-    padding: 0.75rem;
+    padding: var(--step-3);
     overflow: auto;
     overscroll-behavior: contain;
 }

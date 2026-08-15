@@ -30,7 +30,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
-    gap: 0.75rem;
+    gap: var(--step-3);
     min-height: 0;
     height: 100%;
     /* Both hug what is in them vertically: a figure with room to spare is a figure, not a field. */
