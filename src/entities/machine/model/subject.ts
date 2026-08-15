@@ -42,6 +42,19 @@ export type Subject = {
   /** What has happened, oldest first. Rewinding does not unwrite one. */
   readonly steps: readonly Step[];
 
+  /**
+   * When each of them happened, in epoch milliseconds, index for index with `steps`.
+   *
+   * Beside the steps rather than inside them: a `Step` is the library's own `Transition` and this
+   * is not part of one — the machine says what happened, not when, because when is a fact about
+   * the process it happened in and not about the relation.
+   *
+   * That is also why it crosses the wire. A machine being watched from another page took its steps
+   * over there, and stamping them with the reader's clock would say the run happened when the page
+   * happened to hear about it.
+   */
+  readonly times: readonly number[];
+
   /** Where in `steps` the machine stands: 0 before the first, k after `steps[k - 1]`. */
   readonly step: number;
 

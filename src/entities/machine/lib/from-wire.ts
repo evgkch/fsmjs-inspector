@@ -68,6 +68,7 @@ type Entry = {
   graph: Graph;
   at: string;
   steps: Step[];
+  times: number[];
   said: Channel<{ moved: [] }>;
   subject: Subject;
 };
@@ -92,6 +93,7 @@ export function fromWire(link: Link): Presence {
       graph,
       at: "",
       steps: [] as Step[],
+      times: [] as number[],
       said: new Channel<{ moved: [] }>(),
     };
     const subject: Subject = {
@@ -103,6 +105,9 @@ export function fromWire(link: Link): Presence {
       },
       get steps() {
         return it.steps;
+      },
+      get times() {
+        return it.times;
       },
       // Nothing is recording, so the machine is always at the end of what it has done. Walking
       // back is `rewind`'s, and `rewind` belongs to whoever owns the machine.
@@ -137,7 +142,8 @@ export function fromWire(link: Link): Presence {
             old.name = msg.name;
             old.note = msg.note;
             old.at = msg.at;
-            old.steps = msg.steps.map(stepOf);
+            old.steps = msg.steps.map((w) => stepOf(w.edge));
+            old.times = msg.steps.map((w) => w.t);
             told(old);
             return;
           }
@@ -146,7 +152,8 @@ export function fromWire(link: Link): Presence {
           // off the graph once, and a graph swapped underneath it would be a figure of neither.
           const it = entry(msg.name, msg.note, msg.graph, text);
           it.at = msg.at;
-          it.steps = msg.steps.map(stepOf);
+          it.steps = msg.steps.map((w) => stepOf(w.edge));
+          it.times = msg.steps.map((w) => w.t);
           seen.set(msg.who, it);
           moved();
           return;
@@ -157,7 +164,8 @@ export function fromWire(link: Link): Presence {
           // A step from somebody we have no graph for: it arrived before the hello, or after a
           // pipe came back. Ask, rather than draw a run through a machine we cannot draw.
           if (!it) return void link.send({ say: "hail" });
-          it.steps.push(stepOf(msg.edge));
+          it.steps.push(stepOf(msg.went.edge));
+          it.times.push(msg.went.t);
           it.at = msg.at;
           told(it);
           return;

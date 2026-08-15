@@ -26,6 +26,14 @@
 import type { Edge } from "@evgkch/fsmjs";
 import type { Graph } from "./graph.js";
 
+/**
+ * One step as it crosses: the transition in names, and when it happened.
+ *
+ * The time is the publisher's, taken where the step was taken. A reader's clock would say when the
+ * page heard about it, which is a fact about the network.
+ */
+export type Went = { edge: Edge; t: number };
+
 export type Wire =
   | { say: "hail" }
   | {
@@ -38,9 +46,9 @@ export type Wire =
       note: string;
       graph: Graph;
       at: string;
-      steps: Edge[];
+      steps: Went[];
     }
-  | { say: "step"; who: string; edge: Edge; at: string }
+  | { say: "step"; who: string; went: Went; at: string }
   | { say: "bye"; who: string };
 
 /**
@@ -72,8 +80,8 @@ export function isWire(msg: unknown): msg is Wire {
       return (
         named &&
         typeof m["at"] === "string" &&
-        typeof m["edge"] === "object" &&
-        m["edge"] !== null
+        typeof m["went"] === "object" &&
+        m["went"] !== null
       );
     case "bye":
       return named;

@@ -25,6 +25,7 @@ import { TRANSITION } from "@evgkch/fsmjs";
 import type { Edge } from "@evgkch/fsmjs";
 import type { Graph } from "./entities/machine/model/graph.js";
 import { isWire } from "./entities/machine/model/wire.js";
+import type { Went } from "./entities/machine/model/wire.js";
 import { newSocket } from "./shared/api/link.js";
 import type { Link } from "./shared/api/link.js";
 
@@ -126,7 +127,7 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
   // The graph, taken the way the tool's own lede says it can be: a machine is a projection of
   // itself, and this is that projection.
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
-  const steps: Edge[] = [];
+  const steps: Went[] = [];
 
   const hello = () =>
     link.send({
@@ -147,10 +148,13 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
         to: t.target.type,
         ...(t.output && { emit: t.output.type }),
       };
-      steps.push(edge);
+      // Stamped here, where it happened. The page drawing this is somewhere else and its clock
+      // would say when it heard, which is a fact about the network and not about the run.
+      const went: Went = { edge, t: Date.now() };
+      steps.push(went);
       // The step, and where the machine now stands — which is not always the step's target: a
       // machine can be restored from outside, and the wire says what is, not what follows.
-      link.send({ say: "step", who, edge, at: fsm.state.type });
+      link.send({ say: "step", who, went, at: fsm.state.type });
     }),
     // Somebody has opened a page and does not know who is out there. Everything, restated: the
     // run so far is short, and a snapshot is what makes a lost message not a hole.

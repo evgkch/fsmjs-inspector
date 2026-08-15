@@ -37,6 +37,7 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
 
   const steps: Step[] = [];
+  const times: number[] = [];
   const watchers = new Set<() => void>();
   const changed = () => {
     for (const on of watchers) on();
@@ -49,7 +50,9 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
       // `history` subscribed first when there is one, so its index already points at the state
       // this transition reached, and cutting to it drops a redo future the same way.
       if (past) steps.length = past.index - 1;
+      times.length = steps.length;
       steps.push(t as Step);
+      times.push(Date.now());
       changed();
     }),
   ];
@@ -61,6 +64,9 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
     },
     get steps() {
       return steps;
+    },
+    get times() {
+      return times;
     },
     // With nothing recording, the machine is always at the end of what happened.
     get step() {
