@@ -106,41 +106,20 @@ main {
     min-height: 0;
 }
 
-.reading {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--step-4);
-    min-height: 0;
-}
-
-/* Side by side where there is room for two measures, and stacked where there is not. */
-@media (min-width: 62rem) {
-    .reading {
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    }
-}
-
 /*
  * What is down is not drawn, and the row it stood in goes with it — a hidden panel that keeps its
  * share of the page is a gap where a reader expects a panel. The page says which are down and the
  * stylesheet does the rest: no widget here has ever heard that it can be switched off.
  */
 main[data-off~="code"] #text,
-main[data-off~="log"] #lines,
 main[data-off~="figure"] .figure,
 main[data-off~="run"] .history {
     display: none;
 }
 
-/* Both of the read panels down, and the band they stood in goes with them. */
-main[data-off~="code"][data-off~="log"] .panes {
+/* The source down, and the band it stood in goes with it. */
+main[data-off~="code"] .panes {
     grid-template-rows: 0 minmax(0, 1fr);
-}
-
-/* One of them down, and the other takes the whole band rather than half of it. */
-main[data-off~="code"] .reading,
-main[data-off~="log"] .reading {
-    grid-template-columns: minmax(0, 1fr);
 }
 
 /* The four switches. Words, in the tool's own quiet, with the box beside the name — the same pair

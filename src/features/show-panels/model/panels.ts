@@ -1,11 +1,10 @@
 /**
  * Which panels are on screen.
  *
- * Four drawings of one machine — the source, the figure, the run and the log — and a debugger that
- * shows all four at once is a debugger you read a quarter of. Which ones you want depends on what
- * you are looking for: a shape that will not close needs the figure, a machine that stopped moving
- * needs the log and its times, and a schema you are reading for the first time needs the source
- * beside the figure and nothing else.
+ * Three drawings of one machine — the source, the figure and the run — and a debugger that shows
+ * all three at once is a debugger you read a third of. Which ones you want depends on what you are
+ * looking for: a shape that will not close needs the figure, and a schema you are reading for the
+ * first time needs the source beside it and nothing else.
  *
  * One state and one event. There is nowhere to go — every arrangement is the same kind of thing —
  * so what changes is the context, and the machine is here rather than in a page because two pages
@@ -18,8 +17,8 @@
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
 
-/** The four, by the names their panels wear. */
-export type Panel = "code" | "figure" | "run" | "log";
+/** The three, by the names their panels wear. */
+export type Panel = "code" | "figure" | "run";
 
 export type Up = Record<Panel, boolean>;
 
@@ -33,11 +32,11 @@ const showing: Schema<Shown, Asked, Record<string, never>> = {
 
 export type Panels = StateMachine<Shown, Asked, Record<string, never>>;
 
-/** All four, because a reader who has not said otherwise is looking at the whole tool. */
+/** All three, because a reader who has not said otherwise is looking at the whole tool. */
 export function newPanels(): Panels {
   return new StateMachine<Shown, Asked, Record<string, never>>(showing, {
     type: "showing",
-    context: { code: true, figure: true, run: true, log: true },
+    context: { code: true, figure: true, run: true },
   });
 }
 

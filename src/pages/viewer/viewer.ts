@@ -24,8 +24,6 @@ import { page, read } from "../../features/read-schema/index.js";
 import { newSocket } from "../../shared/api/link.js";
 import { el, make } from "../../shared/lib/dom.js";
 import { newEditor } from "../../widgets/editor/editor.js";
-import { newLog } from "../../widgets/log/index.js";
-import type { Log } from "../../widgets/log/index.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { newWatching, watched } from "./model/watching.js";
@@ -69,7 +67,6 @@ export function viewer(): void {
   // run, and a panel of times with nothing in it is a panel saying nothing.
   const mode = newMode();
   const source = el<HTMLElement>("text");
-  const lines = el<HTMLElement>("lines");
   const editor = newEditor({
     focus,
     // The machine is compiled into somebody else's application. Nothing typed here could reach it,
@@ -95,7 +92,7 @@ export function viewer(): void {
    */
   const panels = newPanels();
   const board = el<HTMLElement>("panels");
-  for (const panel of ["code", "figure", "run", "log"] as Panel[]) {
+  for (const panel of ["code", "figure", "run"] as Panel[]) {
     const label = make("label", "panel");
     const box = make("input", "");
     box.type = "checkbox";
@@ -111,7 +108,7 @@ export function viewer(): void {
   dress();
 
   /** What is on screen, and which subject it is of. Not a decision — a handle on a drawing. */
-  let panel: { subject: Subject; handle: Handle; log: Log } | null = null;
+  let panel: { subject: Subject; handle: Handle } | null = null;
   /** The roster as it was last written out, so a hello from anybody does not rebuild all of it. */
   let written = "";
 
@@ -166,16 +163,12 @@ export function viewer(): void {
     // away the figure and whatever the pointer was over sixty times a minute.
     if (panel && panel.subject !== one?.subject) {
       panel.handle.destroy();
-      panel.log.node.remove();
       panel = null;
     }
     if (one && !panel) {
-      const log = newLog({ subject: one.subject, focus, mode });
-      lines.append(log.node);
       panel = {
         subject: one.subject,
         handle: mount(host, one.subject, { focus, mode }),
-        log,
       };
       // The source, as the language writes it. Read after it is set, because what the editor draws
       // on the words — the colours, the marks in the gutter, what `validate` found — comes back
@@ -183,13 +176,8 @@ export function viewer(): void {
       const text = toRules(one.subject.graph as object);
       editor.set(text);
       read(text, one.subject.at);
-      // Both of these are about where the machine stands, so both follow the machine.
-      one.subject.watch(() => {
-        editor.mark();
-        log.draw();
-      });
-      log.show(one.subject.graph, one.subject.at);
-      log.draw();
+      // The marker in the gutter is about where the machine stands, so it follows the machine.
+      one.subject.watch(() => editor.mark());
     }
 
     // What the machine is for, which its schema cannot say. Kept beside the roster rather than in

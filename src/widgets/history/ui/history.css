@@ -219,19 +219,35 @@ path.maybe.tip {
 }
 
 /*
- * How many times, under the middle of its step — which is the boundary between the two slices, the
- * point the curve turns at. It belongs to the turn and not to either slice, and when this strip
- * held step numbers instead they sat in the middle of the band, which read as counting the column
- * on the right.
+ * The strip under a column holds two things, and they stand in different places because they are
+ * about different things.
  *
- * It takes no clicks: half of it hangs over the column to its left, which belongs to the step
- * before it, and which step the pointer is on is a question for the columns and not for the width
- * of a numeral.
+ * The number is the step, and a step arrived in this column: it sits under the column, centred, as
+ * it always did. The count is about the turn, which is the boundary between two columns — and it
+ * is also where the numbers a fold swallowed would have been, so it goes in that break.
+ *
+ * Neither takes clicks: both hang over the column to the left, which belongs to the step before,
+ * and which step the pointer is on is a question for the columns and not for the width of a
+ * numeral.
  */
-.cols .step .no {
-    translate: -50% 0;
+.cols .step {
+    justify-items: center;
+}
+
+.cols .step .no,
+.cols .step .again {
     pointer-events: none;
     color: var(--faint);
+    font: 500 var(--micro)/1 var(--mono-font);
+    font-variant-numeric: tabular-nums;
+}
+
+.cols .step .again {
+    position: absolute;
+    bottom: var(--step-1);
+    left: 0;
+    translate: -50% 0;
+    color: var(--accent);
     font: 500 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;
 }

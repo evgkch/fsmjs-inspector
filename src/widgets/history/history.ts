@@ -41,19 +41,30 @@ import { CELL, EM, HEAD } from "../../shared/lib/grid.js";
 import "./ui/history.css";
 
 /**
- * The strip under the columns, where a folded step says how many times it happened.
+ * The strip under the columns: which step this is, and — where a fold covers several — how many.
  *
- * It counted the steps once — 1, 2, 3 under the columns — and that was a ruler for a thing nobody
- * measures. Which step of a run you are looking at is not a question anyone asks; whether *this*
- * one happened once or sixty times is asked constantly, and was the one thing the picture could
- * not say. So the strip stopped being an index and became a multiplier, and it is empty under
- * everything that happened once.
+ * The numbers count the run's own steps, so a fold breaks the sequence: 1, 2, then a column that
+ * arrived at step 62. The count goes in that break, on the boundary the fold's curve turns at,
+ * which is where the missing numbers would have been. Both facts are in the strip and neither is
+ * in the way of the other — the number says where you are, the multiplier says what is not drawn.
  *
  * The bands over the columns are laid out in CSS and one of them has to stop where this strip
  * begins, which means the stylesheet needs this number too. It is handed over rather than written
  * down twice.
  */
 const FOOT = 18;
+
+/**
+ * The clock on a step, to the millisecond.
+ *
+ * Not a date: a run is read in the sitting it happened in. The milliseconds are the point — two
+ * steps in the same one are a loop, and two a second apart are somebody typing.
+ */
+const clock = (t: number) => {
+  const d = new Date(t);
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, "0")}`;
+};
 
 /**
  * How far along a step the curve stays level before it turns.
@@ -352,13 +363,22 @@ export function newHistory(w: Wiring): History {
       );
       band.style.left = `${k * CELL}px`;
       band.style.width = `${CELL}px`;
-      // What a fold says about itself, and the only thing a column says now: how many times. Once
-      // is the ordinary case and writes nothing — a strip of ×1 would be a column of ones.
-      if (f.count > 1) band.append(make("span", "no", `×${f.count}`));
-      band.title =
-        f.count > 1
-          ? `${f.count} in a row — back to the last of them`
-          : "back to here";
+      // The step this column arrived at, under the column, as it always was. A fold arrives at
+      // the last of its repetitions, so the number jumps and the gap it leaves is where the
+      // count goes — once is the ordinary case and writes nothing.
+      band.append(make("span", "no", String(f.last)));
+      if (f.count > 1) band.append(make("span", "again", `×${f.count}`));
+      // Everything the log widget used to be a panel for, on the thing it is about: when it
+      // happened, what it was, and how many times. A title is the browser's own, costs nothing,
+      // and does not need a quarter of the page to say four words.
+      const when = w.subject.steps[f.last - 1]?.at;
+      band.title = [
+        when === undefined ? "" : `${clock(when)}  `,
+        `${f.edge.from} —${f.edge.on}→ ${f.edge.to}`,
+        f.edge.emit === undefined ? "" : ` / ${f.edge.emit}`,
+        f.count > 1 ? `\n${f.count} in a row, steps ${f.first}–${f.last}` : "",
+        w.subject.rewind ? "\nclick to go back here" : "",
+      ].join("");
       // Lit like anything else that names a rule, but not on offer: this one has been taken
       // already, and the dashes are about what could happen next.
       band.addEventListener("mouseenter", () =>
