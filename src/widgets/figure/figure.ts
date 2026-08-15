@@ -54,7 +54,6 @@ export function newFigure(w: Wiring): Figure {
       drawn = d.geo.width;
       const { node: svg, dress } = board(d, {
         focus: w.focus,
-        exploring: exploring(w.mode),
         forget: w.forget,
       });
       const wrap = make("div", "figure");

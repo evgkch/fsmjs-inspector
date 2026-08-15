@@ -114,6 +114,17 @@ export type Draw = {
   shot: Map<string, Edge[]>; // emit ╳ to — block 3
   far: Set<string>; // from ╳ to — reachable, but not in one step
   id: (r: Edge) => RuleId; // which rule this is, as the guards name it
+  /**
+   * Whether anything can be taken here at all — and therefore whether "out of reach" is a thing
+   * the figure has any business saying.
+   *
+   * Dim means *not from where the machine stands*. It presumes taking is on offer, and it is on
+   * offer in one of the three cases: a machine that is running and can be driven. Exploring, there
+   * is nowhere to be out of reach of. Watching a machine somewhere else, through a subject with no
+   * `drive`, the reach is real but it is not yours to use, and greying the whole figure to say so
+   * would answer a question nobody asked — the reader is reading, not steering.
+   */
+  acting: boolean;
   fires: (row: Edge) => boolean; // could the machine take it from where it stands
   dead: (row: Edge) => boolean; // dead in the dump, as `validate` reads it
 };
@@ -182,6 +193,10 @@ export function plan(
     shot,
     far,
     id: (r) => idOf(rows, r),
+    // Two facts, and `exploring` used to stand for both: where the machine is, and whether it can
+    // be moved from here. A watcher is the case that pulls them apart — it stands somewhere and
+    // cannot be moved — so the subject is asked the second one rather than the mode.
+    acting: !exploring && !!subject.drive,
     fires: (row) => !exploring && canFire(subject, idOf(rows, row)),
     dead: (row) => bad.shadowed(idOf(rows, row)),
   };

@@ -54,7 +54,6 @@ export type Dressed = {
 
 export type Wiring = {
   focus: Focus;
-  exploring: boolean;
   /** Let the whole selection go — the ground under the figure does it too. */
   forget: () => void;
 };
@@ -179,8 +178,12 @@ export function board(d: Draw, w: Wiring): Dressed {
   const dress = () => {
     const { fixed, shown, open } = look();
 
+    // On the table: nothing is out of reach where nothing can be taken, and where something can,
+    // reach is what the machine can do from where it stands. Whether anything can be taken is the
+    // plan's answer and not the mode's — a figure watching a machine in another process is running
+    // and cannot be driven, and dimming every cell of it would say the run had stopped.
     const play = (r: Edge) =>
-      (w.exploring || d.fires(r)) && fixed.every((k) => holds(k, r));
+      (!d.acting || d.fires(r)) && fixed.every((k) => holds(k, r));
     const lit = (r: Edge) => shows(shown, r);
 
     for (const s of spots) {
