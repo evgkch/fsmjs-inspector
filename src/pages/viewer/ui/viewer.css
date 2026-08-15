@@ -1,0 +1,96 @@
+/* The page that watches: a roster along the top, and one machine under it. */
+
+/*
+ * The same page as the standalone one — the same margin, the same measure, the same rhythm — and
+ * the difference is what is missing from it. A reader who has both open should not have to notice
+ * that they are two pages.
+ */
+body {
+    margin: 0;
+    padding: var(--step-6);
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 15px/1.6 var(--main-font);
+}
+
+main {
+    max-width: 96rem;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--step-5);
+}
+
+/*
+ * Inset by a panel's own name, so the first word of the page and the first word of the panel under
+ * it stand on one line down the left edge. One row of the module, like every other line here.
+ */
+.bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--step-3) var(--step-5);
+    min-height: var(--cell);
+    padding: 0 var(--step-3);
+}
+
+.bar .tag {
+    color: var(--faint);
+    font: 500 var(--micro)/1 var(--mono-font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* The machines out there. Peers, so one distance between them and no other. */
+.roster {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--step-2);
+}
+
+/*
+ * One machine, named. It is a tab and not a menu: a menu asks what to load, and there is nothing
+ * to load — these are the machines that exist, and the page is on one of them.
+ */
+.roster .who {
+    padding: var(--step-1) var(--step-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    corner-shape: superellipse(1.25);
+    background: transparent;
+    color: var(--muted);
+    font: 500 var(--name)/1 var(--mono-font);
+    cursor: pointer;
+}
+
+.roster .who:hover {
+    background: color-mix(in oklab, var(--accent) var(--wash), var(--surface));
+    color: var(--ink);
+}
+
+/* The one being drawn. Bordered rather than filled: it is where you are, not what fires. */
+.roster .now,
+.roster .now:hover {
+    border-color: var(--line-firm);
+    background: var(--surface);
+    color: var(--ink);
+}
+
+.pane {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+}
+
+/*
+ * Nobody is publishing. Said in the same quiet the rest of the tool says things about itself in,
+ * and with the address in it, because the one thing that goes wrong here is dialling the wrong
+ * one — the page cannot tell a relay that is not running from an application that has not called
+ * `publish`, and it does not pretend to.
+ */
+.none {
+    margin: 0;
+    padding: var(--step-3);
+    color: var(--faint);
+    font: 400 var(--name)/1.6 var(--mono-font);
+}

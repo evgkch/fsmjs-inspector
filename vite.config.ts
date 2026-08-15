@@ -13,5 +13,10 @@ export default defineConfig({
     // writing the one part of the page the platform used to draw a second time, in a shape a
     // minifier likes, and that is the wrong thing to spend a stylesheet on.
     cssMinify: false,
+    // Two pages: the one that reads a schema, and the one that watches machines running somewhere
+    // else. Vite finds `index.html` on its own and would ship only that.
+    rollupOptions: {
+      input: { index: "index.html", viewer: "viewer.html" },
+    },
   },
 });

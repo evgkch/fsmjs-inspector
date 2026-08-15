@@ -19,7 +19,8 @@
     "visualisation"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/relay.mjs & vite",
+    "relay": "node scripts/relay.mjs",
     "build": "npm run dump && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -36,7 +37,8 @@
     "@evgkch/fsmjs": "^0.1.1",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "ws": "^8.21.3"
   },
   "files": [
     "dist-lib"
