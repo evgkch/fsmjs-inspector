@@ -14,8 +14,9 @@
  * Four sentences, and every one of them is complete on its own:
  *
  *   hail   a page has opened and does not know who is out there
- *   hello  a machine says what it is and everything it has done so far
+ *   hello  a machine says what it is, what can be done to it, and everything it has done
  *   step   one transition, and where it left the machine
+ *   jump   the other way down the wire: go back to a slice
  *   bye    a machine has stopped publishing
  *
  * `hello` restates rather than continues, so nothing has to be replayed and no order has to be
@@ -46,9 +47,31 @@ export type Wire =
       note: string;
       graph: Graph;
       at: string;
+      /**
+       * Where in `steps` the machine is standing — the end of them, unless somebody has walked it
+       * back. Sent rather than assumed: a run that has been rewound looks exactly like one that
+       * has not, and the difference is the whole reason to rewind.
+       */
+      step: number;
       steps: Went[];
+      /**
+       * What the application let the inspector do, and it is not a setting — it is a report of
+       * what exists over there. `history` is here because a `History` was handed to `inspect`, and
+       * a `History` is there because somebody wrote one: the inspector never conjures one up to
+       * satisfy a flag, since a debugger that instruments a machine on its own behalf is a
+       * debugger you cannot take out by deleting a line.
+       */
+      can: { history: boolean };
     }
   | { say: "step"; who: string; went: Went; at: string }
+  /**
+   * Back up the wire: put that machine at slice `step`.
+   *
+   * The only message that travels the other way, and the only thing this tool ever asks of an
+   * application rather than hearing from it. It is refused unless a `History` was handed over,
+   * which is the same thing as saying it is refused unless somebody meant it.
+   */
+  | { say: "jump"; who: string; step: number }
   | { say: "bye"; who: string };
 
 /**
@@ -66,12 +89,17 @@ export function isWire(msg: unknown): msg is Wire {
   switch (m["say"]) {
     case "hail":
       return true;
+    case "jump":
+      return named && typeof m["step"] === "number";
     case "hello":
       return (
         named &&
         typeof m["name"] === "string" &&
+        typeof m["can"] === "object" &&
+        m["can"] !== null &&
         typeof m["note"] === "string" &&
         typeof m["at"] === "string" &&
+        typeof m["step"] === "number" &&
         typeof m["graph"] === "object" &&
         m["graph"] !== null &&
         Array.isArray(m["steps"])

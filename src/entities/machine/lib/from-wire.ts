@@ -10,11 +10,14 @@
  * one machine in it and the interesting ones are usually running at once. Every publisher names
  * itself, so what comes back is a list of who is out there, and the page picks.
  *
- * Two things a remote subject does not have, and they are the same thing twice: `drive` and
- * `rewind`. The machine is not here. Sending it an event would be a debugger's right and is not
- * this hop's business yet; walking its history back would move somebody else's machine in a
- * process that is doing real work. Both are absent rather than refused — a missing `drive` is
- * already the whole of read-only, and every drawing already asks.
+ * What such a subject can do is what the application said it can, and the application said it by
+ * handing `inspect` the things it already had. No `drive`: sending an event to a machine in
+ * another process is a debugger's right and is not this hop's business yet. `rewind` only where a
+ * `History` was handed over — then walking the run does move somebody else's machine, which is
+ * what rewinding a machine is, and is why it takes an instance and not a flag.
+ *
+ * Both are absent rather than refused. A missing `rewind` is the whole of "this run is a record
+ * and not a control", and every drawing already asks.
  */
 import Channel from "@evgkch/channeljs";
 import type { Rx } from "@evgkch/channeljs";
@@ -67,6 +70,9 @@ type Entry = {
   text: string;
   graph: Graph;
   at: string;
+  /** Where in `steps` it is standing — not the end of them, once somebody has walked it back. */
+  pos: number;
+  can: { history: boolean };
   steps: Step[];
   times: number[];
   said: Channel<{ moved: [] }>;
@@ -80,11 +86,19 @@ export function fromWire(link: Link): Presence {
 
   // The entry and the subject reading it are one object: the subject is getters over the fields
   // above it, so a `hello` that lands in the entry is on screen without anything being told twice.
+  /**
+   * What that machine allows arrives with the hello that made this entry, and is fixed for it: a
+   * `rewind` that appears halfway through the life of a subject would be a drawing that becomes a
+   * control while somebody is reading it. An application that starts allowing something else has
+   * called `inspect` again, which is a different machine to this page and gets its own entry.
+   */
   const entry = (
+    who: string,
     name: string,
     note: string,
     graph: Graph,
     text: string,
+    can: { history: boolean },
   ): Entry => {
     const it = {
       name,
@@ -92,6 +106,8 @@ export function fromWire(link: Link): Presence {
       text,
       graph,
       at: "",
+      pos: 0,
+      can,
       steps: [] as Step[],
       times: [] as number[],
       said: new Channel<{ moved: [] }>(),
@@ -109,11 +125,17 @@ export function fromWire(link: Link): Presence {
       get times() {
         return it.times;
       },
-      // Nothing is recording, so the machine is always at the end of what it has done. Walking
-      // back is `rewind`'s, and `rewind` belongs to whoever owns the machine.
+      // Where the far end says it is standing. Not the end of the steps: a run that has been
+      // walked back looks exactly like one that has not, and the difference is the point.
       get step() {
-        return it.steps.length;
+        return it.pos;
       },
+      // Asked of the far end, which does the walking. There is no local guess at what it will do
+      // and no local record of where it went: `jump` goes up the wire and what comes back is a
+      // hello, which is the whole state of that machine restated.
+      ...(can.history && {
+        rewind: (step: number) => link.send({ say: "jump", who, step }),
+      }),
       watch: (on) => it.said.rx.on("moved", on),
       // Let go of this drawing's listeners. The pipe is the roster's, and one panel closing is not
       // a reason to stop hearing the machine it was drawing.
@@ -142,6 +164,7 @@ export function fromWire(link: Link): Presence {
             old.name = msg.name;
             old.note = msg.note;
             old.at = msg.at;
+            old.pos = msg.step;
             old.steps = msg.steps.map((w) => stepOf(w.edge));
             old.times = msg.steps.map((w) => w.t);
             told(old);
@@ -150,8 +173,16 @@ export function fromWire(link: Link): Presence {
           // A different schema under the same name is a different machine, and gets a different
           // subject: everything a figure works out — its lanes, its colours, its axes — is read
           // off the graph once, and a graph swapped underneath it would be a figure of neither.
-          const it = entry(msg.name, msg.note, msg.graph, text);
+          const it = entry(
+            msg.who,
+            msg.name,
+            msg.note,
+            msg.graph,
+            text,
+            msg.can,
+          );
           it.at = msg.at;
+          it.pos = msg.step;
           it.steps = msg.steps.map((w) => stepOf(w.edge));
           it.times = msg.steps.map((w) => w.t);
           seen.set(msg.who, it);
@@ -164,8 +195,13 @@ export function fromWire(link: Link): Presence {
           // A step from somebody we have no graph for: it arrived before the hello, or after a
           // pipe came back. Ask, rather than draw a run through a machine we cannot draw.
           if (!it) return void link.send({ say: "hail" });
+          // A step taken after a walk back drops the future it was walked back from, which the
+          // far end has already done to its own list — this follows rather than decides.
+          it.steps.length = it.pos;
+          it.times.length = it.pos;
           it.steps.push(stepOf(msg.went.edge));
           it.times.push(msg.went.t);
+          it.pos = it.steps.length;
           it.at = msg.at;
           told(it);
           return;

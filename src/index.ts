@@ -64,6 +64,15 @@ type Told = {
  */
 export const RELAY = "ws://localhost:8999";
 
+/**
+ * A recorder, as `history(fsm)` from `@evgkch/fsmjs/debug` makes one — asked for by its shape, so
+ * that this file needs no generic parameters to accept somebody's real one.
+ */
+export type Past = {
+  readonly index: number;
+  jump(index: number): boolean;
+};
+
 export type Options = {
   /** What to call it. An application has more than one machine and they are not alike. */
   name?: string;
@@ -75,6 +84,23 @@ export type Options = {
    * work out from four states, and it is the difference between a roster of names and a roster.
    */
   description?: string;
+  /**
+   * A recorder you already have, and handing it over is the whole of turning rewinding on.
+   *
+   *   const past = history(cart);
+   *   inspect(cart, { name: "cart", history: past });
+   *
+   * A flag would have meant the inspector calling `history(fsm)` itself, and then the line that
+   * turns the debugger off would also be the line that removes a recorder somebody's undo may have
+   * been using. Passing the instance is the fact and the permission at once: what the inspector
+   * can do is exactly what you built and handed it, deleting the call leaves everything you built
+   * exactly where it was, and an application that already records for its own undo does not end up
+   * recording twice.
+   *
+   * What it buys is a run that can be walked from the inspector's own window — which does move
+   * this machine, in this process, because that is what rewinding a machine is.
+   */
+  history?: Past;
   /** Where the inspector is listening, when it is not on this host. */
   url?: string;
   /** A pipe of your own — anything with the three functions on it. Then `url` is not used. */
@@ -128,6 +154,7 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
   // itself, and this is that projection.
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
   const steps: Went[] = [];
+  const past = opts.history;
 
   const hello = () =>
     link.send({
@@ -137,7 +164,10 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
       note,
       graph,
       at: fsm.state.type,
+      // With nothing recording, the machine is always at the end of what happened.
+      step: past ? past.index : steps.length,
       steps,
+      can: { history: !!past },
     });
 
   const off: (() => void)[] = [
@@ -151,6 +181,9 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
       // Stamped here, where it happened. The page drawing this is somewhere else and its clock
       // would say when it heard, which is a fact about the network and not about the run.
       const went: Went = { edge, t: Date.now() };
+      // A step taken after walking back drops the future it was walked back from — the recorder
+      // says where we are, and what came after that is a run that did not happen.
+      if (past) steps.length = past.index - 1;
       steps.push(went);
       // The step, and where the machine now stands — which is not always the step's target: a
       // machine can be restored from outside, and the wire says what is, not what follows.
@@ -159,7 +192,17 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
     // Somebody has opened a page and does not know who is out there. Everything, restated: the
     // run so far is short, and a snapshot is what makes a lost message not a hole.
     link.rx.on("hear", (msg) => {
-      if (isWire(msg) && msg.say === "hail") hello();
+      if (!isWire(msg)) return;
+      if (msg.say === "hail") return void hello();
+      // The one thing the inspector asks of an application, and it asks it of the recorder the
+      // application handed over. No recorder, no rewinding — the message is not refused with an
+      // answer, it simply does nothing, because there is nothing here that could do it.
+      if (msg.say === "jump" && msg.who === who && past) {
+        past.jump(msg.step);
+        // Nothing was dispatched, so nothing was published: `restore` is not a transition. Where
+        // the machine now stands is said the way everything is said here — by restating.
+        hello();
+      }
     }),
     // And every time the pipe comes up, including after it went away, so an application started
     // before the viewer does not wait to be asked.

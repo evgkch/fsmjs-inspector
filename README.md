@@ -98,11 +98,30 @@ npm run dev          # the site on 5173, a relay on ws://localhost:8999
 Then, in the application being debugged — as many machines as it has:
 
 ```ts
-import { publish } from "@evgkch/fsmjs-inspector/publish";
+import { inspect } from "@evgkch/fsmjs-inspector";
 
-publish(cart, { name: "cart" });
-publish(upload, { name: "upload" });
+const cart = inspect(new StateMachine(schema, start), { name: "cart" });
+inspect(upload, { name: "upload", description: "retries, and when it gives up" });
 ```
+
+`inspect` hands the machine back. It is the identity function with a listener attached, so it goes
+around an instance that already exists and comes off by deleting one word.
+
+Rewinding the run from the inspector's own window is turned on by handing over a recorder you
+already have:
+
+```ts
+import { history } from "@evgkch/fsmjs/debug";
+
+const past = history(cart);
+inspect(cart, { name: "cart", history: past });
+```
+
+The instance is the permission and the fact at once. A flag would have meant the inspector calling
+`history(cart)` on your behalf, and then the line that switches the debugger off is also the line
+that takes away a recorder your undo may have been using — and an application that already records
+would record twice. Hand over what you built, and deleting the call leaves everything you built
+exactly where it was.
 
 `viewer.html` is the page that watches. Every publisher announces itself, so what is along the top
 is a roster of who is out there and you pick; `?ws=ws://host:port` points it at a relay elsewhere.
@@ -113,8 +132,10 @@ What crosses the wire is names: the schema as `JSON.stringify` writes it, and th
 every transition. No context, no payload — an application's data does not leave it, and a context
 that could never be serialized is not a problem.
 
-Nothing there fires and nothing is undone. A remote subject has no `drive` and no `rewind`, and
-that is the whole of read-only: not a mode, an absence — every part of the tool already asks.
+What a remote subject can do is what the application handed over, and nothing else: no `drive`,
+because sending an event into another process is a right this hop has not been given, and no
+`rewind` unless a `History` came with it. That is the whole of read-only — not a mode, an absence,
+and every part of the tool already asks.
 
 ## Running it
 
