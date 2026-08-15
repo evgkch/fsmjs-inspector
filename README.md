@@ -100,6 +100,20 @@ that takes away a recorder your undo may have been using — and an application 
 would record twice. Hand over what you built, and deleting the call leaves everything you built
 exactly where it was.
 
+One thing to know, and it is the library's own arrangement rather than this tool's: walking a run
+back is `restore`, which dispatches nothing — no output event fires and no `Transition` is
+published, which is exactly what keeps a rewind off its own history. So an application that draws
+from its output events will not redraw when the run is walked from here. What says so is the
+recorder:
+
+```ts
+past.rx.on("moved", () => paint(cart.state));
+```
+
+Subscribed there rather than to the machine, the page draws wherever the machine is put back, and
+never has to know whether it was your own undo button or somebody reading the run in another
+window.
+
 Every machine announces itself, so what is along the top of the inspector is a roster of who is out
 there and you pick; `?ws=ws://host:port` points it at a relay on another host. The entry point an
 application imports has no document in it and loads no stylesheet — what is being watched may have
