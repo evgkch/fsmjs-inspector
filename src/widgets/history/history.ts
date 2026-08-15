@@ -24,7 +24,7 @@
 import { edges } from "@evgkch/fsmjs";
 import type { Edge } from "@evgkch/fsmjs";
 import { halvesOf } from "../../entities/cell/index.js";
-import { hue, lanes, partsOf } from "../../entities/machine/index.js";
+import { foldAt, folds, hue, lanes, partsOf } from "../../entities/machine/index.js";
 import type { Graph, Step, Subject } from "../../entities/machine/index.js";
 import { exploring } from "../../features/explore/index.js";
 import type { Mode } from "../../features/explore/index.js";
@@ -35,11 +35,17 @@ import { CELL, EM, HEAD } from "../../shared/lib/grid.js";
 import "./ui/history.css";
 
 /**
- * The strip under the columns where the step numbers stand.
+ * The strip under the columns, where a folded step says how many times it happened.
+ *
+ * It counted the steps once — 1, 2, 3 under the columns — and that was a ruler for a thing nobody
+ * measures. Which step of a run you are looking at is not a question anyone asks; whether *this*
+ * one happened once or sixty times is asked constantly, and was the one thing the picture could
+ * not say. So the strip stopped being an index and became a multiplier, and it is empty under
+ * everything that happened once.
  *
  * The bands over the columns are laid out in CSS and one of them has to stop where this strip
- * begins, so the number goes on belonging to its own column — which means the stylesheet needs
- * this number too. It is handed over rather than written down twice.
+ * begins, which means the stylesheet needs this number too. It is handed over rather than written
+ * down twice.
  */
 const FOOT = 18;
 
@@ -159,8 +165,12 @@ export function newHistory(w: Wiring): History {
 
     // Out of the slice the machine is standing in and into the next, which is where the step
     // would be drawn, because a slice is a column and a step is the turn between two of them.
-    const x0 = x(w.subject.step);
-    const x1 = x(w.subject.step + 1);
+    // Out of the column the machine is standing in — which is a fold and not a step, since that is
+    // what the board is drawn in. Worked out again rather than kept from the last draw: it is one
+    // pass over a short list, and a copy would be a second answer to go stale.
+    const on = foldAt(folds(w.subject.steps.map(asEdge)), w.subject.step);
+    const x0 = x(on < 0 ? 0 : on + 1);
+    const x1 = x0 + CELL;
     const y1 = y(rule.to);
     maybe.append(
       svg("path", {
@@ -184,8 +194,16 @@ export function newHistory(w: Wiring): History {
 
     const steps = w.subject.steps.map(asEdge);
     const at = w.subject.step;
-    // A column per slice: where the run started, and where each step took it.
-    const end = x(steps.length) + CELL / 2;
+    // What the run *was*, as opposed to how many times it said so: the same transition twice in a
+    // row is one turn that happened twice, and a column each is how a drag of sixty samples put
+    // both ends of the picture out of reach. Everything below counts in these, and the numbers a
+    // step is known by — for going back to it, for what is undone — stay the run's own.
+    const list = folds(steps);
+    // Where the machine stands, in columns. Inside a fold counts as being on it: a run walked back
+    // into the middle of a drag is standing on that drag.
+    const here = foldAt(list, at);
+    // A column per slice: where the run started, and where each fold took it.
+    const end = x(list.length) + CELL / 2;
     // Room past the end for what could happen next, and no more — one step, which is one column.
     // A string running on further than that promises a run that has not been made yet.
     const width = end + CELL;
@@ -236,13 +254,14 @@ export function newHistory(w: Wiring): History {
         }),
       );
 
-    // The run itself: one curve per step, from the slice it left to the slice it reached.
-    steps.forEach((r, i) =>
+    // The run itself: one curve per fold, from the slice it left to the slice it reached. A fold
+    // of sixty is one curve — the sixty are said under it, in the strip, where a count belongs.
+    list.forEach((f, i) =>
       board.append(
         svg("path", {
-          d: arc(x(i), y(r.from), x(i + 1), y(r.to)),
-          class: `trail${i + 1 > at ? " ahead" : ""}`,
-          style: colour(r.to),
+          d: arc(x(i), y(f.edge.from), x(i + 1), y(f.edge.to)),
+          class: `trail${f.first > at ? " ahead" : ""}`,
+          style: colour(f.edge.to),
         }),
       ),
     );
@@ -258,19 +277,21 @@ export function newHistory(w: Wiring): History {
           style: colour(state),
         }),
       );
-    // Slice 0 is where the run began; after that there is one per step, and it is that step's
-    // target — the same dot the next step leaves from, drawn once, because it is one moment.
-    dot(0, steps.length ? steps[0]!.from : w.subject.at, false);
-    steps.forEach((r, i) => dot(i + 1, r.to, i + 1 > at));
+    // Slice 0 is where the run began; after that there is one per fold, and it is where that fold
+    // left the machine — the same dot the next one leaves from, drawn once, because it is one
+    // moment. A fold's own repetitions arrive and leave at the same two slices, which is the whole
+    // reason they can be folded at all.
+    dot(0, list.length ? list[0]!.edge.from : w.subject.at, false);
+    list.forEach((f, i) => dot(i + 1, f.edge.to, f.first > at));
 
     maybe = svg("g", { class: "ahead-of" });
     board.append(maybe);
     cols.append(board);
     node.replaceChildren(tag, index, cols);
 
-    // One band per step, standing on the slice it arrived in: what is pointed at, what is
-    // clicked, what the scroll snaps to, and what the number belongs to. Going back to step k is
-    // going to the slice step k reached, so the band is that slice.
+    // One band per fold, standing on the slice it arrived in: what is pointed at, what is
+    // clicked, what the scroll snaps to, and what the count belongs to. Going back to a fold is
+    // going to the slice its last step reached, so the band is that slice.
     //
     // What is *drawn* is wider than what is pressed, and the stylesheet does that: a step is a turn
     // between two slices and both of them are in it, so the tint reaches back over the slice the
@@ -278,27 +299,32 @@ export function newHistory(w: Wiring): History {
     // or every column but the last would be claimed by two bands and the one underneath would be
     // unreachable.
     //
-    // At the end of the run no step is marked. The mark says the machine is standing somewhere
+    // At the end of the run nothing is marked. The mark says the machine is standing somewhere
     // other than where the run ends — which is a thing you can only do by clicking one of these,
     // and which the run itself cannot show, since a slice you have walked back to looks exactly
     // like the slice you passed through. Sitting at the tip is the ordinary case and needs nothing
     // said about it; marking it anyway put a permanent selection on a panel nobody had touched.
-    const stood = at < steps.length ? at : -1;
-    steps.forEach((r, i) => {
+    const stood = at < steps.length ? here : -1;
+    list.forEach((f, i) => {
       const k = i + 1;
       const band = make(
         "div",
-        `step${k === stood ? " now" : ""}${k > at ? " ahead" : ""}`,
+        `step${i === stood ? " now" : ""}${f.first > at ? " ahead" : ""}`,
       );
       band.style.left = `${k * CELL}px`;
       band.style.width = `${CELL}px`;
-      band.append(make("span", "no", String(k)));
-      band.title = `back to ${k}`;
+      // What a fold says about itself, and the only thing a column says now: how many times. Once
+      // is the ordinary case and writes nothing — a strip of ×1 would be a column of ones.
+      if (f.count > 1) band.append(make("span", "no", `×${f.count}`));
+      band.title =
+        f.count > 1
+          ? `${f.count} in a row — back to the last of them`
+          : "back to here";
       // Lit like anything else that names a rule, but not on offer: this one has been taken
       // already, and the dashes are about what could happen next.
       band.addEventListener("mouseenter", () =>
         w.focus.pointer.dispatch("enter", {
-          keys: halvesOf(r),
+          keys: halvesOf(f.edge),
           offer: false,
           alive: true,
         }),
@@ -306,7 +332,9 @@ export function newHistory(w: Wiring): History {
       band.addEventListener("mouseleave", () =>
         w.focus.pointer.dispatch("leave"),
       );
-      band.addEventListener("click", () => w.rewind(k));
+      // Back to the last of them: a fold is one column, and the slice that column stands on is
+      // where its last repetition left the machine.
+      band.addEventListener("click", () => w.rewind(f.last));
       cols.append(band);
     });
 

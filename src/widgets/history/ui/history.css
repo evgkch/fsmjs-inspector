@@ -184,9 +184,10 @@ path.maybe.tip {
 }
 
 /*
- * The number, under the middle of its step — which is the boundary between the two slices, the
- * point the curve turns at. It stood in the middle of the band, and the band is the second half of
- * a step, so the count read as belonging to the slice on its right rather than to the turn.
+ * How many times, under the middle of its step — which is the boundary between the two slices, the
+ * point the curve turns at. It belongs to the turn and not to either slice, and when this strip
+ * held step numbers instead they sat in the middle of the band, which read as counting the column
+ * on the right.
  *
  * It takes no clicks: half of it hangs over the column to its left, which belongs to the step
  * before it, and which step the pointer is on is a question for the columns and not for the width
