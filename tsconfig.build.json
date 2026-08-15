@@ -8,5 +8,9 @@
     "types": []
   },
   "include": ["src"],
-  "exclude": ["src/app.ts", "src/samples.ts", "src/page.ts"]
+  // The standalone site is not part of the package, and it is the only thing here that imports a
+  // schema as text through the bundler — with no `vite/client` in scope, declaring it would fail
+  // on an import the package does not have. The three files this named before the layers were
+  // sorted out are gone; the page they became is `pages/workbench`.
+  "exclude": ["src/app/main.ts", "src/pages/workbench"]
 }

@@ -48,6 +48,10 @@
       "types": "./dist-lib/index.d.ts",
       "default": "./dist-lib/index.js"
     },
+    "./publish": {
+      "types": "./dist-lib/publish.d.ts",
+      "default": "./dist-lib/publish.js"
+    },
     "./style.css": "./dist-lib/index.css"
   },
   "sideEffects": [
