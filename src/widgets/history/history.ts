@@ -107,10 +107,18 @@ export function newHistory(w: Wiring): History {
   let maybe: SVGGElement | null = null;
 
   /**
-   * What would happen if the rule now under the pointer were taken: the same curve, dashed, out
-   * of the slice the machine is standing in. It is drawn from the current position and not from
-   * the end, because that is where a step would be taken from — with a redo future ahead of it,
-   * the dashes cross it, which is exactly what taking one would do to it.
+   * What would happen if the rule now under the pointer were taken: the same curve, dashed, and
+   * in the place the step would actually be drawn in.
+   *
+   * That place is not the slice the machine stands in, and drawing it there was a lie the shape
+   * of the run told on itself. A step is two columns — where it came from and where it went — so
+   * the step after the one the machine stands at starts a whole column further on, with the run
+   * along the string between them saying it sat still until then. Drawn one column early, the
+   * dashes ended exactly where the redo future begins: rewind, point at a rule, and the offer
+   * appeared to be about the step ahead rather than about the position you had gone back to.
+   *
+   * So both halves are dashed, the straight one and the curve, and together they are the step
+   * that would be taken — over the top of the future it would drop, which is what taking it does.
    */
   function preview(): void {
     if (!maybe) return;
@@ -128,9 +136,24 @@ export function newHistory(w: Wiring): History {
     const rule = rows.filter((r) => r.from === from && r.on === on)[at];
     if (!rule) return;
 
-    const col = w.subject.step === 0 ? 0 : w.subject.step * 2 - 1;
+    // The columns the next step would take: the run uses two per step, so it starts where the
+    // one before it ended plus one — and column 0 when nothing has happened yet.
+    const col = w.subject.step * 2;
     const x0 = x(col);
     const x1 = x(col + 1);
+    // The wait: from the slice the machine is standing in to the start of the step. Nothing to
+    // wait through before the first one.
+    if (col > 0)
+      maybe.append(
+        svg("line", {
+          x1: x(col - 1),
+          y1: y(rule.from),
+          x2: x0,
+          y2: y(rule.from),
+          class: "maybe",
+          style: colour(rule.from),
+        }),
+      );
     maybe.append(
       svg("path", {
         d: arc(x0, y(rule.from), x1, y(rule.to)),
@@ -159,8 +182,10 @@ export function newHistory(w: Wiring): History {
     const last = steps.length ? steps.length * 2 - 1 : 0;
     const end = x(last) + CELL / 2;
     // Room past the end for what could happen next, and no more: a string running on past the
-    // last thing that happened promises a run that has not been made yet.
-    const width = end + CELL;
+    // last thing that happened promises a run that has not been made yet. What could happen next
+    // is one step, and a step is two columns — one less than that and the offer is drawn off the
+    // edge of the board it is an offer about.
+    const width = end + CELL * 2;
     const height = HEAD + row.size * CELL + FOOT;
 
     // The names, on the left of the strings and out of the scroll: this is the same index the
