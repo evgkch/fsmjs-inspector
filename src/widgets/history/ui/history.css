@@ -11,7 +11,7 @@
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     max-height: 100%;
-    padding: 0.85rem 0 0;
+    padding: var(--step-3) 0 0;
     border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
@@ -46,7 +46,7 @@ svg.names {
  */
 .history .tag {
     grid-column: 1 / -1;
-    padding: 0 0 0.4rem 0.9rem;
+    padding: 0 0 var(--step-2) var(--step-3);
 }
 
 .history text.name {
@@ -56,7 +56,11 @@ svg.names {
 
 /* The figure's rows, carried across: the same line, the same colour, the same weight. */
 line.string {
-    stroke: color-mix(in oklab, var(--c, var(--line)) 18%, transparent);
+    stroke: color-mix(
+        in oklab,
+        var(--c, var(--line)) var(--wash-firm),
+        transparent
+    );
     stroke-width: 1;
 }
 
@@ -76,25 +80,31 @@ circle.at {
 /* Undone, still on the board, still reachable by a click on it. */
 .trail.ahead,
 circle.at.ahead {
-    opacity: 0.25;
+    opacity: var(--undone);
 }
 
 /*
- * What would happen if the rule under the pointer were taken — the same curve, dashed, out of the
- * slice the machine is standing in. It is drawn from there and not from the end, because that is
- * where the step would be taken from.
+ * What would happen if the rule under the pointer were taken: out of the slice the machine is
+ * standing in, into the one it would arrive at.
+ *
+ * The same line, thinner: heavier than a string, which is the ground, and lighter than a step,
+ * which happened. It was dashed and the dashes were the wrong idea twice over — at two pixels with
+ * round caps they drew a chain of beads rather than a line, and even cut and spaced they said
+ * "uncertain" about a curve whose whole content is exactly where it would go. What marks it as an
+ * offer is the weight and the arrow on the end, and neither of those has to be read.
  */
 .maybe {
     fill: none;
     stroke: var(--c, var(--accent));
-    stroke-width: 2;
-    stroke-dasharray: 3 3;
+    stroke-width: 1.5;
     stroke-linecap: round;
 }
 
-circle.maybe {
-    fill: var(--surface);
-    stroke: var(--c, var(--accent));
+/* Where it would arrive. An arrow and not a dot: a dot is a slice, and a slice is something the
+   run passed through — half of one, drawn in dashes, is a claim that it half happened. */
+path.maybe.tip {
+    fill: var(--c, var(--accent));
+    stroke: none;
 }
 
 /*
@@ -109,7 +119,7 @@ circle.maybe {
     display: grid;
     align-content: end;
     justify-items: center;
-    padding-bottom: 0.15rem;
+    padding-bottom: var(--step-1);
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -141,5 +151,5 @@ circle.maybe {
 }
 
 .cols .step.ahead .no {
-    opacity: 0.45;
+    opacity: var(--dim);
 }

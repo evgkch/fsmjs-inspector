@@ -6,11 +6,15 @@
  * time. A row here is the row there — the same state, the same lane, the same colour — so the
  * strings run on and a step is a curve from one string to another.
  *
- * A slice is a column, and a *transition is two of them*: where it came from and where it went.
- * That is the unit the tool deals in everywhere else — a rule is a cause and an effect — so it is
- * the unit here: one step is one pair of columns, carrying one arc and one number. Between the
- * target of a step and the source of the next the machine sat still, and that is drawn as what it
- * is, a straight run along the string.
+ * A column is a slice — the machine was in exactly one state at each — and a step is the turn from
+ * one to the next. So a run of n steps is n + 1 columns, and there is nothing between two of them.
+ *
+ * It was drawn with two columns per step and a straight run along the string between the target of
+ * one and the source of the next, on the grounds that a rule is a cause and an effect. That is a
+ * fact about a rule and not about a run: nothing happened in that straight stretch, and drawing
+ * time passing where no time passes made every transition look as though it were taken one slice
+ * late. Rewind and take a rule and you watched the machine sit through a slice it was already past
+ * before it moved — which is exactly how it was read, and it was reading the picture correctly.
  *
  * What the history *cannot* say is which rule was taken: two rules between the same pair of
  * states are one curve here. That is why pointing at a column lights the figure and the line of
@@ -42,6 +46,17 @@ const FOOT = 18;
  * the next. The horizontal is the state; the turn is the transition.
  */
 const BEND = 0.82;
+
+/**
+ * The arrow on the end of an offer. As tall as the dot of a slice is wide and half again as long,
+ * which is the smallest a head can be and still read as one at this size — and it points along
+ * the curve, because the curve arrives level.
+ */
+const HEAD_LEN = 8;
+const HEAD_HALF = 4;
+
+/** How far out of its string a step that stays in one state goes, and comes back. */
+const LOOP = 9;
 
 export type History = {
   readonly node: HTMLElement;
@@ -98,8 +113,19 @@ export function newHistory(w: Wiring): History {
    * A symmetric curve from one string to the next: the two control points are the same distance
    * in from their own ends, so a step out and a step back look alike, which they are.
    */
-  const arc = (x0: number, y0: number, x1: number, y1: number) => {
+  const arc = (
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    loop = false,
+  ) => {
     const bend = (x1 - x0) * BEND;
+    // A step that arrives where it left has the two ends on one string, and a curve between them
+    // is a straight line — which on this board means the machine did nothing. So it is drawn as
+    // the thing it is: out of the string and back into it, over the slice it took.
+    if (loop)
+      return `M ${x0} ${y0} C ${x0 + bend} ${y0 - LOOP}, ${x1 - bend} ${y1 - LOOP}, ${x1} ${y1}`;
     return `M ${x0} ${y0} C ${x0 + bend} ${y0}, ${x1 - bend} ${y1}, ${x1} ${y1}`;
   };
 
@@ -107,18 +133,13 @@ export function newHistory(w: Wiring): History {
   let maybe: SVGGElement | null = null;
 
   /**
-   * What would happen if the rule now under the pointer were taken: the same curve, dashed, and
-   * in the place the step would actually be drawn in.
+   * What would happen if the rule now under the pointer were taken: the same curve a step is
+   * drawn with, out of the slice the machine is standing in and into the one it would arrive at,
+   * with an arrow on the end of it.
    *
-   * That place is not the slice the machine stands in, and drawing it there was a lie the shape
-   * of the run told on itself. A step is two columns — where it came from and where it went — so
-   * the step after the one the machine stands at starts a whole column further on, with the run
-   * along the string between them saying it sat still until then. Drawn one column early, the
-   * dashes ended exactly where the redo future begins: rewind, point at a rule, and the offer
-   * appeared to be about the step ahead rather than about the position you had gone back to.
-   *
-   * So both halves are dashed, the straight one and the curve, and together they are the step
-   * that would be taken — over the top of the future it would drop, which is what taking it does.
+   * One column, exactly as the step would be. It is lighter than a step that happened and it ends
+   * in an arrow instead of a slice, which is the whole of what marks it as an offer — a dot is a
+   * state the machine was in, and half of one at the end of a line is a state it half was in.
    */
   function preview(): void {
     if (!maybe) return;
@@ -136,35 +157,20 @@ export function newHistory(w: Wiring): History {
     const rule = rows.filter((r) => r.from === from && r.on === on)[at];
     if (!rule) return;
 
-    // The columns the next step would take: the run uses two per step, so it starts where the
-    // one before it ended plus one — and column 0 when nothing has happened yet.
-    const col = w.subject.step * 2;
-    const x0 = x(col);
-    const x1 = x(col + 1);
-    // The wait: from the slice the machine is standing in to the start of the step. Nothing to
-    // wait through before the first one.
-    if (col > 0)
-      maybe.append(
-        svg("line", {
-          x1: x(col - 1),
-          y1: y(rule.from),
-          x2: x0,
-          y2: y(rule.from),
-          class: "maybe",
-          style: colour(rule.from),
-        }),
-      );
+    // Out of the slice the machine is standing in and into the next, which is where the step
+    // would be drawn, because a slice is a column and a step is the turn between two of them.
+    const x0 = x(w.subject.step);
+    const x1 = x(w.subject.step + 1);
+    const y1 = y(rule.to);
     maybe.append(
       svg("path", {
-        d: arc(x0, y(rule.from), x1, y(rule.to)),
+        d: arc(x0, y(rule.from), x1, y1, rule.from === rule.to),
         class: "maybe",
         style: colour(rule.to),
       }),
-      svg("circle", {
-        cx: x1,
-        cy: y(rule.to),
-        r: 4,
-        class: "maybe at",
+      svg("path", {
+        d: `M ${x1 - HEAD_LEN} ${y1 - HEAD_HALF} L ${x1} ${y1} L ${x1 - HEAD_LEN} ${y1 + HEAD_HALF} Z`,
+        class: "maybe tip",
         style: colour(rule.to),
       }),
     );
@@ -178,14 +184,11 @@ export function newHistory(w: Wiring): History {
 
     const steps = w.subject.steps.map(asEdge);
     const at = w.subject.step;
-    // Two columns per step, and the first of them is the slice the run started in.
-    const last = steps.length ? steps.length * 2 - 1 : 0;
-    const end = x(last) + CELL / 2;
-    // Room past the end for what could happen next, and no more: a string running on past the
-    // last thing that happened promises a run that has not been made yet. What could happen next
-    // is one step, and a step is two columns — one less than that and the offer is drawn off the
-    // edge of the board it is an offer about.
-    const width = end + CELL * 2;
+    // A column per slice: where the run started, and where each step took it.
+    const end = x(steps.length) + CELL / 2;
+    // Room past the end for what could happen next, and no more — one step, which is one column.
+    // A string running on further than that promises a run that has not been made yet.
+    const width = end + CELL;
     const height = HEAD + row.size * CELL + FOOT;
 
     // The names, on the left of the strings and out of the scroll: this is the same index the
@@ -233,28 +236,16 @@ export function newHistory(w: Wiring): History {
         }),
       );
 
-    // The run itself: an arc across each step, a straight run along the string between them.
-    steps.forEach((r, i) => {
-      const a = i * 2;
+    // The run itself: one curve per step, from the slice it left to the slice it reached.
+    steps.forEach((r, i) =>
       board.append(
         svg("path", {
-          d: arc(x(a), y(r.from), x(a + 1), y(r.to)),
+          d: arc(x(i), y(r.from), x(i + 1), y(r.to), r.from === r.to),
           class: `trail${i + 1 > at ? " ahead" : ""}`,
           style: colour(r.to),
         }),
-      );
-      if (i > 0)
-        board.append(
-          svg("line", {
-            x1: x(a - 1),
-            y1: y(r.from),
-            x2: x(a),
-            y2: y(r.from),
-            class: `trail${i + 1 > at ? " ahead" : ""}`,
-            style: colour(r.from),
-          }),
-        );
-    });
+      ),
+    );
 
     // A slice, and the machine was in exactly one state at each of them.
     const dot = (col: number, state: string, ahead: boolean) =>
@@ -267,28 +258,27 @@ export function newHistory(w: Wiring): History {
           style: colour(state),
         }),
       );
-    if (!steps.length) dot(0, w.subject.at, false);
-    steps.forEach((r, i) => {
-      dot(i * 2, r.from, i + 1 > at);
-      dot(i * 2 + 1, r.to, i + 1 > at);
-    });
+    // Slice 0 is where the run began; after that there is one per step, and it is that step's
+    // target — the same dot the next step leaves from, drawn once, because it is one moment.
+    dot(0, steps.length ? steps[0]!.from : w.subject.at, false);
+    steps.forEach((r, i) => dot(i + 1, r.to, i + 1 > at));
 
     maybe = svg("g", { class: "ahead-of" });
     board.append(maybe);
     cols.append(board);
     node.replaceChildren(tag, index, cols);
 
-    // One band per step, over its pair of columns: what is pointed at, what is clicked, what the
-    // scroll snaps to, and what the number belongs to. A step is the unit, so a step is the
-    // control — there is nothing to do with half of one.
+    // One band per step, over the slice it arrived in: what is pointed at, what is clicked, what
+    // the scroll snaps to, and what the number belongs to. Going back to step k is going to the
+    // slice step k reached, so the band is that slice and the number stands under it.
     steps.forEach((r, i) => {
       const k = i + 1;
       const band = make(
         "div",
         `step${k === at ? " now" : ""}${k > at ? " ahead" : ""}`,
       );
-      band.style.left = `${i * 2 * CELL}px`;
-      band.style.width = `${CELL * 2}px`;
+      band.style.left = `${k * CELL}px`;
+      band.style.width = `${CELL}px`;
       band.append(make("span", "no", String(k)));
       band.title = `back to ${k}`;
       // Lit like anything else that names a rule, but not on offer: this one has been taken
