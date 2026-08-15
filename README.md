@@ -63,6 +63,59 @@ asks whether it is the rule you named, so your second press *is* the guard. `wit
 the identity, so the context stays as it started — the machine being driven is a real one
 throughout, and that is the point.
 
+## A machine that is running
+
+The page reads a schema; the package watches a machine. One call, over your own application:
+
+```ts
+import { inspect } from "@evgkch/fsmjs-inspector";
+import "@evgkch/fsmjs-inspector/style.css";
+
+const look = inspect(fsm, { title: "checkout", rewind: true });
+// look.close()
+```
+
+It floats over the page and is dragged by its bar; `into: el` puts it in an element of yours
+instead, and `mount(el, subject)` is the same thing one layer down, for a page with a figure of its
+own to share a `focus` with. `rewind` records where the machine has been so the run can be walked
+back — it costs a `restore` per step and it moves somebody else's machine, so it is asked for
+rather than assumed.
+
+One copy of `@evgkch/fsmjs` on the page, and it is the only hard requirement: the library is a peer
+dependency and stays out of the bundle, because a second copy is a second `TRANSITION` symbol and
+the listener would never fire.
+
+### From somewhere else
+
+A machine in a server, a worker, a test run, another tab or another host is watched over a wire.
+Clone this, install it, and start the site with a relay beside it:
+
+```sh
+npm install
+npm run dev          # the site on 5173, a relay on ws://localhost:8999
+```
+
+Then, in the application being debugged — as many machines as it has:
+
+```ts
+import { publish } from "@evgkch/fsmjs-inspector/publish";
+
+publish(cart, { name: "cart" });
+publish(upload, { name: "upload" });
+```
+
+`viewer.html` is the page that watches. Every publisher announces itself, so what is along the top
+is a roster of who is out there and you pick; `?ws=ws://host:port` points it at a relay elsewhere.
+That entry point has no document in it and loads no stylesheet — what is being watched may have no
+DOM at all.
+
+What crosses the wire is names: the schema as `JSON.stringify` writes it, and the four types of
+every transition. No context, no payload — an application's data does not leave it, and a context
+that could never be serialized is not a problem.
+
+Nothing there fires and nothing is undone. A remote subject has no `drive` and no `rewind`, and
+that is the whole of read-only: not a mode, an absence — every part of the tool already asks.
+
 ## Running it
 
 ```sh
@@ -71,22 +124,26 @@ npm run dev
 ```
 
 `npm run build` writes a static site to `dist/`: `npm run dump` refreshes the schemas the tool
-keeps of itself, `tsc --noEmit` is the gate, and `vite build` does the rest.
+keeps of itself, `tsc --noEmit` is the gate, and `vite build` does the rest. `npm run build:lib`
+writes the package into `dist-lib/` — the tool, the publisher, and the stylesheet.
 
 ## Layout
 
 ```
-index.html    the standalone page
-src/          the tool
-schemas/      what it can be pointed at, its own machines included
-scripts/      dump.mjs — writes those three
+index.html     the standalone page
+viewer.html    the page that watches machines running elsewhere
+src/           the tool
+schemas/       what it can be pointed at, its own machines included
+scripts/       dump.mjs writes three of those · relay.mjs carries the wire
 ```
 
-Inside `src/`, three machines and a figure. `diagram.ts` is the interaction: which halves of a
-transition are held, and where the pointer is, as two small machines read together by one `look`.
-`page.ts` is what happens when the text in the editor changes. `subject.ts` is the seam the tool
-turns on — what the figure needs about a machine, and the whole of it. All of them are the
-library, running the tool that explains it.
+Inside `src/`, the layers run one way: `shared` → `entities` → `features` → `widgets` → `pages` →
+`app`. The seam the whole thing turns on is `entities/machine`: a `Subject` is what a figure needs
+about a machine and the whole of it, and there are three — a dump in an editor, a machine in this
+scope, and a machine at the end of a pipe. Everything remembered is a machine of the library's own:
+what is held and where the pointer is, what the mode is, what the editor is doing to a word, how
+the page is arranged, which machine out there is on screen. All of them are the library, running
+the tool that explains it.
 
 ## Licence
 
