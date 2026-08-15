@@ -27,7 +27,7 @@
  * The lines. Snapping is mandatory here as everywhere else that scrolls in this tool: a line is
  * the unit, and half a line is not a thing anyone is reading.
  */
-.lines {
+.log .lines {
     overflow-y: auto;
     overscroll-behavior: contain;
     scroll-snap-type: y mandatory;
@@ -38,7 +38,7 @@
  * One transition, on one row of the same module the figure and the run are drawn on — so a line
  * here is as tall as a row there, and the panels read as one drawing rather than as three.
  */
-.lines .line {
+.log .line {
     display: flex;
     align-items: center;
     gap: var(--step-2);
@@ -48,11 +48,11 @@
 }
 
 /* Undone: walked back past, still on the board. */
-.lines .ahead {
+.log .ahead {
     opacity: var(--undone);
 }
 
-.lines .line:hover {
+.log .line:hover {
     background: color-mix(in oklab, var(--accent) var(--wash), var(--surface));
 }
 
@@ -60,33 +60,33 @@
  * The clock. Quiet and tabular: it is read as a column, and what the eye is looking for is the gap
  * between two lines rather than any one time.
  */
-.when {
+.log .when {
     color: var(--faint);
     font: 400 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;
 }
 
 /* The language's own words, as small and as quiet here as they are in the source. */
-.lines .key {
+.log .key {
     color: var(--faint);
     font: 500 var(--micro)/1 var(--mono-font);
 }
 
 /* A state, in its lane's colour — the same colour it wears in the figure, in the run, and in every
    line of the source. */
-.lines .q {
+.log .q {
     color: var(--c, var(--ink));
     font: 500 var(--name)/1 var(--mono-font);
 }
 
-.lines .ev,
-.lines .out {
+.log .ev,
+.log .out {
     color: var(--muted);
     font: 400 var(--name)/1 var(--mono-font);
 }
 
 /* How many times in a row, in the same words the run says it in. */
-.lines .again {
+.log .again {
     color: var(--faint);
     font: 500 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;

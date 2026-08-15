@@ -210,8 +210,11 @@ main[data-off~="log"] .reading {
     margin: 0;
 }
 
-/* The line to write, set as the source it is — the same face the editor sets a schema in. */
-.line {
+/* The line to write, set as the source it is — the same face the editor sets a schema in.
+   Scoped to the waiting panel, and named for what it is: `.line` is what the editor calls a line
+   of a schema, and an unscoped rule here drew a box around every line of every source on the
+   page. A page-level stylesheet has no business owning a word that general. */
+.wait .snippet {
     margin: 0;
     padding: var(--step-3);
     border: 1px solid var(--line);
