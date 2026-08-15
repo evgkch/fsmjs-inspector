@@ -243,13 +243,13 @@ path.maybe.tip {
  * Centred in the band instead, a number read as counting the slice on its right — which is a state
  * the machine was in, not a step it took.
  *
- * The number is the step; on the elided column, which is not one step, `×N` stands in its place
- * and therefore in the break the swallowed numbers left. Neither takes clicks: both hang over the
- * column to the left, and which step the pointer is on is a question for the columns and not for
- * the width of a numeral.
+ * The number is the step; on the elided column, which is not one step, an ellipsis stands in its
+ * place, in the break the swallowed numbers left. Neither takes clicks: both hang over the column
+ * to the left, and which step the pointer is on is a question for the columns and not for the
+ * width of a numeral.
  */
 .cols .step .no,
-.cols .step .again {
+.cols .step .gap {
     justify-self: start;
     translate: -50% 0;
     pointer-events: none;
@@ -261,10 +261,11 @@ path.maybe.tip {
     color: var(--faint);
 }
 
-/* How many are not drawn — said in the accent, because it is the one word in this strip that is
-   about the drawing rather than about the run. */
-.cols .step .again {
-    color: var(--accent);
+/* That something is not drawn here. How much is the difference between the numbers either side,
+   which is exact and already on the page; a count written here would be that subtraction done for
+   somebody who can see both of its ends. */
+.cols .step .gap {
+    color: var(--faint);
 }
 
 .cols .step.now .no {
