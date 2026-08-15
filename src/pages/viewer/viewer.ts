@@ -16,11 +16,16 @@ import { TRANSITION } from "@evgkch/fsmjs";
 import { toRules } from "@evgkch/fsmjs/formatters";
 import { flaws, fromWire, palette } from "../../entities/machine/index.js";
 import type { Subject } from "../../entities/machine/index.js";
+import { newMode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
+import { newPanels, offOf } from "../../features/show-panels/index.js";
+import type { Panel } from "../../features/show-panels/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { newSocket } from "../../shared/api/link.js";
 import { el, make } from "../../shared/lib/dom.js";
 import { newEditor } from "../../widgets/editor/editor.js";
+import { newLog } from "../../widgets/log/index.js";
+import type { Log } from "../../widgets/log/index.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { newWatching, watched } from "./model/watching.js";
@@ -38,6 +43,7 @@ const RELAY = "ws://localhost:8999";
 
 export function viewer(): void {
   const url = new URLSearchParams(location.search).get("ws") ?? RELAY;
+  const main = document.querySelector("main") as HTMLElement;
   const bar = el<HTMLDivElement>("bar");
   const strip = el<HTMLDivElement>("who");
   const note = el<HTMLParagraphElement>("note");
@@ -59,7 +65,11 @@ export function viewer(): void {
    * the other half of the figure, and reading a debugger means reading both.
    */
   const focus = newFocus();
+  // The mode is the page's, not the mount's, because the log asks it too: exploring there is no
+  // run, and a panel of times with nothing in it is a panel saying nothing.
+  const mode = newMode();
   const source = el<HTMLElement>("text");
+  const lines = el<HTMLElement>("lines");
   const editor = newEditor({
     focus,
     // The machine is compiled into somebody else's application. Nothing typed here could reach it,
@@ -79,8 +89,29 @@ export function viewer(): void {
     editor.show(rules, palette(graph, start), flaws(graph, start)),
   );
 
+  /**
+   * Which panels are up, and the page wears the answer: the stylesheet hides what is down, so
+   * nothing here reaches into a widget to switch it off and no widget learns it can be hidden.
+   */
+  const panels = newPanels();
+  const board = el<HTMLElement>("panels");
+  for (const panel of ["code", "figure", "run", "log"] as Panel[]) {
+    const label = make("label", "panel");
+    const box = make("input", "");
+    box.type = "checkbox";
+    box.checked = true;
+    box.addEventListener("change", () =>
+      panels.dispatch("put", { panel, up: box.checked }),
+    );
+    label.append(box, make("span", "what", panel));
+    board.append(label);
+  }
+  const dress = () => void (main.dataset["off"] = offOf(panels));
+  panels.rx.on(TRANSITION, dress);
+  dress();
+
   /** What is on screen, and which subject it is of. Not a decision — a handle on a drawing. */
-  let panel: { subject: Subject; handle: Handle } | null = null;
+  let panel: { subject: Subject; handle: Handle; log: Log } | null = null;
   /** The roster as it was last written out, so a hello from anybody does not rebuild all of it. */
   let written = "";
 
@@ -135,12 +166,16 @@ export function viewer(): void {
     // away the figure and whatever the pointer was over sixty times a minute.
     if (panel && panel.subject !== one?.subject) {
       panel.handle.destroy();
+      panel.log.node.remove();
       panel = null;
     }
     if (one && !panel) {
+      const log = newLog({ subject: one.subject, focus, mode });
+      lines.append(log.node);
       panel = {
         subject: one.subject,
-        handle: mount(host, one.subject, { focus }),
+        handle: mount(host, one.subject, { focus, mode }),
+        log,
       };
       // The source, as the language writes it. Read after it is set, because what the editor draws
       // on the words — the colours, the marks in the gutter, what `validate` found — comes back
@@ -148,8 +183,13 @@ export function viewer(): void {
       const text = toRules(one.subject.graph as object);
       editor.set(text);
       read(text, one.subject.at);
-      // The marker in the gutter is about where the machine stands, so it follows the machine.
-      one.subject.watch(() => editor.mark());
+      // Both of these are about where the machine stands, so both follow the machine.
+      one.subject.watch(() => {
+        editor.mark();
+        log.draw();
+      });
+      log.show(one.subject.graph, one.subject.at);
+      log.draw();
     }
 
     // What the machine is for, which its schema cannot say. Kept beside the roster rather than in

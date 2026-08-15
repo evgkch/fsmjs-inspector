@@ -93,9 +93,58 @@ main {
  */
 .panes {
     display: grid;
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 2fr);
     gap: var(--step-4);
     min-height: 0;
+}
+
+/*
+ * What is down is not drawn, and the row it stood in goes with it — a hidden panel that keeps its
+ * share of the page is a gap where a reader expects a panel. The page says which are down and the
+ * stylesheet does the rest: no widget here has ever heard that it can be switched off.
+ */
+main[data-off~="code"] #text,
+main[data-off~="log"] #lines,
+main[data-off~="figure"] .figure,
+main[data-off~="run"] .history {
+    display: none;
+}
+
+main[data-off~="code"] .panes {
+    grid-template-rows: 0 minmax(0, 3fr) minmax(0, 2fr);
+}
+
+main[data-off~="log"] .panes {
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr) 0;
+}
+
+main[data-off~="code"][data-off~="log"] .panes {
+    grid-template-rows: 0 minmax(0, 1fr) 0;
+}
+
+/* The four switches. Words, in the tool's own quiet, with the box beside the name — the same pair
+   the standalone page's explore switch is, and in the same order. */
+.panels {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--step-3);
+    margin-left: auto;
+}
+
+.panels .panel {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--step-1);
+    color: var(--faint);
+    font: 500 var(--micro)/1 var(--mono-font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.panels .panel:hover {
+    color: var(--ink);
 }
 
 .panes[hidden] {
