@@ -107,12 +107,17 @@ main {
 }
 
 /*
- * What is down is not drawn, and the row it stood in goes with it — a hidden panel that keeps its
+ * What is down is not drawn, and the room it stood in goes with it — a hidden panel that keeps its
  * share of the page is a gap where a reader expects a panel. The page says which are down and the
  * stylesheet does the rest: no widget here has ever heard that it can be switched off.
+ *
+ * Each of these is a widget's outermost node, which is the one that carries its frame, its name
+ * and its background. Naming an inner part instead — `.figure` is the board inside the figure's
+ * frame — empties the panel and leaves the empty panel standing, which is worse than either
+ * showing it or not.
  */
 main[data-off~="code"] #text,
-main[data-off~="figure"] .figure,
+main[data-off~="figure"] .out,
 main[data-off~="run"] .history {
     display: none;
 }
@@ -120,6 +125,29 @@ main[data-off~="run"] .history {
 /* The source down, and the band it stood in goes with it. */
 main[data-off~="code"] .panes {
     grid-template-rows: 0 minmax(0, 1fr);
+}
+
+/*
+ * One of the two drawings down, and the other takes the whole row rather than half of it. The
+ * figure's column is normally its own measured width, which is a width for a figure that is there.
+ */
+main[data-off~="figure"] .work,
+main[data-off~="run"] .work {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* Both of them down, and the band goes the way the source's does. */
+main[data-off~="figure"][data-off~="run"] #watch {
+    display: none;
+}
+
+main[data-off~="figure"][data-off~="run"] .panes {
+    grid-template-rows: minmax(0, 1fr) 0;
+}
+
+/* And nothing at all left up: the page says so rather than standing empty. */
+main[data-off~="code"][data-off~="figure"][data-off~="run"] .panes {
+    display: none;
 }
 
 /* The four switches. Words, in the tool's own quiet, with the box beside the name — the same pair
