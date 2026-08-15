@@ -5,7 +5,7 @@
 export type { Ctx, Ev, Graph, Step } from "./model/graph.js";
 export { idOf, partsOf, ruleId } from "./model/rule.js";
 export { flaws } from "./model/flaws.js";
-export { foldAt, folds } from "./model/folds.js";
+export { folds } from "./model/folds.js";
 export type { Fold } from "./model/folds.js";
 export type { Flaws } from "./model/flaws.js";
 export type { RuleId } from "./model/rule.js";

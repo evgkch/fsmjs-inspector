@@ -121,6 +121,22 @@ circle.at {
     fill: var(--c, var(--accent));
 }
 
+/*
+ * The middle of a long run of one step: drawn, but not one of them. Dashed because it stands for
+ * steps that are not on the board — the first and the last are, either side of it — and thinner,
+ * because what it carries is a count rather than a moment. Nothing points at it and nothing
+ * presses it: it is not one step, so there is nothing to go back to.
+ */
+.trail.elided {
+    stroke-width: 1.5;
+    stroke-dasharray: 3 4;
+}
+
+.cols .step.elided {
+    pointer-events: none;
+    cursor: default;
+}
+
 /* Undone, still on the board, still reachable by a click on it. */
 .trail.ahead,
 circle.at.ahead {

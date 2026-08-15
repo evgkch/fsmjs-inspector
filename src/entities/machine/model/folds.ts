@@ -8,9 +8,9 @@
  * a fact they already understood. Folded, the same drag is one curve with `×60` under it, and a
  * long session stays a thing you can look at whole.
  *
- * Two in a row is enough to fold. Not three: at two the count is already the shorter statement,
- * and a rule that starts at three has to be explained to whoever sees two identical columns beside
- * one folded pair.
+ * This says only what the run *is* — which steps were the same turn taken again. What to do about
+ * it is the drawing's: the history draws two in a row as two, since there is nothing to save, and
+ * three or more as three — the first, a dashed one for the middle, and the last.
  *
  * What is folded is *consecutive* and *identical*: the same rule, taken from the same state to the
  * same state, on the same event, emitting the same letter. Two different rules that happen to join
@@ -39,11 +39,6 @@ export function folds(steps: readonly Edge[]): Fold[] {
     else out.push({ edge, count: 1, first: i + 1, last: i + 1 });
   }
   return out;
-}
-
-/** Which fold a step is inside, or -1 — the one question the drawings ask backwards. */
-export function foldAt(list: readonly Fold[], step: number): number {
-  return list.findIndex((f) => step >= f.first && step <= f.last);
 }
 
 const same = (a: Edge, b: Edge) =>

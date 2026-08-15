@@ -24,14 +24,13 @@
 import { edges } from "@evgkch/fsmjs";
 import type { Edge } from "@evgkch/fsmjs";
 import { halvesOf } from "../../entities/cell/index.js";
-import {
-  foldAt,
-  folds,
-  hue,
-  lanes,
-  partsOf,
+import { folds, hue, lanes, partsOf } from "../../entities/machine/index.js";
+import type {
+  Fold,
+  Graph,
+  Step,
+  Subject,
 } from "../../entities/machine/index.js";
-import type { Graph, Step, Subject } from "../../entities/machine/index.js";
 import { exploring } from "../../features/explore/index.js";
 import type { Mode } from "../../features/explore/index.js";
 import type { Focus } from "../../features/focus/index.js";
@@ -53,6 +52,47 @@ import "./ui/history.css";
  * down twice.
  */
 const FOOT = 18;
+
+/**
+ * A column of the board: one step, or the ones between the first and the last of a long run.
+ *
+ * Two identical steps in a row are drawn as two — there is nothing to save and nothing to hide.
+ * Three or more are drawn as three: the first, a dashed one for everything in the middle, and the
+ * last. The run keeps its shape — it enters, it goes on, it leaves — and what it stops doing is
+ * spending a screen of columns saying the same turn sixty times.
+ */
+type Col = {
+  edge: Edge;
+  /** Which step of the run this is. Meaningless on the elided one, which is several. */
+  step: number;
+  first: number;
+  last: number;
+  /** How many there are in the run this stands for — only on the elided column. */
+  count?: number;
+};
+
+const spread = (list: readonly Fold[]): Col[] =>
+  list.flatMap((f) => {
+    const at = (k: number): Col => ({
+      edge: f.edge,
+      step: k,
+      first: k,
+      last: k,
+    });
+    if (f.count <= 2)
+      return Array.from({ length: f.count }, (_, i) => at(f.first + i));
+    return [
+      at(f.first),
+      {
+        edge: f.edge,
+        step: -1,
+        first: f.first + 1,
+        last: f.last - 1,
+        count: f.count,
+      },
+      at(f.last),
+    ];
+  });
 
 /**
  * The clock on a step, to the millisecond.
@@ -215,7 +255,9 @@ export function newHistory(w: Wiring): History {
     // Out of the column the machine is standing in — which is a fold and not a step, since that is
     // what the board is drawn in. Worked out again rather than kept from the last draw: it is one
     // pass over a short list, and a copy would be a second answer to go stale.
-    const sits = foldAt(folds(w.subject.steps.map(asEdge)), w.subject.step);
+    const sits = spread(folds(w.subject.steps.map(asEdge))).findIndex(
+      (c) => w.subject.step >= c.first && w.subject.step <= c.last,
+    );
     const x0 = x(sits < 0 ? 0 : sits + 1);
     const x1 = x0 + CELL;
     const y1 = y(rule.to);
@@ -245,10 +287,12 @@ export function newHistory(w: Wiring): History {
     // row is one turn that happened twice, and a column each is how a drag of sixty samples put
     // both ends of the picture out of reach. Everything below counts in these, and the numbers a
     // step is known by — for going back to it, for what is undone — stay the run's own.
-    const list = folds(steps);
-    // Where the machine stands, in columns. Inside a fold counts as being on it: a run walked back
-    // into the middle of a drag is standing on that drag.
-    const stands = foldAt(list, at);
+    const list = spread(folds(steps));
+    // Where the machine stands, in columns. Inside the elided middle counts as standing on it: a
+    // run walked back into a drag is standing in that drag.
+    const stands = list.findIndex((c) =>
+      c.count === undefined ? c.step === at : at >= c.first && at <= c.last,
+    );
     // A column per slice: where the run started, and where each fold took it.
     const end = x(list.length) + CELL / 2;
     // Room past the end for what could happen next, and no more — one step, which is one column.
@@ -301,14 +345,16 @@ export function newHistory(w: Wiring): History {
         }),
       );
 
-    // The run itself: one curve per fold, from the slice it left to the slice it reached. A fold
-    // of sixty is one curve — the sixty are said under it, in the strip, where a count belongs.
-    list.forEach((f, i) =>
+    // The run itself: one curve per column. A run of the same step three times or more is drawn
+    // as three — the first, a dashed one standing for the ones not drawn, and the last — so the
+    // shape of the run survives the shortening: you see it enter, you see it go on, you see it
+    // leave.
+    list.forEach((c, i) =>
       board.append(
         svg("path", {
-          d: arc(x(i), y(f.edge.from), x(i + 1), y(f.edge.to)),
-          class: `trail${f.first > at ? " ahead" : ""}`,
-          style: colour(f.edge.to),
+          d: arc(x(i), y(c.edge.from), x(i + 1), y(c.edge.to)),
+          class: `trail${c.count === undefined ? "" : " elided"}${c.first > at ? " ahead" : ""}`,
+          style: colour(c.edge.to),
         }),
       ),
     );
@@ -329,7 +375,7 @@ export function newHistory(w: Wiring): History {
     // moment. A fold's own repetitions arrive and leave at the same two slices, which is the whole
     // reason they can be folded at all.
     dot(0, list.length ? list[0]!.edge.from : w.subject.at, false);
-    list.forEach((f, i) => dot(i + 1, f.edge.to, f.first > at));
+    list.forEach((c, i) => dot(i + 1, c.edge.to, c.first > at));
 
     maybe = svg("g", { class: "ahead-of" });
     board.append(maybe);
@@ -355,35 +401,46 @@ export function newHistory(w: Wiring): History {
     // like the slice you passed through. Sitting at the tip is the ordinary case and needs nothing
     // said about it; marking it anyway put a permanent selection on a panel nobody had touched.
     const stood = at < steps.length ? stands : -1;
-    list.forEach((f, i) => {
+    list.forEach((c, i) => {
       const k = i + 1;
       const band = make(
         "div",
-        `step${i === stood ? " now" : ""}${f.first > at ? " ahead" : ""}`,
+        `step${c.count === undefined ? "" : " elided"}${i === stood ? " now" : ""}${c.first > at ? " ahead" : ""}`,
       );
       band.style.left = `${k * CELL}px`;
       band.style.width = `${CELL}px`;
-      // The step this column arrived at, under the column, as it always was. A fold arrives at
-      // the last of its repetitions, so the number jumps and the gap it leaves is where the
-      // count goes — once is the ordinary case and writes nothing.
-      band.append(make("span", "no", String(f.last)));
-      if (f.count > 1) band.append(make("span", "again", `×${f.count}`));
+      // The step this column arrived at, under the column, as it always was. The dashed column is
+      // not a step and has no number: what stands under it is how many, in the break the missing
+      // numbers left.
+      if (c.count === undefined)
+        band.append(make("span", "no", String(c.step)));
+      else band.append(make("span", "again", `×${c.count}`));
       // Everything the log widget used to be a panel for, on the thing it is about: when it
       // happened, what it was, and how many times. A title is the browser's own, costs nothing,
       // and does not need a quarter of the page to say four words.
-      const when = w.subject.steps[f.last - 1]?.at;
+      // Nothing is pointed at here that cannot be pressed, and the dashed column cannot: it is not
+      // one step, so it is not one moment, and there is nothing to go back to. It says only how
+      // many, which is written under it.
+      if (c.count !== undefined) {
+        cols.append(band);
+        return;
+      }
+      const when = w.subject.steps[c.step - 1]?.at;
+      // The library's own notation for an edge: the cause on the arrow, the effect after the
+      // slash, and the state it lands in at the point. `ready -down / draw-> resizing` — one arrow
+      // because it is one transition, and everything it is made of is written along it.
       band.title = [
         when === undefined ? "" : `${clock(when)}  `,
-        `${f.edge.from} —${f.edge.on}→ ${f.edge.to}`,
-        f.edge.emit === undefined ? "" : ` / ${f.edge.emit}`,
-        f.count > 1 ? `\n${f.count} in a row, steps ${f.first}–${f.last}` : "",
+        `${c.edge.from} -${c.edge.on}`,
+        c.edge.emit === undefined ? "" : ` / ${c.edge.emit}`,
+        `-> ${c.edge.to}`,
         w.subject.rewind ? "\nclick to go back here" : "",
       ].join("");
       // Lit like anything else that names a rule, but not on offer: this one has been taken
       // already, and the dashes are about what could happen next.
       band.addEventListener("mouseenter", () =>
         w.focus.pointer.dispatch("enter", {
-          keys: halvesOf(f.edge),
+          keys: halvesOf(c.edge),
           offer: false,
           alive: true,
         }),
@@ -393,7 +450,7 @@ export function newHistory(w: Wiring): History {
       );
       // Back to the last of them: a fold is one column, and the slice that column stands on is
       // where its last repetition left the machine.
-      band.addEventListener("click", () => w.rewind(f.last));
+      band.addEventListener("click", () => w.rewind(c.step));
       cols.append(band);
     });
 
