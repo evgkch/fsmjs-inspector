@@ -66,6 +66,17 @@ export type Editor = {
 
 export type Wiring = {
   focus: Focus;
+  /**
+   * The source is read and not written.
+   *
+   * The same schema, the same colours, the same marks in the gutter, the same line lighting up
+   * when the pointer is on a cell of the figure — and nothing that would change it: no typing, no
+   * completion, no renaming, and no firing a rule by pressing its line. It is for a machine that
+   * is running somewhere else, where the text on screen is a report of a schema that is compiled
+   * into somebody's application and cannot be edited from here by any means at all. A textarea
+   * that accepts a keystroke and loses it is worse than one that refuses it.
+   */
+  readonly?: boolean;
   /** The text changed. Reading it is somebody else's business, and slower. */
   onEdit: () => void;
   /** Could this rule fire from where the machine stands. */
@@ -78,6 +89,9 @@ export type Wiring = {
 
 export function newEditor(w: Wiring): Editor {
   const area = make("textarea", "");
+  // Read-only, not disabled: the caret still goes in, the text still selects and copies, and the
+  // keys the panel uses to walk the run still arrive. What is refused is changing it.
+  area.readOnly = w.readonly ?? false;
   area.spellcheck = false;
   area.autocapitalize = "off";
   area.autocomplete = "off";
@@ -248,6 +262,7 @@ export function newEditor(w: Wiring): Editor {
    * one outright, so it needs no second click the way the figure's two halves do.
    */
   function wire(at: number, row: HTMLElement): void {
+    if (w.readonly) return;
     row.addEventListener("click", () => {
       const rule = fresh() ? written.get(at) : undefined;
       if (rule && w.fires(rule)) w.fire(rule);
@@ -414,10 +429,13 @@ export function newEditor(w: Wiring): Editor {
 
   // ── renaming a name in every line it stands in ──────────────────────────────
 
-  /** What the chip says, which is the whole of the mode's face. */
+  /**
+   * What the chip says, which is the whole of the mode's face — and it says nothing at all where
+   * the source cannot be written, because renaming is the one thing it offers.
+   */
   function badge(): void {
     const at = writing.state;
-    if (at.type !== "picked" && at.type !== "renaming")
+    if (w.readonly || (at.type !== "picked" && at.type !== "renaming"))
       return void (chip.hidden = true);
     chip.hidden = false;
     const on = at.type === "renaming";
@@ -443,8 +461,11 @@ export function newEditor(w: Wiring): Editor {
    * written once, in the schema, where it can be read in one place and dumped as a graph like
    * everything else this tool draws.
    */
-  for (const kind of ["mousedown", "dblclick", "blur"] as const)
-    area.addEventListener(kind, (e) => tell(kind, e));
+  // Not where the source cannot be written: every one of these is the writing machine being told
+  // about a word somebody might rename, and there is nothing to rename.
+  if (!w.readonly)
+    for (const kind of ["mousedown", "dblclick", "blur"] as const)
+      area.addEventListener(kind, (e) => tell(kind, e));
 
   // The text changed, and two things always follow whatever it meant: the colour is redrawn now,
   // and the reader is set going, which is slower and worth waiting a moment for.
@@ -465,6 +486,7 @@ export function newEditor(w: Wiring): Editor {
    */
   let swallowed = false;
   area.addEventListener("keydown", (e) => {
+    if (w.readonly) return;
     swallowed = false;
     tell("keydown", e);
     if (swallowed) e.preventDefault();

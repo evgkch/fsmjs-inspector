@@ -13,10 +13,16 @@ body {
     font: 400 15px/1.6 var(--main-font);
 }
 
+/*
+ * The page is the height of the window and the work is what stretches: the run is read at its end
+ * and the source scrolls inside its own frame, so neither of them may push the other off the page.
+ */
 main {
     max-width: 96rem;
+    min-height: 100vh;
     margin: 0 auto;
     display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: var(--step-5);
 }
 
@@ -78,6 +84,22 @@ main {
     border-color: var(--line-firm);
     background: var(--surface);
     color: var(--ink);
+}
+
+/*
+ * The source over the figure and the run. Two rows and not two columns: the source is read here
+ * rather than written, so it is a reference — a band of it across the top is enough, and the
+ * drawing gets the rest.
+ */
+.panes {
+    display: grid;
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--step-4);
+    min-height: 0;
+}
+
+.panes[hidden] {
+    display: none;
 }
 
 .pane {
