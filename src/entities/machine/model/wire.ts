@@ -1,0 +1,80 @@
+/**
+ * What one machine says about itself to a drawing somewhere else.
+ *
+ * The figure needs a graph, where the machine stands, and what it has done. All three are names:
+ * `Graph` is what `JSON.stringify` left of a schema, and a step is drawn from the *types* of its
+ * source, input, target and output — the contexts and payloads are never drawn anywhere. So the
+ * wire carries names and nothing else, which is not a limitation but the same fact the whole tool
+ * rests on, arriving one hop later.
+ *
+ * That has a consequence worth saying out loud: an application's data does not leave it. Whatever
+ * is in a context — a session, a basket, a user — is not serialized, not sent, and cannot be seen
+ * through this. What is sent is the shape of the machine and the path it took through it.
+ *
+ * Four sentences, and every one of them is complete on its own:
+ *
+ *   hail   a page has opened and does not know who is out there
+ *   hello  a machine says what it is and everything it has done so far
+ *   step   one transition, and where it left the machine
+ *   bye    a machine has stopped publishing
+ *
+ * `hello` restates rather than continues, so nothing has to be replayed and no order has to be
+ * kept: a viewer that missed messages, or was not running yet, hails and is whole again. A `step`
+ * carries `at` for the same reason — a machine can be restored from outside, and the target of a
+ * transition is not always where the machine now is.
+ */
+import type { Edge } from "@evgkch/fsmjs";
+import type { Graph } from "./graph.js";
+
+export type Wire =
+  | { say: "hail" }
+  | {
+      say: "hello";
+      /** Which machine this is. One process may publish several. */
+      who: string;
+      /** What to call it on screen — the name the publisher was given, or its id. */
+      name: string;
+      graph: Graph;
+      at: string;
+      steps: Edge[];
+    }
+  | { say: "step"; who: string; edge: Edge; at: string }
+  | { say: "bye"; who: string };
+
+/**
+ * Is this one of ours?
+ *
+ * Anything at all can arrive on a socket, so this is a gate and not a cast. It checks the shape
+ * each sentence needs to be read — no more: a `graph` is `Record<string, unknown>` by definition
+ * and the reader below it is written for a schema that may be nonsense, which is the same reader
+ * the editor uses on hand-typed JSON.
+ */
+export function isWire(msg: unknown): msg is Wire {
+  if (typeof msg !== "object" || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  const named = typeof m["who"] === "string";
+  switch (m["say"]) {
+    case "hail":
+      return true;
+    case "hello":
+      return (
+        named &&
+        typeof m["name"] === "string" &&
+        typeof m["at"] === "string" &&
+        typeof m["graph"] === "object" &&
+        m["graph"] !== null &&
+        Array.isArray(m["steps"])
+      );
+    case "step":
+      return (
+        named &&
+        typeof m["at"] === "string" &&
+        typeof m["edge"] === "object" &&
+        m["edge"] !== null
+      );
+    case "bye":
+      return named;
+    default:
+      return false;
+  }
+}

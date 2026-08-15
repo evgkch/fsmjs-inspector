@@ -14,3 +14,6 @@ export { fromText } from "./lib/from-text.js";
 export type { Text, Told } from "./lib/from-text.js";
 export { fromMachine } from "./lib/from-machine.js";
 export type { Options as WatchOptions } from "./lib/from-machine.js";
+export { fromWire } from "./lib/from-wire.js";
+export type { Presence, Watched } from "./lib/from-wire.js";
+export type { Wire } from "./model/wire.js";
