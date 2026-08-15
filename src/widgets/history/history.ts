@@ -410,11 +410,15 @@ export function newHistory(w: Wiring): History {
       band.style.left = `${k * CELL}px`;
       band.style.width = `${CELL}px`;
       // The step this column arrived at, under the column, as it always was. The dashed column is
-      // not a step and has no number: what stands under it is how many, in the break the missing
-      // numbers left.
-      if (c.count === undefined)
-        band.append(make("span", "no", String(c.step)));
-      else band.append(make("span", "again", `×${c.count}`));
+      // not a step and has no number of its own: what stands under it is how many steps are not
+      // drawn, in the break the missing numbers left. Two of them always are — the first and the
+      // last, either side of it — so the count is the run's own count less those two, and the
+      // smallest it can be is one.
+      band.append(
+        c.count === undefined
+          ? make("span", "no", String(c.step))
+          : make("span", "no gap", `×${c.count - 2}`),
+      );
       // Everything the log widget used to be a panel for, on the thing it is about: when it
       // happened, what it was, and how many times. A title is the browser's own, costs nothing,
       // and does not need a quarter of the page to say four words.
