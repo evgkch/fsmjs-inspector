@@ -1,9 +1,13 @@
 /**
- * `inspect(fsm)` — the inspector over your own application, on a machine that is running.
+ * `overlay(fsm)` — the tool on top of your own application, on a machine that is running.
  *
  * No install, no manifest, no bridge across a devtools boundary: the machine is right here, in
  * this tab, in this scope, so the shortest way to look at it is to put the tool on top of it. One
  * call from a console or from a line of code you delete afterwards.
+ *
+ * This is the embedded half, and it is not what `inspect(fsm)` does: that one says what a machine
+ * is doing to an inspector running beside the application, and draws nothing itself. Reach for
+ * this when the page being debugged is the page you want the figure on.
  *
  * What you get is the same figure the page shows, and it is not a picture of the machine — it is
  * the machine. Where it stands is where it stands. What it has done is what it did. Press a cause
@@ -28,13 +32,13 @@ export type Options = LookOptions &
     title?: string;
   };
 
-export type Inspection = { close: () => void };
+export type Overlaid = { close: () => void };
 
 /** Look at a machine that is running. Returns the way to stop looking. */
-export function inspect(
+export function overlay(
   fsm: StateMachine<Ctx, Ev, Ev>,
   options: Options = {},
-): Inspection {
+): Overlaid {
   const subject = fromMachine(fsm, { rewind: options.rewind });
 
   if (options.into) {

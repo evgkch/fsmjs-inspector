@@ -34,6 +34,8 @@ export type Wire =
       who: string;
       /** What to call it on screen — the name the publisher was given, or its id. */
       name: string;
+      /** A line about what the machine is for. Empty when nobody wrote one. */
+      note: string;
       graph: Graph;
       at: string;
       steps: Edge[];
@@ -60,6 +62,7 @@ export function isWire(msg: unknown): msg is Wire {
       return (
         named &&
         typeof m["name"] === "string" &&
+        typeof m["note"] === "string" &&
         typeof m["at"] === "string" &&
         typeof m["graph"] === "object" &&
         m["graph"] !== null &&

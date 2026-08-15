@@ -19,7 +19,8 @@
     "visualisation"
   ],
   "scripts": {
-    "dev": "node scripts/relay.mjs & vite",
+    "dev": "vite",
+    "inspect": "node scripts/relay.mjs & vite --open /viewer.html",
     "relay": "node scripts/relay.mjs",
     "build": "npm run dump && tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -31,9 +32,11 @@
     "prepublishOnly": "npm run build:lib"
   },
   "peerDependencies": {
-    "@evgkch/fsmjs": ">=0.1.1"
+    "@evgkch/fsmjs": ">=0.1.1",
+    "@evgkch/channeljs": ">=1.1.0"
   },
   "devDependencies": {
+    "@evgkch/channeljs": "^1.1.0",
     "@evgkch/fsmjs": "^0.1.1",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
@@ -50,11 +53,11 @@
       "types": "./dist-lib/index.d.ts",
       "default": "./dist-lib/index.js"
     },
-    "./publish": {
-      "types": "./dist-lib/publish.d.ts",
-      "default": "./dist-lib/publish.js"
+    "./ui": {
+      "types": "./dist-lib/ui.d.ts",
+      "default": "./dist-lib/ui.js"
     },
-    "./style.css": "./dist-lib/index.css"
+    "./style.css": "./dist-lib/ui.css"
   },
   "sideEffects": [
     "*.css"

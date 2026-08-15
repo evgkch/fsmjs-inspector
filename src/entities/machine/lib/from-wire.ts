@@ -16,7 +16,9 @@
  * process that is doing real work. Both are absent rather than refused — a missing `drive` is
  * already the whole of read-only, and every drawing already asks.
  */
-import type { Edge, Off } from "@evgkch/fsmjs";
+import Channel from "@evgkch/channeljs";
+import type { Rx } from "@evgkch/channeljs";
+import type { Edge } from "@evgkch/fsmjs";
 import type { Graph, Step } from "../model/graph.js";
 import type { Subject } from "../model/subject.js";
 import { isWire } from "../model/wire.js";
@@ -26,14 +28,18 @@ import type { Link } from "../../../shared/api/link.js";
 export type Watched = {
   readonly who: string;
   readonly name: string;
+  /** What the machine is for, said by whoever wrote the line. Empty when nobody did. */
+  readonly note: string;
   readonly subject: Subject;
 };
+
+/** Said when the list changes: somebody arrived, left, or became a different machine. */
+export type Roster = { roster: [] };
 
 export type Presence = {
   /** Who is out there, in the order they announced themselves. */
   readonly list: () => readonly Watched[];
-  /** Called when that list changes — somebody arrived, left, or became a different machine. */
-  readonly watch: (on: () => void) => Off;
+  readonly rx: Rx<Roster>;
   readonly stop: () => void;
 };
 
@@ -56,32 +62,37 @@ const stepOf = (e: Edge): Step =>
 /** One machine's side of the roster: what it last said, and the subject reading it. */
 type Entry = {
   name: string;
+  note: string;
   /** The graph as it arrived, kept to tell a reconnection from a different machine. */
   text: string;
   graph: Graph;
   at: string;
   steps: Step[];
-  watchers: Set<() => void>;
+  said: Channel<{ moved: [] }>;
   subject: Subject;
 };
 
 export function fromWire(link: Link): Presence {
   const seen = new Map<string, Entry>();
-  const roster = new Set<() => void>();
-  const moved = () => {
-    for (const on of roster) on();
-  };
+  const roster = new Channel<Roster>();
+  const moved = () => void roster.tx.send("roster");
 
   // The entry and the subject reading it are one object: the subject is getters over the fields
   // above it, so a `hello` that lands in the entry is on screen without anything being told twice.
-  const entry = (name: string, graph: Graph, text: string): Entry => {
+  const entry = (
+    name: string,
+    note: string,
+    graph: Graph,
+    text: string,
+  ): Entry => {
     const it = {
       name,
+      note,
       text,
       graph,
       at: "",
       steps: [] as Step[],
-      watchers: new Set<() => void>(),
+      said: new Channel<{ moved: [] }>(),
     };
     const subject: Subject = {
       get graph() {
@@ -98,23 +109,18 @@ export function fromWire(link: Link): Presence {
       get step() {
         return it.steps.length;
       },
-      watch: (on) => {
-        it.watchers.add(on);
-        return () => it.watchers.delete(on);
-      },
+      watch: (on) => it.said.rx.on("moved", on),
       // Let go of this drawing's listeners. The pipe is the roster's, and one panel closing is not
       // a reason to stop hearing the machine it was drawing.
-      stop: () => it.watchers.clear(),
+      stop: () => it.said.clear(),
     };
     return Object.assign(it, { subject });
   };
 
-  const told = (it: Entry) => {
-    for (const on of it.watchers) on();
-  };
+  const told = (it: Entry) => void it.said.tx.send("moved");
 
   const off: (() => void)[] = [
-    link.on((msg) => {
+    link.rx.on("hear", (msg) => {
       if (!isWire(msg)) return;
       switch (msg.say) {
         // Somebody else asking. A viewer is not a publisher and has nothing to answer with.
@@ -129,6 +135,7 @@ export function fromWire(link: Link): Presence {
           // drawing it stays where it is, because it is the same machine.
           if (old && old.text === text) {
             old.name = msg.name;
+            old.note = msg.note;
             old.at = msg.at;
             old.steps = msg.steps.map(stepOf);
             told(old);
@@ -137,7 +144,7 @@ export function fromWire(link: Link): Presence {
           // A different schema under the same name is a different machine, and gets a different
           // subject: everything a figure works out — its lanes, its colours, its axes — is read
           // off the graph once, and a graph swapped underneath it would be a figure of neither.
-          const it = entry(msg.name, msg.graph, text);
+          const it = entry(msg.name, msg.note, msg.graph, text);
           it.at = msg.at;
           it.steps = msg.steps.map(stepOf);
           seen.set(msg.who, it);
@@ -159,7 +166,7 @@ export function fromWire(link: Link): Presence {
         case "bye": {
           const it = seen.get(msg.who);
           if (!it) return;
-          it.watchers.clear();
+          it.said.clear();
           seen.delete(msg.who);
           moved();
           return;
@@ -169,7 +176,7 @@ export function fromWire(link: Link): Presence {
     // Every time the pipe comes up, and not only the first: whoever is out there answers with
     // everything they have, so a viewer opened late and a viewer that lost the connection are the
     // same case and take the same path.
-    link.open(() => link.send({ say: "hail" })),
+    link.rx.on("open", () => link.send({ say: "hail" })),
   ];
   link.send({ say: "hail" });
 
@@ -180,15 +187,13 @@ export function fromWire(link: Link): Presence {
       [...seen].map(([who, it]) => ({
         who,
         name: it.name,
+        note: it.note,
         subject: it.subject,
       })),
-    watch: (on) => {
-      roster.add(on);
-      return () => roster.delete(on);
-    },
+    rx: roster.rx,
     stop: () => {
       for (const it of off) it();
-      for (const it of seen.values()) it.watchers.clear();
+      for (const it of seen.values()) it.said.clear();
       seen.clear();
       roster.clear();
       link.stop();

@@ -1,0 +1,44 @@
+/**
+ * @evgkch/fsmjs-inspector/ui — the tool itself, for a page that wants to draw it.
+ *
+ * This is not what an application writes. An application writes `inspect(fsm)`, which is one line,
+ * costs it no stylesheet and no document, and is the package's main entry. This is the other half:
+ * `mount` puts the figure in an element you give it, `overlay` floats it over your own page, and
+ * the rest is what a page needs to point them at something.
+ *
+ * Everything here draws. Importing it means importing a stylesheet.
+ */
+import "./shared/ui/tokens.css";
+
+export { mount } from "./pages/inspector/mount.js";
+export type {
+  Handle,
+  Options as ViewOptions,
+} from "./pages/inspector/mount.js";
+
+export { overlay } from "./app/overlay.js";
+export type { Overlaid, Options as OverlayOptions } from "./app/overlay.js";
+
+export { newFocus } from "./features/focus/index.js";
+export type { Focus } from "./features/focus/index.js";
+
+export { newMode } from "./features/explore/index.js";
+export type { Mode } from "./features/explore/index.js";
+
+export {
+  fromMachine,
+  fromText,
+  idOf,
+  partsOf,
+  ruleId,
+} from "./entities/machine/index.js";
+export type {
+  Ctx,
+  Drive,
+  Ev,
+  Graph,
+  RuleId,
+  Step,
+  Subject,
+  Text,
+} from "./entities/machine/index.js";

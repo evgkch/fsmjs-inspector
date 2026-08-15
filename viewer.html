@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>fsmjs — watching</title>
+        <title>fsmjs — inspecting</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -13,14 +13,24 @@
     </head>
     <body>
         <main>
-            <!-- Not a menu: these are the machines that exist, and the page is on one of them. -->
-            <div class="bar">
-                <span class="tag">machines</span>
+            <!-- Not a menu: these are the machines being inspected, and the page is on one of
+                 them. Hidden until there is one, because a bar with nothing in it is a control
+                 that does not work. -->
+            <div class="bar" id="bar" hidden>
+                <span class="tag">inspecting</span>
                 <div id="who" class="roster"></div>
+                <p class="note" id="note" hidden></p>
             </div>
 
             <section class="pane" id="watch"></section>
-            <p class="none" id="none" hidden></p>
+
+            <!-- Before anything has said hello. The dot is the only moving thing on the page, and
+                 it moves while the wire is down. -->
+            <section class="wait" id="wait">
+                <span class="dot"></span>
+                <p class="said" id="said"></p>
+                <pre class="line" id="line" hidden></pre>
+            </section>
         </main>
 
         <script type="module" src="./src/app/watch.ts"></script>

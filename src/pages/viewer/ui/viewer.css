@@ -24,6 +24,10 @@ main {
  * Inset by a panel's own name, so the first word of the page and the first word of the panel under
  * it stand on one line down the left edge. One row of the module, like every other line here.
  */
+.bar[hidden] {
+    display: none;
+}
+
 .bar {
     display: flex;
     flex-wrap: wrap;
@@ -82,15 +86,80 @@ main {
     min-height: 0;
 }
 
-/*
- * Nobody is publishing. Said in the same quiet the rest of the tool says things about itself in,
- * and with the address in it, because the one thing that goes wrong here is dialling the wrong
- * one — the page cannot tell a relay that is not running from an application that has not called
- * `publish`, and it does not pretend to.
- */
-.none {
+/* What this machine is for, which its schema cannot say. Beside the names, in the tool's own
+   quiet: it is a caption, and the names are the controls. */
+.note {
     margin: 0;
+    color: var(--faint);
+    font: 400 var(--name)/1 var(--main-font);
+}
+
+/*
+ * Before anything has said hello.
+ *
+ * Two things are true here in turn and the page says which: the wire is not up, or it is up and
+ * nothing is being inspected. The second is not an error and is not drawn as one — it is a page
+ * waiting for a line that has not been written yet, so it shows the line.
+ */
+.wait {
+    display: grid;
+    justify-items: start;
+    gap: var(--step-3);
     padding: var(--step-3);
     color: var(--faint);
     font: 400 var(--name)/1.6 var(--mono-font);
+}
+
+.wait[hidden] {
+    display: none;
+}
+
+.said {
+    margin: 0;
+}
+
+/* The line to write, set as the source it is — the same face the editor sets a schema in. */
+.line {
+    margin: 0;
+    padding: var(--step-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    corner-shape: superellipse(1.25);
+    background: var(--surface);
+    color: var(--muted);
+    font: 400 var(--code)/1.6 var(--mono-font);
+    overflow-x: auto;
+}
+
+/*
+ * The one moving thing on the page, and it moves only while the wire is down: a debugger that
+ * animates something on every screen is a debugger you stop reading. Still and solid means the
+ * connection is up and the wait is for the application, not for the network.
+ */
+.dot {
+    width: var(--step-2);
+    height: var(--step-2);
+    border-radius: 50%;
+    background: var(--faint);
+}
+
+.dialling .dot {
+    animation: dial 1.6s ease-in-out infinite;
+}
+
+@keyframes dial {
+    0%,
+    100% {
+        opacity: var(--undone);
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialling .dot {
+        animation: none;
+        opacity: var(--dim);
+    }
 }

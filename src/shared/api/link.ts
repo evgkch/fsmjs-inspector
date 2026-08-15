@@ -3,22 +3,36 @@
  *
  * Two sides need to find each other: an application with a machine in it, and a page drawing that
  * machine somewhere else — another tab, another process, another host. What passes between them is
- * described in `entities/machine/model/wire`; how it gets there is described here, in three
- * functions, so that neither side has a socket in it.
+ * described in `entities/machine/model/wire`; how it gets there is described here, in one channel
+ * and one machine, so that neither side has a socket in it.
  *
  * The one implementation is a WebSocket, because it is the one transport a browser and a Node
  * process both have without installing anything. A message channel between two tabs of the same
  * origin would be another, and would need nothing here to change.
+ *
+ * What arrives is announced on a channel and whether the wire is up is held by a machine — the two
+ * tools this whole tool is about. Three hand-rolled sets of listeners stood here first, which is
+ * the sort of thing a debugger for message-passing machines should be the last program to contain.
  */
+import Channel from "@evgkch/channeljs";
+import type { Rx } from "@evgkch/channeljs";
+import { newDialling } from "./model/dialling.js";
+
+/** What a pipe says: something arrived, or the wire itself moved. */
+export type Heard = {
+  hear: [msg: unknown];
+  /** It came up — including every time it came back, which is when to say everything again. */
+  open: [];
+  down: [];
+};
 
 /** Where messages go and come from. Nothing about who is on the other end. */
 export type Link = {
   /** Best effort. A message sent while the pipe is down is dropped, and that is the contract. */
   readonly send: (msg: unknown) => void;
-  /** Hear everything that arrives. Returns the way to stop hearing. */
-  readonly on: (hear: (msg: unknown) => void) => () => void;
-  /** Called whenever the pipe comes up, including every time it comes back. */
-  readonly open: (say: () => void) => () => void;
+  readonly rx: Rx<Heard>;
+  /** Is it up right now — asked of the machine that knows, not of whichever socket exists. */
+  readonly live: () => boolean;
   readonly stop: () => void;
 };
 
@@ -34,18 +48,19 @@ const AGAIN = 1000;
  * which is also why a viewer opened an hour late sees the whole run rather than the tail of it.
  */
 export function newSocket(url: string): Link {
-  const hears = new Set<(msg: unknown) => void>();
-  const opens = new Set<() => void>();
+  const heard = new Channel<Heard>();
+  const dial = newDialling();
   let sock: WebSocket | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let done = false;
 
-  const dial = () => {
+  const ring = () => {
     if (done) return;
     const it = new WebSocket(url);
     sock = it;
     it.addEventListener("open", () => {
-      for (const say of opens) say();
+      dial.dispatch("up");
+      heard.tx.send("open");
     });
     it.addEventListener("message", (e: MessageEvent) => {
       // Whatever is on the wire is somebody else's text until it has been read. Parsing is here
@@ -56,35 +71,30 @@ export function newSocket(url: string): Link {
       } catch {
         return;
       }
-      for (const hear of hears) hear(msg);
+      heard.tx.send("hear", msg);
     });
     // Both ends of a lost connection arrive here, and the difference between "refused" and
     // "closed" is not one this has anything to do about: dial again.
     it.addEventListener("close", () => {
       if (sock === it) sock = null;
-      if (!done) timer = setTimeout(dial, AGAIN);
+      dial.dispatch("down");
+      heard.tx.send("down");
+      if (!done) timer = setTimeout(ring, AGAIN);
     });
     it.addEventListener("error", () => it.close());
   };
-  dial();
+  ring();
 
   return {
     send: (msg) => {
       if (sock?.readyState === 1) sock.send(JSON.stringify(msg));
     },
-    on: (hear) => {
-      hears.add(hear);
-      return () => hears.delete(hear);
-    },
-    open: (say) => {
-      opens.add(say);
-      return () => opens.delete(say);
-    },
+    rx: heard.rx,
+    live: () => dial.state.type === "live",
     stop: () => {
       done = true;
       if (timer) clearTimeout(timer);
-      hears.clear();
-      opens.clear();
+      heard.clear();
       sock?.close();
       sock = null;
     },

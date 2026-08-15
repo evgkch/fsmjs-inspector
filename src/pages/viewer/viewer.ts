@@ -34,12 +34,17 @@ const RELAY = "ws://localhost:8999";
 
 export function viewer(): void {
   const url = new URLSearchParams(location.search).get("ws") ?? RELAY;
+  const bar = el<HTMLDivElement>("bar");
   const strip = el<HTMLDivElement>("who");
+  const note = el<HTMLParagraphElement>("note");
   const host = el<HTMLElement>("watch");
-  const none = el<HTMLParagraphElement>("none");
-  none.textContent = `Nothing is publishing at ${url}`;
+  const wait = el<HTMLElement>("wait");
+  const said = el<HTMLParagraphElement>("said");
+  const line = el<HTMLPreElement>("line");
+  line.textContent = `import { inspect } from "@evgkch/fsmjs-inspector";\n\nconst fsm = inspect(yourMachine, { name: "cart" });`;
 
-  const there = fromWire(newSocket(url));
+  const link = newSocket(url);
+  const there = fromWire(link);
   const at = newWatching();
 
   /** What is on screen, and which subject it is of. Not a decision — a handle on a drawing. */
@@ -51,6 +56,28 @@ export function viewer(): void {
     const list = there.list();
     const who = watched(at);
     const one = list.find((w) => w.who === who) ?? null;
+
+    /*
+     * Three things can be true, and they are not the same thing said louder.
+     *
+     * Nothing has connected: the inspector is listening and the wire is not up — either nothing is
+     * running or it is dialling somewhere else, and the address is the only useful thing to say.
+     * Connected and empty: the wire is fine, so what is missing is the line in the application,
+     * and that line is what to show. Watching: the interface, and none of this.
+     *
+     * It was one sentence for the first two, which named the address at the moment the address was
+     * the one thing that was demonstrably right.
+     */
+    wait.hidden = list.length > 0;
+    bar.hidden = list.length === 0;
+    if (!list.length) {
+      const up = link.live();
+      wait.classList.toggle("dialling", !up);
+      said.textContent = up
+        ? "Connected. No machine is being inspected yet — put this beside yours:"
+        : `Waiting for a connection at ${url}`;
+      line.hidden = !up;
+    }
 
     // Rebuilt only when it is a different list. Every machine says hello whenever a pipe comes up,
     // and a strip rebuilt on each of those takes the keyboard focus off whatever was on it.
@@ -79,7 +106,12 @@ export function viewer(): void {
     }
     if (one && !panel)
       panel = { subject: one.subject, handle: mount(host, one.subject) };
-    none.hidden = panel !== null;
+
+    // What the machine is for, which its schema cannot say. Kept beside the roster rather than in
+    // it: it belongs to the one being read, and four of them in a row would be a paragraph where
+    // the names are.
+    note.textContent = one?.note ?? "";
+    note.hidden = !one?.note;
   };
 
   /**
@@ -98,7 +130,10 @@ export function viewer(): void {
     draw();
   };
 
-  there.watch(settle);
+  there.rx.on("roster", settle);
   at.rx.on(TRANSITION, draw);
+  // The wire moving changes what there is to say while nothing is being watched, and nothing else.
+  link.rx.on("open", draw);
+  link.rx.on("down", draw);
   settle();
 }

@@ -7,24 +7,24 @@ import { defineConfig } from "vite";
  * The library is left out of the bundle: whoever embeds the inspector already has a machine, and
  * a second copy of `fsmjs` would be a second `TRANSITION` symbol — the listener would never fire.
  *
- * Two entries, and the second one is the point of having two: `publish` is what an application
- * being watched imports, and an application being watched may have no document — a server, a
- * worker, a test run. `index` carries a stylesheet and builds a page; nothing that only says what a
- * machine did should have to load it.
+ * Two entries, and which one is the main one is the whole point. `index` is `inspect(fsm)`: what an
+ * application writes, with no document and no stylesheet in it, because the thing being debugged
+ * may have neither — a server, a worker, a test run. `ui` is the tool, for a page that wants to
+ * draw the figure itself, and importing it means importing a stylesheet.
  */
 export default defineConfig({
   build: {
     outDir: "dist-lib",
     lib: {
-      entry: { index: "src/index.ts", publish: "src/publish.ts" },
+      entry: { index: "src/index.ts", ui: "src/ui.ts" },
       formats: ["es"],
     },
     rollupOptions: {
       external: [/^@evgkch\//],
-      // The stylesheet is named after the entry that carries it, not after the package: with one
-      // entry it was `index.css` and `./style.css` in the manifest points at it, and adding a
-      // second entry is no reason for a file somebody imports by name to be called something else.
-      output: { assetFileNames: "index[extname]" },
+      // Named after the entry that carries it, which is `ui` — the main entry has no stylesheet at
+      // all, and a file called `index.css` beside a JavaScript file that never mentions a document
+      // would be the manifest's one confusing sentence.
+      output: { assetFileNames: "ui[extname]" },
     },
   },
 });
