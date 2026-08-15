@@ -11,6 +11,12 @@
  * A law is worth having only if it is the whole story, so there are no numbers below that stand
  * outside these — and where one used to, it was because two people (both of them me) had chosen
  * a value a week apart for the same job.
+ *
+ * The package publishes this file on its own, as `@evgkch/fsmjs-inspector/tokens.css`. A page that
+ * shows a machine beside the inspector — a demo, an example, an application with a debugger in the
+ * corner — should not be picking its own greys and its own spacings: two palettes a shade apart
+ * read as a mistake, and one of them will be. The stylesheet beside it, `style.css`, is this plus
+ * everything the widgets draw with; a page that only wants the vocabulary takes this.
  */
 
 :root {

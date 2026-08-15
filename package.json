@@ -28,7 +28,7 @@
     "dump": "node --no-warnings scripts/dump.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json && cp src/shared/ui/tokens.css dist-lib/tokens.css",
     "prepublishOnly": "npm run build:lib"
   },
   "peerDependencies": {
@@ -57,7 +57,8 @@
       "types": "./dist-lib/ui.d.ts",
       "default": "./dist-lib/ui.js"
     },
-    "./style.css": "./dist-lib/ui.css"
+    "./style.css": "./dist-lib/ui.css",
+    "./tokens.css": "./dist-lib/tokens.css"
   },
   "sideEffects": [
     "*.css"
