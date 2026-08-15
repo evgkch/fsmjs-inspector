@@ -18,21 +18,26 @@
                     >Schema
                     <select id="sample"></select>
                 </label>
-                <button id="new" title="a schema of your own, in the language">
-                    new
-                </button>
-                <button
-                    id="open"
-                    title="read a schema from a file — a dump, or the language"
-                >
-                    open
-                </button>
-                <button
-                    id="dump"
-                    title="write this schema out as JSON, the way a machine dumps itself"
-                >
-                    dump
-                </button>
+                <div class="acts">
+                    <button
+                        id="new"
+                        title="a schema of your own, in the language"
+                    >
+                        new
+                    </button>
+                    <button
+                        id="open"
+                        title="read a schema from a file — a dump, or the language"
+                    >
+                        open
+                    </button>
+                    <button
+                        id="dump"
+                        title="write this schema out as JSON, the way a machine dumps itself"
+                    >
+                        dump
+                    </button>
+                </div>
                 <input
                     type="file"
                     id="file"
@@ -51,13 +56,14 @@
                     >
                         reset
                     </button>
+                    <!-- The name, then what it says — like every other pair in this line. -->
                     <label
                         class="flag"
                         title="no state is current; nothing fires"
                     >
+                        explore
                         <input type="checkbox" id="explore" />
                         <span class="track"></span>
-                        explore
                     </label>
                 </div>
             </div>

@@ -212,9 +212,25 @@
  * It appears when a word is double-clicked and does nothing until it is pressed, because
  * double-clicking a word is how the text is read. Pressed, it is a mode and says so: what is typed
  * next lands in every line at once, and there is no undoing that by eye.
+ *
+ * Out of the flow, on the corner of the box. In the header row it was a thing that arrives and
+ * leaves, and it is taller than the word beside it — so double-clicking a word grew the row by the
+ * difference and pushed every line of the source down under the caret you had just put in it. What
+ * it belongs to is the editor and not that row: it is about the whole text, it is the only thing on
+ * the page that acts on all of it at once, and it now stands in the one place a box keeps for
+ * something that is about the box. `.editor` is the positioned ancestor, so it is written here and
+ * the markup stays as it reads: the name of the panel, then what can be done to it.
+ *
+ * Both its offsets are the row's own inset less the padding it wears: that puts its word on the
+ * line of the word opposite and its last letter over the panel's inside edge, where the name on the
+ * left starts. Text lines up with text — the box a control is drawn as is not what a reader reads
+ * the column of the page from.
  */
 .editor .rename {
-    margin-left: auto;
+    position: absolute;
+    top: calc(var(--step-3) - var(--step-1));
+    right: calc(var(--step-3) - var(--step-2));
+    z-index: 2;
     padding: var(--step-1) var(--step-2);
     border: 0;
     border-radius: var(--radius-sm);

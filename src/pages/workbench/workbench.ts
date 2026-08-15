@@ -18,7 +18,7 @@ import {
   palette,
   ruleId,
 } from "../../entities/machine/index.js";
-import type { Graph, Text } from "../../entities/machine/index.js";
+import type { Graph, Lane, Text } from "../../entities/machine/index.js";
 import { exploring, newMode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { page, read, shown } from "../../features/read-schema/index.js";
@@ -54,6 +54,8 @@ export function workbench(): void {
   const mode = newMode();
   let subject: Text | null = null;
   let handle: Handle | null = null;
+  /** What colour a state is drawn in, which is the figure's lane order and nothing else. */
+  let lane: Lane = () => undefined;
 
   /** A rule of the text, as the guards name it: its cell, and its place in that cell. */
   const idOfLine = (r: Written) => ruleId(r.edge.from, r.edge.on, r.slot);
@@ -83,12 +85,14 @@ export function workbench(): void {
     handle = mount(host, subject, { focus, mode });
     // The run marker in the gutter is about where the machine stands, so it follows the machine.
     subject.watch(() => editor.mark());
+    // One palette, and everything that writes a state asks it: the text, the figure's own lanes
+    // and the header, which names a state too. The same order of the same states everywhere.
+    lane = palette(graph, start);
     fillStart(graph, start);
     warn(null, null);
-    // One palette, and everything that writes a state asks it: the text and the figure's own lanes
-    // are the same order of the same states. And one reading of what is wrong with the schema,
-    // which both of them draw on the names it is wrong about.
-    editor.show(rules, palette(graph, start), flaws(graph, start));
+    // And one reading of what is wrong with the schema, which the text and the figure both draw
+    // on the names it is wrong about.
+    editor.show(rules, lane, flaws(graph, start));
   });
 
   page.rx.on("stopped", ({ message, line }) => warn(message, line));
@@ -97,11 +101,24 @@ export function workbench(): void {
   const warn = (message: string | null, line: number | null) =>
     editor.blame(message, line);
 
+  /**
+   * Where a run begins, and every state it could begin at.
+   *
+   * Each name wears its own lane, and so does the field once one is chosen: a state is written in
+   * its colour in the figure's index, in the run's index and in every line of the source, and the
+   * header is the one place it was written in plain ink. The list is the same index as the
+   * figure's, in the same order and the same colours — so choosing a start is choosing a row.
+   */
   function fillStart(graph: Graph, start: string): void {
     startSel.replaceChildren(
-      ...nodes(graph).map((n) => new Option(n, n, false, n === start)),
+      ...nodes(graph).map((n) => {
+        const option = new Option(n, n, false, n === start);
+        option.setAttribute("style", lane(n) ?? "");
+        return option;
+      }),
     );
     startSel.value = start;
+    startSel.setAttribute("style", lane(start) ?? "");
   }
 
   /**

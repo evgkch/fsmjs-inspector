@@ -28,6 +28,14 @@
  */
 .cols {
     position: relative;
+    /*
+     * A layer of its own, so the tint of a step can go *under* the drawing. The bands come after
+     * the board in the markup — they have to, they are what is pressed — and a positioned box
+     * paints over the content of the box it is in. A translucent tint could live with that and let
+     * the curves through; an opaque one cannot, and opaque is what it has to be. Inside this
+     * context a negative layer sits above the panel and below the run.
+     */
+    isolation: isolate;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior: contain;
@@ -64,7 +72,8 @@ line.string {
     stroke-width: 1;
 }
 
-/* Where the run went. An arc across a step, a straight run along the string between two. */
+/* Where the run went: one curve per step, from the slice it left to the slice it reached — and a
+   straight segment along one string where the step went where it already was. */
 .trail {
     fill: none;
     stroke: var(--c, var(--accent));
@@ -108,9 +117,14 @@ path.maybe.tip {
 }
 
 /*
- * One step, over its two columns: what is pointed at, what is clicked, what the scroll snaps to,
- * and what the number belongs to. Clicking one is the whole of undo and redo — a step you can see
- * is a better thing to press than an arrow that means "one from wherever you are".
+ * One step: what is pointed at, what is clicked, what the scroll snaps to, and what the number
+ * belongs to. Clicking one is the whole of undo and redo — a step you can see is a better thing to
+ * press than an arrow that means "one from wherever you are".
+ *
+ * What is *pressed* is one column, the slice the step arrived in, because that is the slice going
+ * back to it goes to. Two adjacent bands two columns wide would overlap on every column but the
+ * last, and of two things stacked on a column only the upper one can be pressed. What is *drawn*
+ * is both slices, and that is the box below.
  */
 .cols .step {
     position: absolute;
@@ -118,7 +132,7 @@ path.maybe.tip {
     bottom: 0;
     display: grid;
     align-content: end;
-    justify-items: center;
+    justify-items: start;
     padding-bottom: var(--step-1);
     border: 0;
     border-radius: 0;
@@ -127,20 +141,60 @@ path.maybe.tip {
     scroll-snap-align: end;
 }
 
-.cols .step:hover {
-    background: color-mix(in oklab, var(--accent) var(--wash), transparent);
+/*
+ * The step, drawn: a transition holds two slices, so the tint covers the one it left and the one it
+ * reached, and the column that is pressed is its right half.
+ *
+ * Opaque — mixed into the panel, not laid over it. Any two of these share a column, since the slice
+ * one step arrived in is the slice the next one left, and a translucent tint over a translucent
+ * tint puts a third, darker band between two steps, standing for something that does not exist. A
+ * mix with the surface stacks without adding up: what you see on the shared column is whichever
+ * step is on top, and never a colour that belongs to neither.
+ *
+ * It stops above the number strip, so the numbers stay on the panel and stay legible, and so the
+ * strip reads as one row of counts rather than as part of what is lit.
+ */
+.cols .step::before {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    top: 0;
+    right: 0;
+    bottom: var(--foot);
+    left: calc(-1 * var(--cell));
+    pointer-events: none;
 }
 
-/* Where the machine stands in what has happened. */
-.cols .step.now {
+.cols .step:hover::before {
+    background: color-mix(in oklab, var(--accent) var(--wash), var(--surface));
+}
+
+/*
+ * Where the machine stands, when that is behind the end of the run — and the step that put it
+ * there. Over the pointer's tint and not under it: this is where you are, and a pointer passing
+ * along the neighbouring column should not eat half of it.
+ */
+.cols .step.now::before {
+    z-index: -1;
     background: color-mix(
         in oklab,
         var(--accent) var(--wash-firm),
-        transparent
+        var(--surface)
     );
 }
 
+/*
+ * The number, under the middle of its step — which is the boundary between the two slices, the
+ * point the curve turns at. It stood in the middle of the band, and the band is the second half of
+ * a step, so the count read as belonging to the slice on its right rather than to the turn.
+ *
+ * It takes no clicks: half of it hangs over the column to its left, which belongs to the step
+ * before it, and which step the pointer is on is a question for the columns and not for the width
+ * of a numeral.
+ */
 .cols .step .no {
+    translate: -50% 0;
+    pointer-events: none;
     color: var(--faint);
     font: 500 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;

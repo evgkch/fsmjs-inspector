@@ -43,7 +43,18 @@ main {
 .bar {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--step-3) var(--step-4);
+    /*
+     * Four distances, and each one says how far apart two things are:
+     *
+     *    6  a name and its value — one thing said in two words
+     *   12  peers, of which there are three: new, open, dump
+     *   18  things of different kinds standing together: a start, a reset, a mode
+     *   24  the ends of a group
+     *
+     * It was one gap for all of it, so `dump` stood as close to the name of the schema as it did
+     * to `open`, and the header read as seven loose words rather than two subjects.
+     */
+    gap: var(--step-3) var(--step-5);
     align-items: center;
     /* One row of the same module everything else on the page is drawn on: the header is a line of
        the page, not a band across the top of it — and the arithmetic that stops the page from
@@ -78,8 +89,16 @@ main {
 .bar .run {
     display: inline-flex;
     align-items: center;
-    gap: var(--step-3);
+    gap: var(--step-4);
     margin-left: auto;
+}
+
+/* The three things you can do to a document, and they are three of one kind — so they stand at
+   the distance peers stand at, and further than that from the name of the document itself. */
+.bar .acts {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--step-3);
 }
 
 /*
@@ -106,8 +125,29 @@ select,
     cursor: pointer;
 }
 
+/*
+ * As wide as what it says, and not as wide as the longest thing it could say.
+ *
+ * A select is laid out to fit its widest option, and with the platform's own arrow taken off that
+ * width became a stretch of nothing between the value and the caret — so the caret hung in the
+ * middle of the header, at a distance set by the longest state name in a list nobody has open. The
+ * gap moved when the schema changed. A name and the mark that says it can be changed are one
+ * object, and there is no version of that object with sixty pixels of air inside it.
+ */
 select {
     appearance: none;
+    field-sizing: content;
+}
+
+/* The name of a document, set as a name — the mono is for the language, and a schema's title is
+   not a word of it. The state below is, and stays in it. */
+#sample {
+    font-family: var(--main-font);
+}
+
+/* And it is a state, so it is written in the state's colour, as it is everywhere else. */
+#start {
+    color: var(--c, var(--ink));
 }
 
 /*
@@ -131,6 +171,104 @@ select:focus-visible,
     outline: 2px solid var(--accent);
     outline-offset: var(--step-1);
     border-radius: 2px;
+}
+
+/*
+ * The list itself, which until now was the one part of this tool drawn by somebody else.
+ *
+ * Everything on the page is one surface, one line weight, one small type and one tint for "this is
+ * the one" — and then you pressed a name and got a square white box in the system's font with a
+ * solid blue bar across the row you were on. `appearance: base-select` hands the popup over, so it
+ * is drawn the way every other list of names here is drawn: the panel's own frame and radius, the
+ * language's own type, and the same wash that marks what is being pointed at everywhere else.
+ *
+ * The caret stays the one we draw. The platform's ▾ arrives with the base appearance and is turned
+ * off, because a control that is a word plus a mark should have exactly one mark, from one rule.
+ */
+@supports (appearance: base-select) {
+    /*
+     * The base appearance comes with a floor on the field's height — a row of the module, for a
+     * finger — and its content is laid against the top of whatever that leaves. So the word sat
+     * six pixels above the name written beside it, and the two stopped being one phrase.
+     *
+     * A field here is a word in a line of words, and it is as tall as the word. Nothing is pressed
+     * with a finger on this page, and the label around it is the target anyway: the whole row is
+     * the module tall because the bar says so, not because the field is padded out to it.
+     */
+    select {
+        appearance: base-select;
+        align-items: center;
+        min-block-size: auto;
+    }
+
+    select::picker-icon {
+        display: none;
+    }
+
+    /*
+     * The list stands off its field by the distance a name stands from its value, and is as wide
+     * as the longest name in it: the field is as wide as the word it is showing, and a list cut to
+     * that width would clip every name longer than the one already chosen.
+     *
+     * A schema may name more states than the window has room for, so it scrolls, and it scrolls
+     * inside itself like every other list on this page.
+     */
+    ::picker(select) {
+        margin-block: var(--step-2);
+        padding: var(--step-1);
+        border: 1px solid var(--line-firm);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        min-inline-size: max-content;
+        max-block-size: 50vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    /*
+     * A row of the list, said as a row of a list: padded, and with a corner, because it is a thing
+     * you point at. Written through the picker rather than at `option` on its own — the rows exist
+     * in the list and the field shows a word, and a rule about one should not be one sentence away
+     * from becoming a rule about the other.
+     */
+    ::picker(select) option {
+        display: flex;
+        align-items: center;
+        gap: var(--step-2);
+        padding: var(--step-1) var(--step-2);
+        border-radius: var(--step-2);
+        /* A state carries its lane here as it does in the figure's index and in the text: one
+           fact, one colour, wherever the name is written. A document has no lane and falls back
+           to the ink it is written in. */
+        color: var(--c, var(--ink));
+        font: 500 var(--name)/1 var(--mono-font);
+    }
+
+    /* Whatever the closed field is set in, its list is set in — one control, one voice. */
+    #sample::picker(select) option {
+        font-family: var(--main-font);
+    }
+
+    /* No tick. Nothing else on this page is a picture of itself, and the one being pointed at and
+       the one already chosen are said the way they are said everywhere else: a wash, and a firmer
+       wash. */
+    ::picker(select) option::checkmark {
+        display: none;
+    }
+
+    ::picker(select) option:hover,
+    ::picker(select) option:focus {
+        background: color-mix(in oklab, var(--accent) var(--wash), transparent);
+        outline: none;
+    }
+
+    ::picker(select) option:checked {
+        background: color-mix(
+            in oklab,
+            var(--accent) var(--wash-firm),
+            transparent
+        );
+    }
 }
 
 /*
@@ -177,10 +315,19 @@ select:focus-visible,
     pointer-events: none;
 }
 
+/*
+ * Small, and behind its name.
+ *
+ * Every other pair in this header is a name and then what it says, and this one was the value and
+ * then the name — the only thing in the line read right to left. And at 30 by 18 it was the
+ * largest object in a header of ten-pixel words, which put the weight of the whole line on the one
+ * control that is pressed least. Two by one on the module: 24 by 12, a knob of 6 inset by 3, and a
+ * travel of 12 — every number the module halved or doubled, like every other number on the page.
+ */
 .flag .track {
     position: relative;
-    width: calc(var(--step-4) + var(--step-3));
-    height: var(--step-4);
+    width: var(--step-5);
+    height: var(--step-3);
     border-radius: 999px;
     /* The two round things on the page. Everything else is a box with soft corners. */
     corner-shape: round;
@@ -193,8 +340,8 @@ select:focus-visible,
     position: absolute;
     top: var(--step-1);
     left: var(--step-1);
-    width: var(--step-3);
-    height: var(--step-3);
+    width: var(--step-2);
+    height: var(--step-2);
     border-radius: 50%;
     corner-shape: round;
     background: var(--surface);

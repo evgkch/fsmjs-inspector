@@ -34,7 +34,13 @@ import { make, svg } from "../../shared/lib/dom.js";
 import { CELL, EM, HEAD } from "../../shared/lib/grid.js";
 import "./ui/history.css";
 
-/** The strip under the columns where the step numbers stand. */
+/**
+ * The strip under the columns where the step numbers stand.
+ *
+ * The bands over the columns are laid out in CSS and one of them has to stop where this strip
+ * begins, so the number goes on belonging to its own column — which means the stylesheet needs
+ * this number too. It is handed over rather than written down twice.
+ */
 const FOOT = 18;
 
 /**
@@ -54,9 +60,6 @@ const BEND = 0.82;
  */
 const HEAD_LEN = 8;
 const HEAD_HALF = 4;
-
-/** How far out of its string a step that stays in one state goes, and comes back. */
-const LOOP = 9;
 
 export type History = {
   readonly node: HTMLElement;
@@ -88,6 +91,7 @@ export function newHistory(w: Wiring): History {
   // nobody can find is a control nobody has, and the name of the panel is where you would look.
   tag.title = "← and → walk the run";
   const node = make("aside", "history");
+  node.style.setProperty("--foot", `${FOOT}px`);
   node.append(tag, cols);
   /** Rebuilt with every draw, because the names are as wide as the names are. */
   let index: SVGSVGElement | null = null;
@@ -112,20 +116,16 @@ export function newHistory(w: Wiring): History {
   /**
    * A symmetric curve from one string to the next: the two control points are the same distance
    * in from their own ends, so a step out and a step back look alike, which they are.
+   *
+   * A step that arrives where it left comes out of this as a straight segment along its own
+   * string, and that is right. It was drawn as a bump out of the string and back, on the grounds
+   * that a flat line reads as the machine doing nothing — true of the old board, where a step took
+   * two columns and the stretch between two of them was flat. There is no such stretch now: every
+   * column boundary is a step, so a flat segment between two slices *is* a step, and one that goes
+   * where it was. Nothing has to be arched to be told apart from a thing that no longer exists.
    */
-  const arc = (
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    loop = false,
-  ) => {
+  const arc = (x0: number, y0: number, x1: number, y1: number) => {
     const bend = (x1 - x0) * BEND;
-    // A step that arrives where it left has the two ends on one string, and a curve between them
-    // is a straight line — which on this board means the machine did nothing. So it is drawn as
-    // the thing it is: out of the string and back into it, over the slice it took.
-    if (loop)
-      return `M ${x0} ${y0} C ${x0 + bend} ${y0 - LOOP}, ${x1 - bend} ${y1 - LOOP}, ${x1} ${y1}`;
     return `M ${x0} ${y0} C ${x0 + bend} ${y0}, ${x1 - bend} ${y1}, ${x1} ${y1}`;
   };
 
@@ -164,7 +164,7 @@ export function newHistory(w: Wiring): History {
     const y1 = y(rule.to);
     maybe.append(
       svg("path", {
-        d: arc(x0, y(rule.from), x1, y1, rule.from === rule.to),
+        d: arc(x0, y(rule.from), x1, y1),
         class: "maybe",
         style: colour(rule.to),
       }),
@@ -240,7 +240,7 @@ export function newHistory(w: Wiring): History {
     steps.forEach((r, i) =>
       board.append(
         svg("path", {
-          d: arc(x(i), y(r.from), x(i + 1), y(r.to), r.from === r.to),
+          d: arc(x(i), y(r.from), x(i + 1), y(r.to)),
           class: `trail${i + 1 > at ? " ahead" : ""}`,
           style: colour(r.to),
         }),
@@ -268,14 +268,27 @@ export function newHistory(w: Wiring): History {
     cols.append(board);
     node.replaceChildren(tag, index, cols);
 
-    // One band per step, over the slice it arrived in: what is pointed at, what is clicked, what
-    // the scroll snaps to, and what the number belongs to. Going back to step k is going to the
-    // slice step k reached, so the band is that slice and the number stands under it.
+    // One band per step, standing on the slice it arrived in: what is pointed at, what is
+    // clicked, what the scroll snaps to, and what the number belongs to. Going back to step k is
+    // going to the slice step k reached, so the band is that slice.
+    //
+    // What is *drawn* is wider than what is pressed, and the stylesheet does that: a step is a turn
+    // between two slices and both of them are in it, so the tint reaches back over the slice the
+    // step left, and the number stands on the boundary between the two. Pressing stays one column,
+    // or every column but the last would be claimed by two bands and the one underneath would be
+    // unreachable.
+    //
+    // At the end of the run no step is marked. The mark says the machine is standing somewhere
+    // other than where the run ends — which is a thing you can only do by clicking one of these,
+    // and which the run itself cannot show, since a slice you have walked back to looks exactly
+    // like the slice you passed through. Sitting at the tip is the ordinary case and needs nothing
+    // said about it; marking it anyway put a permanent selection on a panel nobody had touched.
+    const stood = at < steps.length ? at : -1;
     steps.forEach((r, i) => {
       const k = i + 1;
       const band = make(
         "div",
-        `step${k === at ? " now" : ""}${k > at ? " ahead" : ""}`,
+        `step${k === stood ? " now" : ""}${k > at ? " ahead" : ""}`,
       );
       band.style.left = `${k * CELL}px`;
       band.style.width = `${CELL}px`;
@@ -298,9 +311,20 @@ export function newHistory(w: Wiring): History {
     });
 
     preview();
-    // Pinned to the newest: a run is read at its end, and what you did last is what you are
-    // looking for.
-    cols.scrollLeft = cols.scrollWidth;
+    // Where to look. At the end, when the run is at its end: a run is read at its end, and what you
+    // did last is what you came for. Standing behind it — at the step you went back to. Pinning the
+    // newest there scrolled the panel away from the thing that had just been clicked, in any run
+    // longer than the panel is wide.
+    //
+    // Asked of the board rather than remembered from the loop: the mark is on it, and a second copy
+    // of which band it is would be a second answer to a question with one.
+    //
+    // `nearest`, so a step already on screen does not move the view at all. Every redraw comes
+    // through here — a step, a rewind, a word typed into the schema — and a panel that re-aims
+    // itself on each of them takes the run away from whoever is reading it.
+    const here = cols.querySelector<HTMLElement>(".step.now");
+    if (here) here.scrollIntoView({ block: "nearest", inline: "nearest" });
+    else cols.scrollLeft = cols.scrollWidth;
   }
 
   return {
