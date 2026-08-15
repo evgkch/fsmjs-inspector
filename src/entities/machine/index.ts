@@ -11,7 +11,7 @@ export type { Flaws } from "./model/flaws.js";
 export type { RuleId } from "./model/rule.js";
 export { LANES, hue, lanes, palette } from "./model/lanes.js";
 export type { Lane } from "./model/lanes.js";
-export type { Drive, Subject } from "./model/subject.js";
+export type { Change, Drive, Subject } from "./model/subject.js";
 export { fromText } from "./lib/from-text.js";
 export type { Text, Told } from "./lib/from-text.js";
 export { fromMachine } from "./lib/from-machine.js";

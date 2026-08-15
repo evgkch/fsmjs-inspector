@@ -19,6 +19,20 @@ export type {
 export { overlay } from "./app/overlay.js";
 export type { Overlaid, Options as OverlayOptions } from "./app/overlay.js";
 
+/**
+ * The widgets, as elements. Importing any of them registers it, and importing this module
+ * registers all three — so a page can drop one in and wire it to a subject, a focus and a mode
+ * without lifting the whole inspector. Each is the panel itself: `<fsmjs-figure>` *is* the `.out`
+ * box, `<fsmjs-history>` the `.history`, `<fsmjs-editor>` the `.editor`, and each takes a `wiring`
+ * property (a JS object, never an attribute).
+ */
+export { FsmjsFigure } from "./widgets/figure/figure.js";
+export type { Wiring as FigureWiring } from "./widgets/figure/figure.js";
+export { FsmjsHistory } from "./widgets/history/history.js";
+export type { Wiring as HistoryWiring } from "./widgets/history/history.js";
+export { FsmjsEditor } from "./widgets/editor/editor.js";
+export type { Wiring as EditorWiring } from "./widgets/editor/editor.js";
+
 export { newFocus } from "./features/focus/index.js";
 export type { Focus } from "./features/focus/index.js";
 

@@ -23,7 +23,7 @@ import type { Panel } from "../../features/show-panels/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { newSocket } from "../../shared/api/link.js";
 import { el, make } from "../../shared/lib/dom.js";
-import { newEditor } from "../../widgets/editor/editor.js";
+import { FsmjsEditor } from "../../widgets/editor/editor.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { newWatching, watched } from "./model/watching.js";
@@ -69,7 +69,8 @@ export function viewer(): void {
   // run, and a panel of times with nothing in it is a panel saying nothing.
   const mode = newMode();
   const source = el<HTMLElement>("text");
-  const editor = newEditor({
+  const editor = new FsmjsEditor();
+  editor.wiring = {
     focus,
     // The machine is compiled into somebody else's application. Nothing typed here could reach it,
     // so nothing here accepts typing.
@@ -78,8 +79,8 @@ export function viewer(): void {
     fires: () => false,
     here: () => panel?.subject.at ?? "",
     fire: () => {},
-  });
-  source.append(editor.node);
+  };
+  source.append(editor);
 
   // The reader turns the schema back into the language and says where every rule is written. It is
   // the same reader the standalone page uses on hand-typed text: a graph off the wire is written
@@ -103,7 +104,7 @@ export function viewer(): void {
     box.addEventListener("change", () =>
       panels.dispatch("put", { panel, up: box.checked }),
     );
-    label.append(box, make("span", "what", panel));
+    label.append(box, make("span", "check"), make("span", "what", panel));
     board.append(label);
   }
   const dress = () => void (main.dataset["off"] = offOf(panels));

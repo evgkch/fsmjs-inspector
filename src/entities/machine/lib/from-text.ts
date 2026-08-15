@@ -16,7 +16,7 @@ import type { History } from "@evgkch/fsmjs/debug";
 import type { Ctx, Ev, Graph, Step } from "../model/graph.js";
 import { partsOf, ruleId } from "../model/rule.js";
 import type { RuleId } from "../model/rule.js";
-import type { Subject } from "../model/subject.js";
+import type { Change, Subject } from "../model/subject.js";
 
 /**
  * One transition, kept with the line `rules` wrote for it. The history shows it on hover, and it
@@ -55,9 +55,9 @@ export function fromText(graph: Graph, start: string): Text {
 
   const past: History<Ctx> = history(fsm);
   const steps: Told[] = [];
-  const watchers = new Set<() => void>();
-  const changed = () => {
-    for (const on of watchers) on();
+  const watchers = new Set<(what: Change) => void>();
+  const say = (what: Change) => {
+    for (const on of watchers) on(what);
   };
 
   const off: Off[] = [
@@ -81,7 +81,7 @@ export function fromText(graph: Graph, start: string): Text {
      * nothing at all can fire. The figure did: one click and every cell on it went dim.
      */
     fsm.rx.on(TRANSITION, () => {
-      if (taking === null) changed();
+      if (taking === null) say({ say: "step" });
     }),
   ];
 
@@ -114,12 +114,12 @@ export function fromText(graph: Graph, start: string): Text {
           taking = null;
         }
         // Now, with the naming over and the machine standing where it ended up.
-        changed();
+        say({ say: "step" });
       },
     },
     rewind: (step) => {
       past.jump(step);
-      changed();
+      say({ say: "rewind", step });
     },
     watch: (on) => {
       watchers.add(on);

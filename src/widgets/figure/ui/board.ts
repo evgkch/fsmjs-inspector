@@ -215,6 +215,25 @@ export function board(d: Draw, w: Wiring): Dressed {
     for (const [coord, nodes] of tag)
       for (const node of nodes) node.classList.toggle("lit", shine.has(coord));
 
+    // Where the machine stands, said on the index and on the names of the state it stands on.
+    // Folded into `dress` because it is the one thing about a figure that moves when the machine
+    // does — nothing else on the board has to be rebuilt for a step.
+    const here = d.here;
+    const at = d.all.indexOf(here);
+    if (at < 0) markDot.setAttribute("display", "none");
+    else {
+      markDot.removeAttribute("display");
+      markDot.setAttribute("cx", String(g.spine + 6));
+      markDot.setAttribute("cy", String(g.row(at) + CELL / 2));
+      markDot.setAttribute("style", d.hue(here) ?? "");
+    }
+    for (const q of d.all) {
+      for (const node of tag.get(`from\0${q}`) ?? [])
+        node.classList.toggle("here", q === here);
+      for (const node of tag.get(`to\0${q}`) ?? [])
+        node.classList.toggle("here", q === here);
+    }
+
     // A crossing has no bands, so aiming through one adds none: `bands` says so, and nothing
     // here has to know which kind of key it is looking at.
     wash.replaceChildren(
@@ -451,13 +470,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     const ends = d.rows.filter((r) => r.emit === undefined && r.to === to);
     const name = mark(
       `to\0${to}`,
-      stood(
-        g.q(i),
-        to,
-        `name to${to === d.here ? " here" : ""}${d.off.has(to) ? " off" : ""}`,
-        90,
-        d.hue(to),
-      ),
+      stood(g.q(i), to, `name to${d.off.has(to) ? " off" : ""}`, 90, d.hue(to)),
     );
     root.append(name);
     if (ends.length) {
@@ -555,19 +568,6 @@ export function board(d: Draw, w: Wiring): Dressed {
   d.all.forEach((from, j) => {
     const y = g.row(j);
     const row = svg("g", { class: "row" });
-    // Where the machine stands, on the index of states — the one place that fact belongs, and
-    // the one mark on the figure that is not a cell. Exploring there is no such state, so there
-    // is no dot, which is the whole visible difference between the two.
-    if (from === d.here)
-      row.append(
-        svg("circle", {
-          cx: g.spine + 6,
-          cy: y + CELL / 2,
-          r: 3.5,
-          style: d.hue(from),
-          class: "mark",
-        }),
-      );
     row.append(
       mark(
         `from\0${from}`,
@@ -576,7 +576,7 @@ export function board(d: Draw, w: Wiring): Dressed {
           {
             x: g.names,
             y: y + CELL / 2 + 4,
-            class: `name side${from === d.here ? " here" : ""}${d.off.has(from) ? " off" : ""}`,
+            class: `name side${d.off.has(from) ? " off" : ""}`,
             style: d.hue(from),
             "text-anchor": "middle",
           },
@@ -633,6 +633,12 @@ export function board(d: Draw, w: Wiring): Dressed {
 
     root.append(row);
   });
+
+  // Where the machine stands, on the index of states — the one place that fact belongs, and the
+  // one mark on the figure that is not a cell. One dot, moved rather than rebuilt, because only
+  // one state can be current; `dress` puts it on the row and hides it when no state is (exploring).
+  const markDot = svg("circle", { r: 3.5, class: "mark" });
+  root.append(markDot);
 
   dress();
   return { node: root, dress };

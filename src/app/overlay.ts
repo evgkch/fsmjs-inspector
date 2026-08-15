@@ -62,7 +62,9 @@ export function overlay(fsm: AnyMachine, options: Options = {}): Overlaid {
   const box = document.createElement("input");
   box.type = "checkbox";
   box.checked = options.exploring ?? false;
-  flag.append(box, document.createTextNode("explore"));
+  const track = document.createElement("span");
+  track.className = "track";
+  flag.append(document.createTextNode("explore"), box, track);
   const shut = document.createElement("button");
   shut.textContent = "✕";
   shut.title = "close";

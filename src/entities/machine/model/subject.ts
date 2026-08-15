@@ -32,6 +32,22 @@ export type Drive = {
   take: (rule: RuleId) => void;
 };
 
+/**
+ * What changed, as opposed to *that* it changed.
+ *
+ * The watch used to say only "something moved", and every drawing answered by rebuilding itself
+ * whole. Three things can move, and they cost three different amounts, which is why they are told
+ * apart:
+ *
+ *   — `step`: the run grew by one. A column can be appended; nothing already drawn is wrong.
+ *   — `rewind`: the machine was walked to another slice. Nothing is new and nothing is gone, so
+ *     what moves is the mark of where it stands.
+ *   — `restore`: the whole run was restated — a reconnection, or a machine rebuilt from scratch.
+ *     Nothing of the last drawing is safe to keep.
+ */
+export type Change =
+  { say: "step" } | { say: "rewind"; step: number } | { say: "restore" };
+
 export type Subject = {
   /** What to draw: the graph, the way `JSON.stringify(machine)` writes one. */
   readonly graph: Graph;
@@ -52,7 +68,7 @@ export type Subject = {
   readonly rewind?: (step: number) => void;
 
   /** Called whenever any of the above has changed. Returns the way to stop being called. */
-  readonly watch: (on: () => void) => Off;
+  readonly watch: (on: (what: Change) => void) => Off;
 
   /** Let go of whatever this subject is holding: listeners, a history, a machine of its own. */
   readonly stop: () => void;

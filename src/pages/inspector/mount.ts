@@ -16,8 +16,8 @@ import { newSight } from "./model/showing.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between, take } from "../../features/take-rule/index.js";
 import { make } from "../../shared/lib/dom.js";
-import { newFigure } from "../../widgets/figure/figure.js";
-import { newHistory } from "../../widgets/history/history.js";
+import { FsmjsFigure } from "../../widgets/figure/figure.js";
+import { FsmjsHistory } from "../../widgets/history/history.js";
 import "./ui/inspector.css";
 
 /** How a figure is being looked at, as opposed to what it is looking at. */
@@ -79,18 +79,20 @@ export function mount(
     focus.pointer.dispatch("leave");
   };
 
-  const history = newHistory({
+  const history = new FsmjsHistory();
+  history.wiring = {
     subject,
     focus,
     mode,
     rewind: (step) => {
+      // The widgets hear the subject themselves and move their marks; nothing here has to redraw.
       subject.rewind?.(step);
       forget();
-      show();
     },
-  });
+  };
 
-  const figure = newFigure({ subject, focus, mode, forget });
+  const figure = new FsmjsFigure();
+  figure.wiring = { subject, focus, mode, forget };
 
   /**
    * What is on screen and how it is arranged — the one thing here that is remembered rather than
@@ -103,7 +105,7 @@ export function mount(
 
   // The figure, and what happened on it — beside it or under it, which `fit` decides.
   const work = make("div", "work");
-  work.append(figure.node, history.node);
+  work.append(figure, history);
   const root = make("div", "fsmjs-inspector");
   root.append(work);
   host.append(root);
@@ -179,7 +181,6 @@ export function mount(
       show();
     }),
     () => watching.disconnect(),
-    subject.watch(() => show()),
     /**
      * Both halves are named, so a rule has been named — and naming a rule is what takes it. The
      * choice machine says only that it happened; which rule the two cells come down to and
@@ -226,9 +227,9 @@ export function mount(
               : null;
     if (to === null || to < 0 || to > subject.steps.length) return;
     e.preventDefault();
+    // The widgets hear the subject themselves and move their marks; nothing here has to redraw.
     subject.rewind(to);
     forget();
-    show();
   };
   document.addEventListener("keydown", onKey);
 

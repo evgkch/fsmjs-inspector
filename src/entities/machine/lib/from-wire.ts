@@ -23,7 +23,7 @@ import Channel from "@evgkch/channeljs";
 import type { Rx } from "@evgkch/channeljs";
 import type { Edge } from "@evgkch/fsmjs";
 import type { Graph, Step } from "../model/graph.js";
-import type { Subject } from "../model/subject.js";
+import type { Change, Subject } from "../model/subject.js";
 import { isWire } from "../model/wire.js";
 import type { Link } from "../../../shared/api/link.js";
 
@@ -77,7 +77,7 @@ type Entry = {
   pos: number;
   can: { history: boolean };
   steps: Step[];
-  said: Channel<{ moved: [] }>;
+  said: Channel<{ moved: [what: Change] }>;
   subject: Subject;
 };
 
@@ -111,7 +111,7 @@ export function fromWire(link: Link): Presence {
       pos: 0,
       can,
       steps: [] as Step[],
-      said: new Channel<{ moved: [] }>(),
+      said: new Channel<{ moved: [what: Change] }>(),
     };
     const subject: Subject = {
       get graph() {
@@ -134,7 +134,7 @@ export function fromWire(link: Link): Presence {
       ...(can.history && {
         rewind: (step: number) => link.send({ say: "jump", who, step }),
       }),
-      watch: (on) => it.said.rx.on("moved", on),
+      watch: (on) => it.said.rx.on("moved", (what) => on(what)),
       // Let go of this drawing's listeners. The pipe is the roster's, and one panel closing is not
       // a reason to stop hearing the machine it was drawing.
       stop: () => it.said.clear(),
@@ -142,7 +142,7 @@ export function fromWire(link: Link): Presence {
     return Object.assign(it, { subject });
   };
 
-  const told = (it: Entry) => void it.said.tx.send("moved");
+  const told = (it: Entry, what: Change) => void it.said.tx.send("moved", what);
 
   const off: (() => void)[] = [
     link.rx.on("hear", (msg) => {
@@ -164,7 +164,7 @@ export function fromWire(link: Link): Presence {
             old.at = msg.at;
             old.pos = msg.step;
             old.steps = msg.steps.map((w) => stepOf(w.edge, w.t));
-            told(old);
+            told(old, { say: "restore" });
             return;
           }
           // A different schema under the same name is a different machine, and gets a different
@@ -197,7 +197,7 @@ export function fromWire(link: Link): Presence {
           it.steps.push(stepOf(msg.went.edge, msg.went.t));
           it.pos = it.steps.length;
           it.at = msg.at;
-          told(it);
+          told(it, { say: "step" });
           return;
         }
 

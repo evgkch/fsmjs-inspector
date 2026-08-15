@@ -26,7 +26,7 @@ import { canFire, take } from "../../features/take-rule/index.js";
 import { el } from "../../shared/lib/dom.js";
 import { looksLikeRules } from "../../shared/lang/rules.js";
 import type { Written } from "../../shared/lang/rules.js";
-import { newEditor } from "../../widgets/editor/editor.js";
+import { FsmjsEditor } from "../../widgets/editor/editor.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { SAMPLES } from "./model/samples.js";
@@ -61,7 +61,8 @@ export function workbench(): void {
   const idOfLine = (r: Written) => ruleId(r.edge.from, r.edge.on, r.slot);
 
   let timer = 0;
-  const editor = newEditor({
+  const editor = new FsmjsEditor();
+  editor.wiring = {
     focus,
     onEdit: () => {
       clearTimeout(timer);
@@ -73,8 +74,8 @@ export function workbench(): void {
     // Exploring, no state is current — in the text as in the figure.
     here: () => (exploring(mode) ? "" : (subject?.at ?? "")),
     fire: (r) => subject && take(subject, idOfLine(r)),
-  });
-  pane.prepend(editor.node);
+  };
+  pane.prepend(editor);
 
   // The page's two outputs are the whole of its effect on the DOM: one says a machine is up, the
   // other says the text stopped parsing.

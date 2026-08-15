@@ -16,7 +16,7 @@ import { TRANSITION } from "@evgkch/fsmjs";
 import type { AnyMachine, Off } from "@evgkch/fsmjs";
 import type { Graph, Step } from "../model/graph.js";
 import { partsOf } from "../model/rule.js";
-import type { Subject } from "../model/subject.js";
+import type { Change, Subject } from "../model/subject.js";
 
 /**
  * Any machine at all: the inspector reads labels and names, never types.
@@ -55,21 +55,26 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
 
   const steps: Step[] = [];
-  const watchers = new Set<() => void>();
-  const changed = () => {
-    for (const on of watchers) on();
+  const watchers = new Set<(what: Change) => void>();
+  const say = (what: Change) => {
+    for (const on of watchers) on(what);
   };
 
   const past = opts.history ?? null;
 
   const off: Off[] = [
-    ...(past ? [past.rx.on("moved", changed)] : []),
+    // The recorder says `moved` only when it is walked back or forward — a `jump`, `undo`, `redo`.
+    // A fired transition records silently, so this and the transition below cannot both fire for
+    // the same event, which is what makes the two kinds of change tellable apart.
+    ...(past
+      ? [past.rx.on("moved", (i) => say({ say: "rewind", step: i }))]
+      : []),
     fsm.rx.on(TRANSITION, (t) => {
       // `history` subscribed first when there is one, so its index already points at the state
       // this transition reached, and cutting to it drops a redo future the same way.
       if (past) steps.length = past.index - 1;
       steps.push(t as Step);
-      changed();
+      say({ say: "step" });
     }),
   ];
 

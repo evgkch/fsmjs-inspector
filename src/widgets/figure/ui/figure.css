@@ -3,6 +3,10 @@
 /* The figure's own box: it fills the band it is in and scrolls inside itself, so a schema too
    wide or too tall for the page never makes the page itself scroll. */
 .out {
+    /* The element is a custom element, which is inline until told otherwise. The box is a block —
+       it fills its band, and a `<fsmjs-figure>` dropped into a page of its own stands on its own
+       line like any panel. */
+    display: block;
     min-height: 12rem;
     max-height: 100%;
     /* The same inset as the source's name and the run's, so the three read as one row of names. */

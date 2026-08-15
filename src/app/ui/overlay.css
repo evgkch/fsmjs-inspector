@@ -44,11 +44,52 @@
     cursor: pointer;
 }
 
+/* The input is what the keyboard and the screen reader work with; the track is what is seen — the
+   same switch the standalone page's explore flag is, so the embedded panel and the page read as one
+   tool. A mode is a switch, not a tick. */
 .overlay-bar .flag input {
-    accent-color: var(--accent);
-    width: var(--step-3);
-    height: var(--step-3);
+    position: absolute;
+    width: 1px;
+    height: 1px;
     margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.overlay-bar .flag .track {
+    position: relative;
+    width: var(--step-5);
+    height: var(--step-3);
+    border-radius: 999px;
+    corner-shape: round;
+    background: var(--line-firm);
+    transition: background-color var(--quick) var(--ease);
+}
+
+.overlay-bar .flag .track::after {
+    content: "";
+    position: absolute;
+    top: var(--step-1);
+    left: var(--step-1);
+    width: var(--step-2);
+    height: var(--step-2);
+    border-radius: 50%;
+    corner-shape: round;
+    background: var(--surface);
+    transition: translate var(--quick) var(--ease);
+}
+
+.overlay-bar .flag input:checked + .track {
+    background: var(--accent);
+}
+
+.overlay-bar .flag input:checked + .track::after {
+    translate: var(--step-3) 0;
+}
+
+.overlay-bar .flag input:focus-visible + .track {
+    outline: 2px solid var(--accent);
+    outline-offset: var(--step-1);
 }
 
 .overlay-bar button {
