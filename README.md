@@ -65,34 +65,11 @@ throughout, and that is the point.
 
 ## A machine that is running
 
-The page reads a schema; the package watches a machine. One call, over your own application:
-
-```ts
-import { inspect } from "@evgkch/fsmjs-inspector";
-import "@evgkch/fsmjs-inspector/style.css";
-
-const look = inspect(fsm, { title: "checkout", rewind: true });
-// look.close()
-```
-
-It floats over the page and is dragged by its bar; `into: el` puts it in an element of yours
-instead, and `mount(el, subject)` is the same thing one layer down, for a page with a figure of its
-own to share a `focus` with. `rewind` records where the machine has been so the run can be walked
-back — it costs a `restore` per step and it moves somebody else's machine, so it is asked for
-rather than assumed.
-
-One copy of `@evgkch/fsmjs` on the page, and it is the only hard requirement: the library is a peer
-dependency and stays out of the bundle, because a second copy is a second `TRANSITION` symbol and
-the listener would never fire.
-
-### From somewhere else
-
-A machine in a server, a worker, a test run, another tab or another host is watched over a wire.
-Clone this, install it, and start the site with a relay beside it:
+The inspector is an application you run, and what an application being debugged writes is one word.
 
 ```sh
 npm install
-npm run dev          # the site on 5173, a relay on ws://localhost:8999
+npm run inspect      # the inspector, and the relay it listens on
 ```
 
 Then, in the application being debugged — as many machines as it has:
@@ -123,10 +100,19 @@ that takes away a recorder your undo may have been using — and an application 
 would record twice. Hand over what you built, and deleting the call leaves everything you built
 exactly where it was.
 
-`viewer.html` is the page that watches. Every publisher announces itself, so what is along the top
-is a roster of who is out there and you pick; `?ws=ws://host:port` points it at a relay elsewhere.
-That entry point has no document in it and loads no stylesheet — what is being watched may have no
-DOM at all.
+Every machine announces itself, so what is along the top of the inspector is a roster of who is out
+there and you pick; `?ws=ws://host:port` points it at a relay on another host. The entry point an
+application imports has no document in it and loads no stylesheet — what is being watched may have
+no DOM at all, and a server should not be importing a page to say what a machine did.
+
+One copy of `@evgkch/fsmjs` in the application, and it is the only hard requirement: the library is
+a peer dependency and stays out of the bundle, because a second copy is a second `TRANSITION`
+symbol and the listener would never fire.
+
+The figure can also be put on the page being debugged, rather than in a window of its own —
+`overlay(fsm)` from `@evgkch/fsmjs-inspector/ui`, with `@evgkch/fsmjs-inspector/style.css`. That
+half draws, so it costs a stylesheet, and it is the right one only when the page you want the
+figure on is the page you are debugging.
 
 What crosses the wire is names: the schema as `JSON.stringify` writes it, and the four types of
 every transition. No context, no payload — an application's data does not leave it, and a context
@@ -146,7 +132,8 @@ npm run dev
 
 `npm run build` writes a static site to `dist/`: `npm run dump` refreshes the schemas the tool
 keeps of itself, `tsc --noEmit` is the gate, and `vite build` does the rest. `npm run build:lib`
-writes the package into `dist-lib/` — the tool, the publisher, and the stylesheet.
+writes the package into `dist-lib/` — the one word an application writes, the tool that draws, and
+the stylesheet.
 
 ## Layout
 
