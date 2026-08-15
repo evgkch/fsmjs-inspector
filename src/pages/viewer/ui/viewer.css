@@ -91,11 +91,33 @@ main {
  * rather than written, so it is a reference — a band of it across the top is enough, and the
  * drawing gets the rest.
  */
+/*
+ * Two bands: what is read, and what is drawn.
+ *
+ * The source and the log are both text, both scrolled, both read a line at a time — so they stand
+ * together, side by side, and the figure and the run get the rest of the page as the one drawing
+ * they are. The log had a band of its own along the bottom, which put the newest thing that
+ * happened as far from the run that drew it as the page allows.
+ */
 .panes {
     display: grid;
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
     gap: var(--step-4);
     min-height: 0;
+}
+
+.reading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--step-4);
+    min-height: 0;
+}
+
+/* Side by side where there is room for two measures, and stacked where there is not. */
+@media (min-width: 62rem) {
+    .reading {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
 }
 
 /*
@@ -110,16 +132,15 @@ main[data-off~="run"] .history {
     display: none;
 }
 
-main[data-off~="code"] .panes {
-    grid-template-rows: 0 minmax(0, 3fr) minmax(0, 2fr);
-}
-
-main[data-off~="log"] .panes {
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr) 0;
-}
-
+/* Both of the read panels down, and the band they stood in goes with them. */
 main[data-off~="code"][data-off~="log"] .panes {
-    grid-template-rows: 0 minmax(0, 1fr) 0;
+    grid-template-rows: 0 minmax(0, 1fr);
+}
+
+/* One of them down, and the other takes the whole band rather than half of it. */
+main[data-off~="code"] .reading,
+main[data-off~="log"] .reading {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 /* The four switches. Words, in the tool's own quiet, with the box beside the name — the same pair
