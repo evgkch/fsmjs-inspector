@@ -235,37 +235,36 @@ path.maybe.tip {
 }
 
 /*
- * The strip under a column holds two things, and they stand in different places because they are
- * about different things.
+ * What stands in the strip stands under the *transition*, not under a column: on the boundary the
+ * two slices meet at, which is the point the curve turns at and the middle of the tint that lights
+ * both of them. A band is the column the step arrived in, so that boundary is the band's left
+ * edge, and the label is pulled back by half its own width to sit on it.
  *
- * The number is the step, and a step arrived in this column: it sits under the column, centred, as
- * it always did. The count is about the turn, which is the boundary between two columns — and it
- * is also where the numbers a fold swallowed would have been, so it goes in that break.
+ * Centred in the band instead, a number read as counting the slice on its right — which is a state
+ * the machine was in, not a step it took.
  *
- * Neither takes clicks: both hang over the column to the left, which belongs to the step before,
- * and which step the pointer is on is a question for the columns and not for the width of a
- * numeral.
+ * The number is the step; on the elided column, which is not one step, `×N` stands in its place
+ * and therefore in the break the swallowed numbers left. Neither takes clicks: both hang over the
+ * column to the left, and which step the pointer is on is a question for the columns and not for
+ * the width of a numeral.
  */
-.cols .step {
-    justify-items: center;
-}
-
 .cols .step .no,
 .cols .step .again {
+    justify-self: start;
+    translate: -50% 0;
     pointer-events: none;
-    color: var(--faint);
     font: 500 var(--micro)/1 var(--mono-font);
     font-variant-numeric: tabular-nums;
 }
 
+.cols .step .no {
+    color: var(--faint);
+}
+
+/* How many are not drawn — said in the accent, because it is the one word in this strip that is
+   about the drawing rather than about the run. */
 .cols .step .again {
-    position: absolute;
-    bottom: var(--step-1);
-    left: 0;
-    translate: -50% 0;
     color: var(--accent);
-    font: 500 var(--micro)/1 var(--mono-font);
-    font-variant-numeric: tabular-nums;
 }
 
 .cols .step.now .no {
