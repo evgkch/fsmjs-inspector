@@ -55,7 +55,6 @@ export function fromText(graph: Graph, start: string): Text {
 
   const past: History<Ctx> = history(fsm);
   const steps: Told[] = [];
-  const times: number[] = [];
   const watchers = new Set<() => void>();
   const changed = () => {
     for (const on of watchers) on();
@@ -69,9 +68,7 @@ export function fromText(graph: Graph, start: string): Text {
         // transition reached. Cutting the array to it drops the redo future here exactly as the
         // dispatch dropped it there, which keeps one step per recorded state.
         steps.length = past.index - 1;
-        times.length = steps.length;
         steps.push(Object.assign(t, { line }));
-        times.push(Date.now());
       }),
     ),
     /**
@@ -97,9 +94,6 @@ export function fromText(graph: Graph, start: string): Text {
     },
     get steps() {
       return steps;
-    },
-    get times() {
-      return times;
     },
     get step() {
       return past.index;

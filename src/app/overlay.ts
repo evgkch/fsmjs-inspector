@@ -16,10 +16,10 @@
  * is the thing you opened this to see.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
-import type { StateMachine } from "@evgkch/fsmjs";
+import type { AnyMachine } from "@evgkch/fsmjs";
 import { newDrag } from "../features/drag-panel/index.js";
 import { fromMachine } from "../entities/machine/index.js";
-import type { Ctx, Ev, WatchOptions } from "../entities/machine/index.js";
+import type { WatchOptions } from "../entities/machine/index.js";
 import { mount } from "../pages/inspector/mount.js";
 import type { Options as LookOptions } from "../pages/inspector/mount.js";
 import "./ui/overlay.css";
@@ -35,11 +35,8 @@ export type Options = LookOptions &
 export type Overlaid = { close: () => void };
 
 /** Look at a machine that is running. Returns the way to stop looking. */
-export function overlay(
-  fsm: StateMachine<Ctx, Ev, Ev>,
-  options: Options = {},
-): Overlaid {
-  const subject = fromMachine(fsm, { rewind: options.rewind });
+export function overlay(fsm: AnyMachine, options: Options = {}): Overlaid {
+  const subject = fromMachine(fsm, { history: options.history });
 
   if (options.into) {
     const handle = mount(options.into, subject, options);

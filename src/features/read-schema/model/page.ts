@@ -66,23 +66,23 @@ type Broke = { message: string; line: number | null };
 const schema: Schema<Q, In, Out> = {
   blank: {
     parsed: [
-      { to: "ready", when: readable, with: adopt, emit: "built", by: made },
-      { to: "broken", with: first, emit: "stopped", by: told },
+      { when: readable, to: ["ready", adopt], emit: ["built", made] },
+      { to: ["broken", first], emit: ["stopped", told] },
     ],
   },
   ready: {
     parsed: [
-      { to: "ready", when: readable, with: adopt, emit: "built", by: made },
+      { when: readable, to: ["ready", adopt], emit: ["built", made] },
       // Leaving `ready` is the one transition that has somewhere to put the graph it is
       // leaving, and the only reason the figure survives a typo.
-      { to: "broken", with: keep, emit: "stopped", by: told },
+      { to: ["broken", keep], emit: ["stopped", told] },
     ],
-    begin: [{ to: "ready", with: begun, emit: "built", by: made }],
+    begin: [{ to: ["ready", begun], emit: ["built", made] }],
   },
   broken: {
     parsed: [
-      { to: "ready", when: readable, with: adopt, emit: "built", by: made },
-      { to: "broken", with: still, emit: "stopped", by: told },
+      { when: readable, to: ["ready", adopt], emit: ["built", made] },
+      { to: ["broken", still], emit: ["stopped", told] },
     ],
   },
 };

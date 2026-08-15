@@ -24,7 +24,13 @@
 import { edges } from "@evgkch/fsmjs";
 import type { Edge } from "@evgkch/fsmjs";
 import { halvesOf } from "../../entities/cell/index.js";
-import { foldAt, folds, hue, lanes, partsOf } from "../../entities/machine/index.js";
+import {
+  foldAt,
+  folds,
+  hue,
+  lanes,
+  partsOf,
+} from "../../entities/machine/index.js";
 import type { Graph, Step, Subject } from "../../entities/machine/index.js";
 import { exploring } from "../../features/explore/index.js";
 import type { Mode } from "../../features/explore/index.js";
@@ -108,7 +114,12 @@ export function newHistory(w: Wiring): History {
    * else's application and put their machine there.
    */
   const ends = make("div", "ends");
-  const goto = (name: string, hint: string, step: () => number, edge: number) => {
+  const goto = (
+    name: string,
+    hint: string,
+    step: () => number,
+    edge: number,
+  ) => {
     const key = make("button", "end", name);
     key.title = hint;
     key.addEventListener("click", () => {
@@ -193,8 +204,8 @@ export function newHistory(w: Wiring): History {
     // Out of the column the machine is standing in — which is a fold and not a step, since that is
     // what the board is drawn in. Worked out again rather than kept from the last draw: it is one
     // pass over a short list, and a copy would be a second answer to go stale.
-    const on = foldAt(folds(w.subject.steps.map(asEdge)), w.subject.step);
-    const x0 = x(on < 0 ? 0 : on + 1);
+    const sits = foldAt(folds(w.subject.steps.map(asEdge)), w.subject.step);
+    const x0 = x(sits < 0 ? 0 : sits + 1);
     const x1 = x0 + CELL;
     const y1 = y(rule.to);
     maybe.append(
@@ -226,7 +237,7 @@ export function newHistory(w: Wiring): History {
     const list = folds(steps);
     // Where the machine stands, in columns. Inside a fold counts as being on it: a run walked back
     // into the middle of a drag is standing on that drag.
-    const here = foldAt(list, at);
+    const stands = foldAt(list, at);
     // A column per slice: where the run started, and where each fold took it.
     const end = x(list.length) + CELL / 2;
     // Room past the end for what could happen next, and no more — one step, which is one column.
@@ -332,7 +343,7 @@ export function newHistory(w: Wiring): History {
     // and which the run itself cannot show, since a slice you have walked back to looks exactly
     // like the slice you passed through. Sitting at the tip is the ordinary case and needs nothing
     // said about it; marking it anyway put a permanent selection on a panel nobody had touched.
-    const stood = at < steps.length ? here : -1;
+    const stood = at < steps.length ? stands : -1;
     list.forEach((f, i) => {
       const k = i + 1;
       const band = make(

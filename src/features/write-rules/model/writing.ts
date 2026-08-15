@@ -117,11 +117,11 @@ export type Says = Merge<
 /** Written once and named by every state that reads the caret, which is every state but one. */
 const looking = [
   { to: "plain" as const, when: nothing },
-  { to: "ahead" as const, when: something, with: seen },
+  { when: something, to: ["ahead", seen] as const },
 ];
 
 /** Naming a word is naming a word, wherever the reader was when they did it. */
-const naming = [{ to: "picked" as const, when: isName, with: picking }];
+const naming = [{ when: isName, to: ["picked", picking] as const }];
 
 const writing: Schema<Written, Typing, Says> = {
   plain: {
@@ -137,7 +137,7 @@ const writing: Schema<Written, Typing, Says> = {
     // TAB, and the state does not change: what the machine knows about the word is still true —
     // it is the text that changes, and the `moved` that follows the edit reads it again.
     keydown: [
-      { to: "ahead", when: tabbed, emit: "filled", by: filling },
+      { when: tabbed, to: "ahead", emit: ["filled", filling] },
       { to: "plain", when: escaped },
     ],
     drop: [{ to: "plain" }],
@@ -150,17 +150,15 @@ const writing: Schema<Written, Typing, Says> = {
     dblclick: naming,
     mousedown: [{ to: "plain", when: single }],
     keydown: [{ to: "plain", when: escaped }],
-    press: [{ to: "renaming", with: arming, emit: "armed", by: selecting }],
+    press: [{ to: ["renaming", arming], emit: ["armed", selecting] }],
     drop: [{ to: "plain" }],
   },
   renaming: {
     input: [
       {
-        to: "renaming",
         when: inside,
-        with: typing,
-        emit: "rewritten",
-        by: rewriting,
+        to: ["renaming", typing],
+        emit: ["rewritten", rewriting],
       },
       // Anywhere else, and the reader has moved on. It is the same event either way: a keystroke
       // is a keystroke, and which of two things it meant is a question with an answer in here.

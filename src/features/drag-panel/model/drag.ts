@@ -41,10 +41,10 @@ export type Puts = Merge<IEvent<"put", { left: number; top: number }>>;
 
 const dragging: Schema<Held, Pointing, Puts> = {
   still: {
-    pointerdown: [{ to: "dragging", when: grabbed, with: hold }],
+    pointerdown: [{ when: grabbed, to: ["dragging", hold] }],
   },
   dragging: {
-    pointermove: [{ to: "dragging", emit: "put", by: under }],
+    pointermove: [{ to: "dragging", emit: ["put", under] }],
     pointerup: [{ to: "still" }],
   },
 };

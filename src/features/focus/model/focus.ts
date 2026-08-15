@@ -80,20 +80,20 @@ export type Took = Merge<IEvent<"took", { cause: Key; effect: Key }>>;
 
 const choosing: Schema<Held, Pressing, Took> = {
   nothing: {
-    press: [{ to: "half", when: isHalf, with: hold }],
+    press: [{ when: isHalf, to: ["half", hold] }],
   },
   half: {
     press: [
       { to: "nothing", when: same },
-      { to: "whole", when: causeHeld, with: pairUp, emit: "took", by: both },
-      { to: "whole", when: effectHeld, with: pairDown, emit: "took", by: both },
+      { when: causeHeld, to: ["whole", pairUp], emit: ["took", both] },
+      { when: effectHeld, to: ["whole", pairDown], emit: ["took", both] },
     ],
     drop: [{ to: "nothing" }],
   },
   whole: {
     press: [
-      { to: "half", when: isCause, with: keepEffect },
-      { to: "half", when: isEffect, with: keepCause },
+      { when: isCause, to: ["half", keepEffect] },
+      { when: isEffect, to: ["half", keepCause] },
     ],
     drop: [{ to: "nothing" }],
   },
@@ -126,11 +126,11 @@ export type Moving = Merge<
 
 const moving: Schema<Where, Moving, Record<string, never>> = {
   away: {
-    enter: [{ to: "over", when: named, with: onto }],
+    enter: [{ when: named, to: ["over", onto] }],
   },
   over: {
     // Moving from one cell to the next is one event, not a leave and an enter.
-    enter: [{ to: "over", when: named, with: onto }],
+    enter: [{ when: named, to: ["over", onto] }],
     leave: [{ to: "away" }],
   },
 };

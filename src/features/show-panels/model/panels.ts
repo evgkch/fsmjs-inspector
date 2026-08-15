@@ -28,7 +28,7 @@ export type Shown = Merge<IState<"showing", Up>>;
 export type Asked = Merge<IEvent<"put", { panel: Panel; up: boolean }>>;
 
 const showing: Schema<Shown, Asked, Record<string, never>> = {
-  showing: { put: [{ to: "showing", when: news, with: set }] },
+  showing: { put: [{ when: news, to: ["showing", set] }] },
 };
 
 export type Panels = StateMachine<Shown, Asked, Record<string, never>>;

@@ -54,12 +54,15 @@ export type Presence = {
  * wire anyway, so it is not pretended into existence here — it is `undefined`, which is what a
  * state of a dumped machine carries.
  */
-const stepOf = (e: Edge): Step =>
+const stepOf = (e: Edge, at: number): Step =>
   ({
     source: { type: e.from, context: undefined },
     input: { type: e.on },
     target: { type: e.to, context: undefined },
     ...(e.emit === undefined ? {} : { output: { type: e.emit } }),
+    // The time it happened at, over there. A transition carries its own now, so the run arrives
+    // whole rather than as a list of steps beside a list of clocks.
+    at,
   }) as Step;
 
 /** One machine's side of the roster: what it last said, and the subject reading it. */
@@ -74,7 +77,6 @@ type Entry = {
   pos: number;
   can: { history: boolean };
   steps: Step[];
-  times: number[];
   said: Channel<{ moved: [] }>;
   subject: Subject;
 };
@@ -109,7 +111,6 @@ export function fromWire(link: Link): Presence {
       pos: 0,
       can,
       steps: [] as Step[],
-      times: [] as number[],
       said: new Channel<{ moved: [] }>(),
     };
     const subject: Subject = {
@@ -121,9 +122,6 @@ export function fromWire(link: Link): Presence {
       },
       get steps() {
         return it.steps;
-      },
-      get times() {
-        return it.times;
       },
       // Where the far end says it is standing. Not the end of the steps: a run that has been
       // walked back looks exactly like one that has not, and the difference is the point.
@@ -165,8 +163,7 @@ export function fromWire(link: Link): Presence {
             old.note = msg.note;
             old.at = msg.at;
             old.pos = msg.step;
-            old.steps = msg.steps.map((w) => stepOf(w.edge));
-            old.times = msg.steps.map((w) => w.t);
+            old.steps = msg.steps.map((w) => stepOf(w.edge, w.t));
             told(old);
             return;
           }
@@ -183,8 +180,7 @@ export function fromWire(link: Link): Presence {
           );
           it.at = msg.at;
           it.pos = msg.step;
-          it.steps = msg.steps.map((w) => stepOf(w.edge));
-          it.times = msg.steps.map((w) => w.t);
+          it.steps = msg.steps.map((w) => stepOf(w.edge, w.t));
           seen.set(msg.who, it);
           moved();
           return;
@@ -198,9 +194,7 @@ export function fromWire(link: Link): Presence {
           // A step taken after a walk back drops the future it was walked back from, which the
           // far end has already done to its own list — this follows rather than decides.
           it.steps.length = it.pos;
-          it.times.length = it.pos;
-          it.steps.push(stepOf(msg.went.edge));
-          it.times.push(msg.went.t);
+          it.steps.push(stepOf(msg.went.edge, msg.went.t));
           it.pos = it.steps.length;
           it.at = msg.at;
           told(it);

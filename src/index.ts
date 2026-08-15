@@ -22,39 +22,12 @@
  * are" a single question with several answers.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
-import type { Edge } from "@evgkch/fsmjs";
+import type { AnyMachine, Edge } from "@evgkch/fsmjs";
 import type { Graph } from "./entities/machine/model/graph.js";
 import { isWire } from "./entities/machine/model/wire.js";
 import type { Went } from "./entities/machine/model/wire.js";
 import { newSocket } from "./shared/api/link.js";
 import type { Link } from "./shared/api/link.js";
-
-/**
- * Any machine at all — said as what a publisher needs of one, and not as a `StateMachine` with its
- * type parameters filled in.
- *
- * A real application's machine carries real contexts and real payloads, and `StateMachine<Q, Σ, Λ>`
- * is invariant in all three: asking for the erased shape a dump has would refuse every machine
- * worth watching and send its owner looking for a cast. What is actually read is the name of the
- * state it is in and the channel it says its transitions on, so that is what is asked for.
- */
-type Any = {
-  readonly state: Named;
-  readonly rx: {
-    on(msg: typeof TRANSITION, hear: (t: Told) => void): () => boolean;
-  };
-};
-
-/** A state or an event, as this file reads one: which of them it is. */
-type Named = { readonly type: string };
-
-/** A transition that happened, in the four names it is drawn from. */
-type Told = {
-  readonly source: Named;
-  readonly input: Named;
-  readonly target: Named;
-  readonly output?: Named;
-};
 
 /**
  * Where the relay listens when nobody says otherwise.
@@ -71,6 +44,9 @@ export const RELAY = "ws://localhost:8999";
 export type Past = {
   readonly index: number;
   jump(index: number): boolean;
+  readonly rx: {
+    on(msg: "moved", hear: (index: number) => void): () => boolean;
+  };
 };
 
 export type Options = {
@@ -141,7 +117,7 @@ const idOf = () =>
  * line that already declares it, and removed later without unpicking anything. It is not wrapped,
  * not proxied and not copied: what comes out is what went in, with one listener on its channel.
  */
-export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
+export function inspect<T extends AnyMachine>(fsm: T, opts: Options = {}): T {
   const who = idOf();
   const name = opts.name ?? `machine ${count}`;
   const note = opts.description ?? "";
@@ -197,16 +173,17 @@ export function inspect<T extends Any>(fsm: T, opts: Options = {}): T {
       // The one thing the inspector asks of an application, and it asks it of the recorder the
       // application handed over. No recorder, no rewinding — the message is not refused with an
       // answer, it simply does nothing, because there is nothing here that could do it.
-      if (msg.say === "jump" && msg.who === who && past) {
-        past.jump(msg.step);
-        // Nothing was dispatched, so nothing was published: `restore` is not a transition. Where
-        // the machine now stands is said the way everything is said here — by restating.
-        hello();
-      }
+      // Nothing is said back from here: the recorder announces that it moved, and the answer
+      // goes out on that. Which means a walk back started by the application itself is reported
+      // exactly as one started from the inspector, because they are the same event.
+      if (msg.say === "jump" && msg.who === who) past?.jump(msg.step);
     }),
     // And every time the pipe comes up, including after it went away, so an application started
     // before the viewer does not wait to be asked.
     link.rx.on("open", hello),
+    // `restore` publishes no transition — walking a run back is not a thing the machine did — so
+    // where it now stands is restated when the recorder says it moved it.
+    ...(past ? [past.rx.on("moved", hello)] : []),
   ];
   hello();
 

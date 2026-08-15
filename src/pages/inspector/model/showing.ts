@@ -62,24 +62,24 @@ const showing: Schema<Showing, Told, Shows> = {
   blank: {
     moved: [{ to: "blank", emit: "redraw" }],
     measured: [
-      { to: "beside", when: fits, with: sized, emit: "aside", by: wide },
-      { to: "under", with: sized, emit: "below", by: wide },
+      { when: fits, to: ["beside", sized], emit: ["aside", wide] },
+      { to: ["under", sized], emit: ["below", wide] },
     ],
   },
   under: {
     moved: [{ to: "under", emit: "redraw" }],
     looked: [{ to: "under", emit: "redress" }],
     measured: [
-      { to: "beside", when: fits, with: sized, emit: "aside", by: wide },
-      { to: "under", when: grew, with: sized, emit: "below", by: wide },
+      { when: fits, to: ["beside", sized], emit: ["aside", wide] },
+      { when: grew, to: ["under", sized], emit: ["below", wide] },
     ],
   },
   beside: {
     moved: [{ to: "beside", emit: "redraw" }],
     looked: [{ to: "beside", emit: "redress" }],
     measured: [
-      { to: "under", when: tight, with: sized, emit: "below", by: wide },
-      { to: "beside", when: grew, with: sized, emit: "aside", by: wide },
+      { when: tight, to: ["under", sized], emit: ["below", wide] },
+      { when: grew, to: ["beside", sized], emit: ["aside", wide] },
     ],
   },
 };

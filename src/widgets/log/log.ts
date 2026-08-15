@@ -75,7 +75,9 @@ export function newLog(w: Wiring): Log {
     if (node.hidden) return;
 
     const steps = w.subject.steps.map(asEdge);
-    const times = w.subject.times;
+    // When each of them happened, off the transitions themselves: a step carries its own time now,
+    // taken in the process the machine runs in, so nothing here keeps a clock beside the run.
+    const times = w.subject.steps.map((t) => t.at);
     const at = w.subject.step;
 
     for (const f of folds(steps)) {
@@ -107,7 +109,9 @@ export function newLog(w: Wiring): Log {
           alive: true,
         }),
       );
-      line.addEventListener("mouseleave", () => w.focus.pointer.dispatch("leave"));
+      line.addEventListener("mouseleave", () =>
+        w.focus.pointer.dispatch("leave"),
+      );
       rows.append(line);
     }
     // Read at its end, like the run it is: what happened last is what you came for.

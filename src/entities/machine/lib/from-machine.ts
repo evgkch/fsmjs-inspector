@@ -13,22 +13,40 @@
  * one that was pressed, and seeing that is the point of pointing the tool at a live machine.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
-import type { Off, StateMachine } from "@evgkch/fsmjs";
-import { history } from "@evgkch/fsmjs/debug";
-import type { History } from "@evgkch/fsmjs/debug";
-import type { Ctx, Ev, Graph, Step } from "../model/graph.js";
+import type { AnyMachine, Off } from "@evgkch/fsmjs";
+import type { Graph, Step } from "../model/graph.js";
 import { partsOf } from "../model/rule.js";
 import type { Subject } from "../model/subject.js";
 
-/** Any machine at all: the inspector reads labels and names, never types. */
-type Any = StateMachine<Ctx, Ev, Ev>;
+/**
+ * Any machine at all: the inspector reads labels and names, never types.
+ *
+ * `AnyMachine` is the library's own word for that now. It used to be `StateMachine<Ctx, Ev, Ev>` —
+ * the erased shape a dump has — which is the one shape a real application's machine is never in,
+ * so every caller with a machine worth watching had to cast.
+ */
+type Any = AnyMachine;
 
 export type Options = {
   /**
-   * Record where the machine has been, so the history can be walked. It costs a `restore` per
-   * step back and it moves somebody else's machine, so it is asked for rather than assumed.
+   * A recorder you already have — `history(fsm)` from `@evgkch/fsmjs/debug` — and handing it over
+   * is the whole of turning rewinding on.
+   *
+   * Not a flag, for the same reason `inspect` does not take one: a flag would mean this calling
+   * `history(fsm)` on somebody's behalf, and then the line that switches the tool off is also the
+   * line that removes a recorder their undo may have been using. It also cannot be a flag any
+   * more, honestly — recording needs a machine that can be restored, and what is read here is any
+   * machine at all.
    */
-  rewind?: boolean;
+  history?: Past;
+};
+
+/** A recorder, by its shape: what this uses of one, and nothing about what it records. */
+export type Past = {
+  readonly index: number;
+  jump(index: number): boolean;
+  readonly rx: { on(msg: "moved", hear: (i: number) => void): () => boolean };
+  stop(): void;
 };
 
 export function fromMachine(fsm: Any, opts: Options = {}): Subject {
@@ -37,22 +55,20 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
 
   const steps: Step[] = [];
-  const times: number[] = [];
   const watchers = new Set<() => void>();
   const changed = () => {
     for (const on of watchers) on();
   };
 
-  const past: History<Ctx> | null = opts.rewind ? history(fsm) : null;
+  const past = opts.history ?? null;
 
   const off: Off[] = [
+    ...(past ? [past.rx.on("moved", changed)] : []),
     fsm.rx.on(TRANSITION, (t) => {
       // `history` subscribed first when there is one, so its index already points at the state
       // this transition reached, and cutting to it drops a redo future the same way.
       if (past) steps.length = past.index - 1;
-      times.length = steps.length;
       steps.push(t as Step);
-      times.push(Date.now());
       changed();
     }),
   ];
@@ -64,9 +80,6 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
     },
     get steps() {
       return steps;
-    },
-    get times() {
-      return times;
     },
     // With nothing recording, the machine is always at the end of what happened.
     get step() {
@@ -81,12 +94,9 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
       // and what it decided arrives back as a step.
       take: (rule) => void fsm.dispatch(partsOf(rule).on as never),
     },
-    ...(past && {
-      rewind: (step: number) => {
-        past.jump(step);
-        changed();
-      },
-    }),
+    // Told, not assumed: the recorder says `moved` whenever it moves the machine, including when
+    // something other than this walked it back, so there is nothing to remember to redraw after.
+    ...(past && { rewind: (step: number) => void past.jump(step) }),
     watch: (on) => {
       watchers.add(on);
       return () => watchers.delete(on);

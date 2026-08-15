@@ -24,9 +24,9 @@ export type Told = Merge<
 >;
 
 const looking: Schema<Look, Told, Record<string, never>> = {
-  nobody: { pick: [{ to: "watching", with: at }] },
+  nobody: { pick: [{ to: ["watching", at] }] },
   watching: {
-    pick: [{ to: "watching", with: at }],
+    pick: [{ to: ["watching", at] }],
     gone: [{ to: "nobody", when: mine }],
   },
 };

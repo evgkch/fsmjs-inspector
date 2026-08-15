@@ -32,12 +32,12 @@
     "prepublishOnly": "npm run build:lib"
   },
   "peerDependencies": {
-    "@evgkch/fsmjs": ">=0.1.1",
-    "@evgkch/channeljs": ">=1.1.0"
+    "@evgkch/channeljs": ">=1.1.0",
+    "@evgkch/fsmjs": "file:../fsmjs"
   },
   "devDependencies": {
     "@evgkch/channeljs": "^1.1.0",
-    "@evgkch/fsmjs": "^0.1.1",
+    "@evgkch/fsmjs": "file:../fsmjs",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "vite": "^8.2.0",
