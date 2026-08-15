@@ -18,12 +18,20 @@
                  that does not work. -->
             <div class="bar" id="bar" hidden>
                 <span class="tag">inspecting</span>
-                <div id="who" class="roster"></div>
-                <p class="note" id="note" hidden></p>
-                <!-- Four drawings of one machine. Which of them you want depends on what you are
+                <!-- Who is out there. Shown only when there is a choice to make: one machine is
+                     not a list, it is the thing you are looking at. -->
+                <div id="who" class="roster" hidden></div>
+                <!-- Three drawings of one machine. Which of them you want depends on what you are
                      looking for, so it is asked rather than assumed. -->
                 <div class="panels" id="panels"></div>
             </div>
+
+            <!-- What is being inspected, said as a page says what it is about: the machine's name,
+                 and the line its author wrote about what it is for. -->
+            <header class="what" id="what" hidden>
+                <h2 class="name" id="name"></h2>
+                <p class="note" id="note" hidden></p>
+            </header>
 
             <div class="panes" id="work" hidden>
                 <!-- The schema, read and not written. The editor is three layers that have to

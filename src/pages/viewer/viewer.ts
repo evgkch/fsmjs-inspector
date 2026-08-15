@@ -44,6 +44,8 @@ export function viewer(): void {
   const main = document.querySelector("main") as HTMLElement;
   const bar = el<HTMLDivElement>("bar");
   const strip = el<HTMLDivElement>("who");
+  const what = el<HTMLElement>("what");
+  const title = el<HTMLHeadingElement>("name");
   const note = el<HTMLParagraphElement>("note");
   const host = el<HTMLElement>("watch");
   const work = el<HTMLElement>("work");
@@ -92,7 +94,8 @@ export function viewer(): void {
    */
   const panels = newPanels();
   const board = el<HTMLElement>("panels");
-  for (const panel of ["code", "figure", "run"] as Panel[]) {
+  // The names the panels wear, so a switch and the thing it switches are called the same word.
+  for (const panel of ["code", "figure", "history"] as Panel[]) {
     const label = make("label", "panel");
     const box = make("input", "");
     box.type = "checkbox";
@@ -131,6 +134,11 @@ export function viewer(): void {
     wait.hidden = list.length > 0;
     bar.hidden = list.length === 0;
     work.hidden = list.length === 0;
+    what.hidden = one === null;
+    // A roster is for choosing, and with one machine there is nothing to choose: the name below
+    // says what you are looking at, and a single tab beside it would be a control that does
+    // nothing.
+    strip.hidden = list.length < 2;
     if (!list.length) {
       const up = link.live();
       wait.classList.toggle("dialling", !up);
@@ -180,9 +188,10 @@ export function viewer(): void {
       one.subject.watch(() => editor.mark());
     }
 
-    // What the machine is for, which its schema cannot say. Kept beside the roster rather than in
-    // it: it belongs to the one being read, and four of them in a row would be a paragraph where
-    // the names are.
+    // The machine being read, said the way a page says what it is about — its name, and the line
+    // its author wrote about what it is for. Not in the roster: those are what you press, and this
+    // is what you are looking at.
+    title.textContent = one?.name ?? "";
     note.textContent = one?.note ?? "";
     note.hidden = !one?.note;
   };

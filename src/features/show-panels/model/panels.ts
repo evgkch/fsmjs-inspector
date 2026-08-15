@@ -1,7 +1,7 @@
 /**
  * Which panels are on screen.
  *
- * Three drawings of one machine — the source, the figure and the run — and a debugger that shows
+ * Three drawings of one machine — the source, the figure and the history — and a debugger that shows
  * all three at once is a debugger you read a third of. Which ones you want depends on what you are
  * looking for: a shape that will not close needs the figure, and a schema you are reading for the
  * first time needs the source beside it and nothing else.
@@ -18,7 +18,7 @@ import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
 
 /** The three, by the names their panels wear. */
-export type Panel = "code" | "figure" | "run";
+export type Panel = "code" | "figure" | "history";
 
 export type Up = Record<Panel, boolean>;
 
@@ -36,7 +36,7 @@ export type Panels = StateMachine<Shown, Asked, Record<string, never>>;
 export function newPanels(): Panels {
   return new StateMachine<Shown, Asked, Record<string, never>>(showing, {
     type: "showing",
-    context: { code: true, figure: true, run: true },
+    context: { code: true, figure: true, history: true },
   });
 }
 
