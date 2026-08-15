@@ -52,9 +52,44 @@ svg.names {
  * down its middle, in the same type and the same colours. A row of a run says nothing without the
  * name of the state it is.
  */
+/* The name of the panel, and the two ends of the run on the same line — a control belongs beside
+   the thing it acts on, and there is no other line here that is about the run as a whole. */
 .history .tag {
     grid-column: 1 / -1;
-    padding: 0 0 var(--step-2) var(--step-3);
+    display: flex;
+    align-items: baseline;
+    gap: var(--step-3);
+    padding: 0 var(--step-3) var(--step-2);
+}
+
+.ends {
+    display: inline-flex;
+    gap: var(--step-2);
+}
+
+.ends[hidden] {
+    display: none;
+}
+
+/*
+ * Two words, set as the tool sets everything it says about itself: quiet, small, and not shaped
+ * like a button. What they do is a jump, which is not a thing that wants a target the size of a
+ * key — and a debugger with two chrome buttons in the corner of a panel is a debugger wearing a
+ * toolbar it does not need.
+ */
+.ends .end {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--faint);
+    font: 500 var(--micro)/1 var(--mono-font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.ends .end:hover {
+    color: var(--accent);
 }
 
 .history text.name {

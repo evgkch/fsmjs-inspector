@@ -212,12 +212,18 @@ export function mount(
     const into = (e.target as HTMLElement | null)?.tagName ?? "";
     if (into === "TEXTAREA" || into === "INPUT" || into === "SELECT") return;
     if (!subject.rewind) return;
+    // The ends of the run under the same hand as the steps of it. Home and End mean this
+    // everywhere else a document is walked, and a run is a document that was written by a machine.
     const to =
       e.key === "ArrowLeft"
         ? subject.step - 1
         : e.key === "ArrowRight"
           ? subject.step + 1
-          : null;
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? subject.steps.length
+              : null;
     if (to === null || to < 0 || to > subject.steps.length) return;
     e.preventDefault();
     subject.rewind(to);

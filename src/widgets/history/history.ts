@@ -95,9 +95,34 @@ export function newHistory(w: Wiring): History {
   const tag = make("div", "tag", "history");
   // The run is walked by clicking a step, and by the two keys that mean the same thing. A control
   // nobody can find is a control nobody has, and the name of the panel is where you would look.
-  tag.title = "← and → walk the run";
+  tag.title = "← and → walk the run · Home and End for its ends";
+
+  /**
+   * Both ends of the run, which is the one place a fold does not save you: a session is long, and
+   * "the beginning" and "where it is now" are the two slices anyone actually asks for.
+   *
+   * What they do is asked of the subject and not decided here. A machine that can be walked back
+   * is walked back — the panel follows the mark, because the mark is what moved. One that cannot,
+   * which is any machine being watched from another process, is not moved at all and the panel
+   * scrolls instead: the reader wanted to see the start of the run, not to reach into somebody
+   * else's application and put their machine there.
+   */
+  const ends = make("div", "ends");
+  const goto = (name: string, hint: string, step: () => number, edge: number) => {
+    const key = make("button", "end", name);
+    key.title = hint;
+    key.addEventListener("click", () => {
+      if (w.subject.rewind) w.rewind(step());
+      else cols.scrollTo({ left: edge < 0 ? 0 : cols.scrollWidth });
+    });
+    ends.append(key);
+    return key;
+  };
+  goto("start", "the slice the run began at", () => 0, -1);
+  goto("end", "where the run has got to", () => w.subject.steps.length, 1);
   const node = make("aside", "history");
   node.style.setProperty("--foot", `${FOOT}px`);
+  tag.append(ends);
   node.append(tag, cols);
   /** Rebuilt with every draw, because the names are as wide as the names are. */
   let index: SVGSVGElement | null = null;
@@ -288,6 +313,9 @@ export function newHistory(w: Wiring): History {
     board.append(maybe);
     cols.append(board);
     node.replaceChildren(tag, index, cols);
+    // Nothing to walk and nothing to scroll: a run of no steps has one slice, and both ends of it
+    // are where you already are.
+    ends.hidden = !list.length;
 
     // One band per fold, standing on the slice it arrived in: what is pointed at, what is
     // clicked, what the scroll snaps to, and what the count belongs to. Going back to a fold is
