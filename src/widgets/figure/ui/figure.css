@@ -120,9 +120,16 @@ circle.mark {
     stroke: var(--c, var(--accent));
 }
 
-/* Out of reach: unreachable from here, or ruled out by a held half. No pointer cursor. */
-.box.dim {
-    opacity: var(--dim);
+/* Out of reach: unreachable from here, or ruled out by a held half. Grey ink, not
+   transparency — a tinted cell at low opacity disappears on a light ground — and no pointer
+   cursor. */
+.box.dim rect {
+    fill: transparent;
+    stroke: var(--line-firm);
+}
+
+.box.dim .flag {
+    fill: var(--line-firm);
 }
 
 .box.hot {
@@ -143,6 +150,12 @@ path.flag {
 .box.shot.lit rect {
     fill: var(--emit);
     stroke: var(--emit);
+}
+
+/* A dimmed output cell greys like the rest — the later rule, or the emit tint would win. */
+.box.shot.dim rect {
+    fill: transparent;
+    stroke: var(--line-firm);
 }
 
 /* The ground the bands and the cells stand on. Clicking it lets a choice go. */

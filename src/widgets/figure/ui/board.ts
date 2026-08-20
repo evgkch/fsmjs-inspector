@@ -1,5 +1,5 @@
 /**
- * The three blocks, drawn and then *dressed*.
+ * The three blocks, drawn and dressed in one pass.
  *
  *   ┌────────┬─────────────┐
  *   │FROM×ON │  FROM × TO  │  1 and 2 — the rows are shared across this line
@@ -17,9 +17,12 @@
  * runs its bands out to the names and lights the possible other halves; pressing fixes the half.
  * Block 2 is where the two bands cross — a display, never a control.
  *
- * The board is built once per schema and machine position; every class it wears afterwards is
- * computed in one pass from `look()`, so pointing and pressing cannot diverge.
+ * One template over the plan and the focus: geometry from the plan, every class from `look()`,
+ * so pointing and pressing cannot diverge. The differ reduces a dress to class changes.
  */
+import { svg } from "lit";
+import type { TemplateResult } from "lit";
+import { classMap } from "lit/directives/class-map.js";
 import { edgeLabel } from "@evgkch/fsmjs/formatters";
 import {
   CAUSE,
@@ -33,16 +36,9 @@ import {
 } from "../../../entities/cell/index.js";
 import type { Key } from "../../../entities/cell/index.js";
 import type { Focus } from "../../../features/focus/index.js";
-import { svg } from "../../../shared/lib/dom.js";
 import { CELL } from "../../../shared/lib/grid.js";
 import type { Row } from "../../../shared/lang/rules.js";
 import type { Draw } from "../model/plan.js";
-
-export type Dressed = {
-  node: SVGSVGElement;
-  /** Put the classes on again, because something about the focus changed. */
-  dress: () => void;
-};
 
 export type Wiring = {
   focus: Focus;
@@ -50,53 +46,32 @@ export type Wiring = {
   forget: () => void;
 };
 
-export function board(d: Draw, w: Wiring): Dressed {
+export function board(d: Draw, w: Wiring): TemplateResult {
   const { choice, pointer, look } = w.focus;
   const g = d.geo;
   const height = g.bottom;
   const width = g.width;
-  const root = svg("svg", {
-    class: "board",
-    width,
-    height,
-    viewBox: `0 0 ${width} ${height}`,
-  });
+  const midL = g.q(0) - CELL / 2;
+  const midR = g.q(d.cols.length - 1) + CELL / 2;
 
-  /**
-   * Something on the board that answers to the state of the figure. `key` is the cell it stands
-   * for and `list` the rules drawn there; `base` is what it wears whatever the state is.
-   */
-  type Spot = {
-    node: SVGElement;
-    family: "box" | "name";
-    key: Key;
-    list: Row[];
-    base: string;
-    /**
-     * What `dress` last computed: whether anything here can still be taken, and whether it is
-     * what the next press asks for. Kept as data — the classes only draw these facts.
-     */
-    live: boolean;
-    hot: boolean;
-  };
-  const spots: Spot[] = [];
+  const { fixed, shown, open } = look();
 
-  // The names along the axes. A name is one coordinate, so it is written where several cells can
-  // claim it, and more than one node may say the same one.
-  const tag = new Map<string, SVGElement[]>();
-  const mark = <T extends SVGElement>(coord: string, node: T): T => {
-    tag.set(coord, [...(tag.get(coord) ?? []), node]);
-    return node;
-  };
-  /** The four coordinates of a rule, as the names along the axes write them. */
+  // Reach is the plan's answer, not the mode's: a watched machine is running but cannot be
+  // driven, and dimming its cells would misreport the run.
+  const play = (r: Row) =>
+    (!d.acting || d.fires(r)) && fixed.every((k) => holds(k, r));
+  const lit = (r: Row) => shows(shown, r);
+
+  // A name is one coordinate, so it lights for every lit rule that uses it.
   const coords = (r: Row) => [
     `from\0${r.from}`,
     `on\0${r.on}`,
     `to\0${r.to}`,
     `emit\0${r.emit ?? ""}`,
   ];
-  const midL = g.q(0) - CELL / 2;
-  const midR = g.q(d.cols.length - 1) + CELL / 2;
+  const shine = new Set<string>();
+  for (const r of d.rows) if (lit(r)) for (const c of coords(r)) shine.add(c);
+  const here = d.here;
 
   /**
    * The bands of a cell: the row and column it intersects, run out to the names on both axes.
@@ -120,12 +95,7 @@ export function board(d: Draw, w: Wiring): Dressed {
       // The column is an event type with no other axis: down to its name and stop.
       return [
         row,
-        {
-          x: g.on(i) - CELL / 2,
-          y: 0,
-          width: CELL,
-          height: g.foot,
-        },
+        { x: g.on(i) - CELL / 2, y: 0, width: CELL, height: g.foot },
       ];
     }
     if (kind === EFFECT) {
@@ -157,12 +127,7 @@ export function board(d: Draw, w: Wiring): Dressed {
       if (!list.length) return [];
       const out: Record<string, number>[] = [
         { x: 0, y: g.row(d.all.indexOf(a!)), width: midR, height: CELL },
-        {
-          x: g.q(d.cols.indexOf(b!)) - CELL / 2,
-          y: 0,
-          width: CELL,
-          height,
-        },
+        { x: g.q(d.cols.indexOf(b!)) - CELL / 2, y: 0, width: CELL, height },
       ];
       for (const on of new Set(list.map((r) => r.on))) {
         const i = d.evs.indexOf(on);
@@ -189,203 +154,88 @@ export function board(d: Draw, w: Wiring): Dressed {
     return [];
   };
 
-  const wash = svg("g", { class: "wash" });
+  // Two keys can band the same lane — a source and the corner both band the row. Drawn once,
+  // or the tint would double where they agree.
+  const lanes = new Map(
+    shown.flatMap(bands).map((box) => [JSON.stringify(box), box]),
+  );
+  const wash = [...lanes.values()].map(
+    (box) =>
+      svg`<rect class="lit-lane" x=${box.x} y=${box.y}
+        width=${box.width} height=${box.height}></rect>`,
+  );
 
   /**
-   * Everything that depends on the state of the figure, in one pass. `play` says what can still
-   * be taken; `shows` says what is pointed at or fixed — one predicate, shared with the editor,
-   * so a cell and the line naming its rule light together.
+   * What a cell answers to the state of the figure: whether anything here can still be taken,
+   * whether it is what the next press asks for, and the handlers those two decide.
    */
-  const dress = () => {
-    const { fixed, shown, open } = look();
-
-    // Reach is the plan's answer, not the mode's: a watched machine is running but cannot be
-    // driven, and dimming its cells would misreport the run.
-    const play = (r: Row) =>
-      (!d.acting || d.fires(r)) && fixed.every((k) => holds(k, r));
-    const lit = (r: Row) => shows(shown, r);
-
-    for (const s of spots) {
-      // Three states per cell, never two at once: out of reach; lit (pointed at or held, the
-      // same look); or plain.
-      const alive = s.list.some(play);
-      const hot =
-        fixed.includes(s.key) || (open.includes(kindOf(s.key)) && alive);
-      s.live = alive;
-      s.hot = hot;
-      const cls = [s.base];
-      if (s.family === "box")
-        cls.push(!alive ? "dim" : s.list.some(lit) ? "lit" : "");
-      if (hot) cls.push("hot");
-      s.node.setAttribute("class", cls.filter(Boolean).join(" "));
-      s.node.setAttribute("tabindex", hot ? "0" : "-1");
-    }
-
-    // A name is one coordinate, so it lights for every lit rule that uses it.
-    const shine = new Set<string>();
-    for (const r of d.rows) if (lit(r)) for (const c of coords(r)) shine.add(c);
-    for (const [coord, nodes] of tag)
-      for (const node of nodes) node.classList.toggle("lit", shine.has(coord));
-
-    // Where the machine stands — the one thing that moves on a step, so it lives in `dress`.
-    const here = d.here;
-    const at = d.all.indexOf(here);
-    if (at < 0) markDot.setAttribute("display", "none");
-    else {
-      markDot.removeAttribute("display");
-      markDot.setAttribute("cx", String(g.spine + 6));
-      markDot.setAttribute("cy", String(g.row(at) + CELL / 2));
-      markDot.setAttribute("style", d.hue(here) ?? "");
-    }
-    for (const q of d.all) {
-      for (const node of tag.get(`from\0${q}`) ?? [])
-        node.classList.toggle("here", q === here);
-      for (const node of tag.get(`to\0${q}`) ?? [])
-        node.classList.toggle("here", q === here);
-    }
-
-    // Two keys can band the same lane — a source and the corner both band the row. Drawn once,
-    // or the tint would double where they agree.
-    const lanes = new Map(
-      shown.flatMap(bands).map((box) => [JSON.stringify(box), box]),
-    );
-    wash.replaceChildren(
-      ...[...lanes.values()].map((box) =>
-        svg("rect", { ...box, class: "lit-lane" }),
-      ),
-    );
-  };
-
-  /** A press is one dispatch; the choice machine's guards decide what it meant. */
-  const choose = (key: Key, alive: boolean) =>
-    choice.dispatch("press", { key, alive });
-
-  /** Wire a cell up: pointing and pressing are each one dispatch into the focus machines. */
-  const wire = (s: Spot): SVGElement => {
-    spots.push(s);
-    // Reach is handed over with the event; what to do about it is the machine's guard.
+  const spot = (key: Key, list: Row[]) => {
+    const alive = list.some(play);
+    const hot = fixed.includes(key) || (open.includes(kindOf(key)) && alive);
     const on = () =>
-      pointer.dispatch("enter", { keys: [s.key], offer: true, alive: s.live });
+      pointer.dispatch("enter", { keys: [key], offer: true, alive });
     const off = () => pointer.dispatch("leave");
-    s.node.addEventListener("mouseenter", on);
-    s.node.addEventListener("mouseleave", off);
-    s.node.addEventListener("focus", on);
-    s.node.addEventListener("blur", off);
-    // A crossing is never held; no press is offered.
-    if (kindOf(s.key) === CORNER) return s.node;
-    const take = () => choose(s.key, s.live);
-    s.node.setAttribute("role", "button");
-    s.node.addEventListener("click", take);
-    s.node.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        take();
-      }
-    });
-    return s.node;
+    // A press is one dispatch; the choice machine's guards decide what it meant. A crossing is
+    // never held; no press is offered.
+    const corner = kindOf(key) === CORNER;
+    const take = corner
+      ? undefined
+      : () => choice.dispatch("press", { key, alive });
+    const keys = corner
+      ? undefined
+      : (e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            take!();
+          }
+        };
+    return {
+      alive,
+      hot,
+      lit: list.some(lit),
+      on,
+      off,
+      take,
+      keys,
+      tabindex: hot ? "0" : "-1",
+    };
   };
-
-  // Clicking anywhere that is not a cell lets the whole selection go.
-  const floor = svg("rect", {
-    x: 0,
-    y: 0,
-    width,
-    height,
-    class: "floor",
-  });
-  floor.addEventListener("click", w.forget);
-  // The bands are background: appended before the cells.
-  root.append(floor, wash);
-
-  // The columns of blocks 2 and 3 are one line each, interrupted only by the band of names.
-  d.cols.forEach((n, i) => {
-    const rail = (y1: number, y2: number) =>
-      root.append(
-        svg("line", {
-          x1: g.q(i),
-          y1,
-          x2: g.q(i),
-          y2,
-          class: "rail",
-          style: d.hue(n),
-        }),
-      );
-    rail(g.head, g.grid);
-    if (d.outs.length)
-      rail(g.λ(0) - CELL / 2, g.λ(d.outs.length - 1) + CELL / 2);
-  });
-
-  // The rows of blocks 1 and 2, stopping at the band of names between them.
-  d.all.forEach((n, j) => {
-    const y = g.row(j) + CELL / 2;
-    const beam = (x1: number, x2: number) =>
-      root.append(
-        svg("line", { x1, y1: y, x2, y2: y, class: "rail", style: d.hue(n) }),
-      );
-    if (d.evs.length) beam(6, g.spine);
-    if (d.all.length) beam(midL, midR);
-  });
 
   // ── block 3: what comes out on arrival ──
-  d.outs.forEach((λ, i) => {
+  const outs = d.outs.map((λ, i) => {
     const y = g.λ(i);
-    root.append(
-      mark(
-        `emit\0${λ}`,
-        svg(
-          "text",
-          {
-            x: g.names,
-            y: y + 4,
-            class: "name out",
-            "text-anchor": "middle",
-            // Λ is one axis, one colour.
-            style: "--c: var(--emit)",
-          },
-          λ,
-        ),
-      ),
-    );
-
-    d.cols.forEach((to, k) => {
+    const name = svg`<text
+      class=${classMap({ name: true, out: true, lit: shine.has(`emit\0${λ}`) })}
+      x=${g.names} y=${y + 4} text-anchor="middle"
+      style="--c: var(--emit)">${λ}</text>`;
+    const cells = d.cols.flatMap((to, k) => {
       const list = d.shot.get(`${λ}\0${to}`);
-      if (!list) return;
-      const box = svg("g", { style: d.hue(to) });
-      box.append(
-        svg("rect", {
-          x: g.q(k) - CELL / 2 + 3,
-          y: y - CELL / 2 + 3,
-          width: CELL - 6,
-          height: CELL - 6,
-          rx: 5,
-        }),
-      );
-      box.append(svg("title", {}, `TO ${to} EMIT ${λ}`));
-      root.append(
-        wire({
-          node: box,
-          family: "box",
-          key: keyOf(EFFECT, λ, to),
-          list,
-          base: "box shot",
-          live: false,
-          hot: false,
-        }),
-      );
+      if (!list) return [];
+      const s = spot(keyOf(EFFECT, λ, to), list);
+      return [
+        svg`<g style=${d.hue(to)}
+          class=${classMap({ box: true, shot: true, dim: !s.alive, lit: s.alive && s.lit, hot: s.hot })}
+          tabindex=${s.tabindex} role="button"
+          @mouseenter=${s.on} @mouseleave=${s.off} @focus=${s.on} @blur=${s.off}
+          @click=${s.take} @keydown=${s.keys}>
+          <rect x=${g.q(k) - CELL / 2 + 3} y=${y - CELL / 2 + 3}
+            width=${CELL - 6} height=${CELL - 6} rx="5"></rect>
+          <title>${`TO ${to} EMIT ${λ}`}</title>
+        </g>`,
+      ];
     });
+    return [name, ...cells];
   });
 
   /*
    * The four indices, named with the language's own keywords — FROM, ON, TO, EMIT — set the same
    * way the editor sets them.
    */
+  const caps: TemplateResult[] = [];
   const cap = (x: number, y: number, word: string, anchor = "middle") =>
-    root.append(
-      svg("text", { x, y, class: "cap", "text-anchor": anchor }, word),
+    caps.push(
+      svg`<text class="cap" x=${x} y=${y} text-anchor=${anchor}>${word}</text>`,
     );
-
-  // ON and FROM on the line above the grid; TO and EMIT down the right-hand edge, each against
-  // the middle of the run of names it names.
   if (d.evs.length) cap((6 + g.spine) / 2, 13, "ON");
   cap(g.names, 13, "FROM");
   if (d.cols.length) cap(g.verge, (g.stem + g.foot) / 2 + 3, "TO", "start");
@@ -398,74 +248,51 @@ export function board(d: Draw, w: Wiring): Dressed {
    * upward and hang from the line under the grid. The baseline is shifted half a letter so the
    * word sits on its column.
    */
-  const stood = (
-    x: number,
-    name: string,
-    cls: string,
-    turn: 90 | -90,
-    hue?: string,
-  ) => {
+  const stoodAt = (x: number, turn: 90 | -90) => {
     const down = turn === 90;
     const axis = x + (down ? -4 : 4);
     const y = down ? (g.stem + g.foot) / 2 : g.stem;
-    return svg(
-      "text",
-      {
-        x: axis,
-        y,
-        class: cls,
-        "text-anchor": down ? "middle" : "end",
-        transform: `rotate(${turn}, ${axis}, ${y})`,
-        ...(hue !== undefined && { style: hue }),
-      },
-      name,
-    );
+    return { axis, y, anchor: down ? "middle" : "end" };
   };
 
-  d.evs.forEach((σ, i) => {
-    root.append(mark(`on\0${σ}`, stood(g.on(i), σ, "name on", -90)));
+  const ons = d.evs.map((σ, i) => {
+    const { axis, y, anchor } = stoodAt(g.on(i), -90);
+    return svg`<text
+      class=${classMap({ name: true, on: true, lit: shine.has(`on\0${σ}`) })}
+      x=${axis} y=${y} text-anchor=${anchor}
+      transform=${`rotate(-90, ${axis}, ${y})`}>${σ}</text>`;
   });
 
   // `TO r` with nothing emitted has no cell in block 3; the name of the column is that
   // outcome's cell.
-  d.cols.forEach((to, i) => {
+  const tos = d.cols.flatMap((to, i) => {
+    const { axis, y, anchor } = stoodAt(g.q(i), 90);
     const ends = d.rows.filter((r) => r.emit === undefined && r.to === to);
-    const name = mark(
-      `to\0${to}`,
-      stood(g.q(i), to, `name to${d.off.has(to) ? " off" : ""}`, 90, d.hue(to)),
-    );
-    root.append(name);
-    if (ends.length) {
-      // A word on end is a small target; the invisible band it stands in takes the pointer.
-      const grab = svg("rect", {
-        x: g.q(i) - CELL / 2,
-        y: g.stem,
-        width: CELL,
-        height: g.foot - g.stem,
-        class: "grab",
-      });
-      grab.append(svg("title", {}, `TO ${to}, and nothing is emitted`));
-      root.append(grab);
-      wire({
-        node: name,
-        family: "name",
-        key: keyOf(EFFECT, "", to),
-        list: ends,
-        base: name.getAttribute("class")!,
-        live: false,
-        hot: false,
-      });
-      // The two are one control: the name is what is lit, the heading is what is hit.
-      grab.addEventListener("mouseenter", () =>
-        name.dispatchEvent(new Event("mouseenter")),
-      );
-      grab.addEventListener("mouseleave", () =>
-        name.dispatchEvent(new Event("mouseleave")),
-      );
-      grab.addEventListener("click", () =>
-        name.dispatchEvent(new Event("click")),
-      );
-    }
+    const s = ends.length ? spot(keyOf(EFFECT, "", to), ends) : null;
+    const name = svg`<text
+      class=${classMap({
+        name: true,
+        to: true,
+        off: d.off.has(to),
+        lit: shine.has(`to\0${to}`),
+        here: to === here,
+        hot: s?.hot ?? false,
+      })}
+      x=${axis} y=${y} text-anchor=${anchor} style=${d.hue(to)}
+      transform=${`rotate(90, ${axis}, ${y})`}
+      tabindex=${s?.tabindex ?? "-1"} role=${s ? "button" : undefined}
+      @mouseenter=${s?.on} @mouseleave=${s?.off} @focus=${s?.on} @blur=${s?.off}
+      @click=${s?.take} @keydown=${s?.keys}>${to}</text>`;
+    if (!s) return [name];
+    // A word on end is a small target; the invisible band it stands in takes the pointer.
+    // The two are one control: the name is what is lit, the heading is what is hit.
+    const grab = svg`<rect class="grab"
+      x=${g.q(i) - CELL / 2} y=${g.stem} width=${CELL} height=${g.foot - g.stem}
+      role="button"
+      @mouseenter=${s.on} @mouseleave=${s.off} @click=${s.take}>
+      <title>${`TO ${to}, and nothing is emitted`}</title>
+    </rect>`;
+    return [name, grab];
   });
 
   // ── the rows: blocks 1 and 2, sharing them ──
@@ -480,82 +307,59 @@ export function board(d: Draw, w: Wiring): Dressed {
     list: Row[],
     tint: string,
     key: Key,
-  ): SVGGElement => {
-    const box = svg("g", { style: tint });
-    box.append(
-      svg("rect", {
-        x: x - CELL / 2 + 2.5,
-        y: y - CELL / 2 + 2.5,
-        width: CELL - 5,
-        height: CELL - 5,
-        rx: 5,
-      }),
-    );
-    // A corner flag where `validate` calls a rule of this cell dead.
-    if (list.some(d.dead))
-      box.append(
-        svg("path", {
-          d: `M ${x + CELL / 2 - 8.5} ${y - CELL / 2 + 2.5} L ${x + CELL / 2 - 2.5} ${y - CELL / 2 + 2.5} L ${x + CELL / 2 - 2.5} ${y - CELL / 2 + 8.5} Z`,
-          class: "flag",
-        }),
-      );
-    box.append(
-      svg(
-        "title",
-        {},
+  ) => {
+    const s = spot(key, list);
+    const dead = list.some(d.dead);
+    const corner = kindOf(key) === CORNER;
+    return svg`<g style=${tint}
+      class=${classMap({ box: true, dim: !s.alive, lit: s.alive && s.lit, hot: s.hot })}
+      tabindex=${s.tabindex} role=${corner ? undefined : "button"}
+      @mouseenter=${s.on} @mouseleave=${s.off} @focus=${s.on} @blur=${s.off}
+      @click=${s.take} @keydown=${s.keys}>
+      <rect x=${x - CELL / 2 + 2.5} y=${y - CELL / 2 + 2.5}
+        width=${CELL - 5} height=${CELL - 5} rx="5"></rect>
+      ${
+        dead
+          ? svg`<path class="flag"
+              d=${`M ${x + CELL / 2 - 8.5} ${y - CELL / 2 + 2.5} L ${x + CELL / 2 - 2.5} ${y - CELL / 2 + 2.5} L ${x + CELL / 2 - 2.5} ${y - CELL / 2 + 8.5} Z`}></path>`
+          : ""
+      }
+      <title>${
         list.map(edgeLabel).join("\n") +
-          (list.some(d.dead)
-            ? "\n\n`validate` calls a rule here dead: read back as a dump, an unguarded rule " +
-              "ahead of it in this cell would always win. Here the guard is your second click."
-            : ""),
-      ),
-    );
-    wire({
-      node: box,
-      family: "box",
-      key,
-      list,
-      base: "box",
-      live: false,
-      hot: false,
-    });
-    return box;
+        (dead
+          ? "\n\n`validate` calls a rule here dead: read back as a dump, an unguarded rule " +
+            "ahead of it in this cell would always win. Here the guard is your second click."
+          : "")
+      }</title>
+    </g>`;
   };
 
-  d.all.forEach((from, j) => {
+  const rows = d.all.map((from, j) => {
     const y = g.row(j);
-    const row = svg("g", { class: "row" });
-    row.append(
-      mark(
-        `from\0${from}`,
-        svg(
-          "text",
-          {
-            x: g.names,
-            y: y + CELL / 2 + 4,
-            class: `name side${d.off.has(from) ? " off" : ""}`,
-            style: d.hue(from),
-            "text-anchor": "middle",
-          },
-          from,
-        ),
-      ),
-    );
+    const name = svg`<text
+      class=${classMap({
+        name: true,
+        side: true,
+        off: d.off.has(from),
+        lit: shine.has(`from\0${from}`),
+        here: from === here,
+      })}
+      x=${g.names} y=${y + CELL / 2 + 4} text-anchor="middle"
+      style=${d.hue(from)}>${from}</text>`;
 
     // Block 1: no lane colour — its columns are events, and where a rule leads is block 2's to
     // say.
-    d.evs.forEach((σ, i) => {
+    const causes = d.evs.flatMap((σ, i) => {
       const list = d.cell.get(`${from}\0${σ}`);
-      if (list)
-        row.append(
-          square(g.on(i), y + CELL / 2, list, "", keyOf(CAUSE, from, σ)),
-        );
+      return list
+        ? [square(g.on(i), y + CELL / 2, list, "", keyOf(CAUSE, from, σ))]
+        : [];
     });
 
-    d.cols.forEach((to, i) => {
+    const pairs = d.cols.flatMap((to, i) => {
       const list = d.pair.get(`${from}\0${to}`);
-      if (list) {
-        row.append(
+      if (list)
+        return [
           square(
             g.q(i),
             y + CELL / 2,
@@ -563,36 +367,63 @@ export function board(d: Draw, w: Wiring): Dressed {
             d.hue(to),
             keyOf(CORNER, from, to),
           ),
-        );
-        return;
-      }
-      if (!d.far.has(`${from}\0${to}`)) return;
+        ];
+      if (!d.far.has(`${from}\0${to}`)) return [];
       // Reachable, but not in one step.
-      const dot = svg("circle", {
-        cx: g.q(i),
-        cy: y + CELL / 2,
-        r: 2.5,
-        class: "far",
-      });
-      dot.append(
-        svg(
-          "title",
-          {},
-          from === to
-            ? `${from} lies on a cycle: a run can come back to it`
-            : `${to} is reachable from ${from}, but not by one rule`,
-        ),
-      );
-      row.append(dot);
+      return [
+        svg`<circle class="far" cx=${g.q(i)} cy=${y + CELL / 2} r="2.5">
+          <title>${
+            from === to
+              ? `${from} lies on a cycle: a run can come back to it`
+              : `${to} is reachable from ${from}, but not by one rule`
+          }</title>
+        </circle>`,
+      ];
     });
 
-    root.append(row);
+    return svg`<g class="row">${name}${causes}${pairs}</g>`;
   });
 
-  // Where the machine stands: one dot on the index of states, moved by `dress`.
-  const markDot = svg("circle", { r: 3.5, class: "mark" });
-  root.append(markDot);
+  // The columns of blocks 2 and 3 are one line each, interrupted only by the band of names;
+  // the rows of blocks 1 and 2 stop at the band of names between them.
+  const rails: TemplateResult[] = [];
+  d.cols.forEach((n, i) => {
+    const rail = (y1: number, y2: number) =>
+      rails.push(
+        svg`<line class="rail" style=${d.hue(n)}
+          x1=${g.q(i)} y1=${y1} x2=${g.q(i)} y2=${y2}></line>`,
+      );
+    rail(g.head, g.grid);
+    if (d.outs.length)
+      rail(g.λ(0) - CELL / 2, g.λ(d.outs.length - 1) + CELL / 2);
+  });
+  d.all.forEach((n, j) => {
+    const y = g.row(j) + CELL / 2;
+    const beam = (x1: number, x2: number) =>
+      rails.push(
+        svg`<line class="rail" style=${d.hue(n)}
+          x1=${x1} y1=${y} x2=${x2} y2=${y}></line>`,
+      );
+    if (d.evs.length) beam(6, g.spine);
+    if (d.all.length) beam(midL, midR);
+  });
 
-  dress();
-  return { node: root, dress };
+  // Where the machine stands: one dot on the index of states.
+  const at = d.all.indexOf(here);
+  const markDot =
+    at < 0
+      ? ""
+      : svg`<circle class="mark" r="3.5"
+          cx=${g.spine + 6} cy=${g.row(at) + CELL / 2}
+          style=${d.hue(here) ?? ""}></circle>`;
+
+  // Clicking anywhere that is not a cell lets the whole selection go. The bands are background:
+  // drawn before the cells.
+  return svg`<svg class="board" width=${width} height=${height}
+    viewBox=${`0 0 ${width} ${height}`}>
+    <rect class="floor" x="0" y="0" width=${width} height=${height}
+      @click=${w.forget}></rect>
+    <g class="wash">${wash}</g>
+    ${rails} ${outs} ${caps} ${ons} ${tos} ${rows} ${markDot}
+  </svg>`;
 }

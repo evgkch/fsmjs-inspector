@@ -12,9 +12,14 @@
  * Writing aids: the word being typed is completed in grey where only one word fits (TAB takes
  * it), and a double-clicked name can be renamed in every line at once.
  *
- * Custom element `<fsmjs-editor>`; shadow root, palette via inherited custom properties.
- * `disconnectedCallback` unsubscribes from the focus and writing machines.
+ * Custom element `<fsmjs-editor>`, a LitElement for its shadow, styles and lifecycle — and an
+ * imperative text engine inside: the textarea, the `insertText` writes that keep the browser's
+ * undo stack, the caret and the completion ghost are managed by hand, and the one render places
+ * the nodes the constructor built. `disconnectedCallback` unsubscribes from the focus and
+ * writing machines.
  */
+import { LitElement, html } from "lit";
+import type { TemplateResult } from "lit";
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
 import { halvesOf, shows } from "../../entities/cell/index.js";
@@ -25,7 +30,7 @@ import { newWriting } from "../../features/write-rules/index.js";
 import type { Facts, Typing } from "../../features/write-rules/index.js";
 import { make, word } from "../../shared/lib/dom.js";
 import { CELL, rhythm } from "../../shared/lib/grid.js";
-import { shadow } from "../../shared/lib/shadow.js";
+import { sheets } from "../../shared/lib/element.js";
 import type { Vocab } from "../../shared/lang/complete.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { tokenize } from "../../shared/lang/tokens.js";
@@ -48,7 +53,9 @@ export type Wiring = {
   fire: (rule: Written) => void;
 };
 
-export class FsmjsEditor extends HTMLElement {
+export class FsmjsEditor extends LitElement {
+  static override styles = sheets(editorCss);
+
   #w?: Wiring;
 
   #area: HTMLTextAreaElement;
@@ -59,9 +66,7 @@ export class FsmjsEditor extends HTMLElement {
   #sheet: HTMLDivElement;
   #chip: HTMLButtonElement;
   #say: HTMLParagraphElement;
-
-  /** The shadow root the source is drawn into. */
-  #root: ShadowRoot;
+  #tag: HTMLDivElement;
 
   /** What is going on in the text besides the text. */
   #writing = newWriting();
@@ -102,7 +107,6 @@ export class FsmjsEditor extends HTMLElement {
   constructor() {
     super();
     this.className = "editor";
-    this.#root = shadow(this, editorCss);
 
     this.#area = make("textarea", "");
     // Read-only, not disabled: caret, selection, copying and the panel's keys still work.
@@ -134,15 +138,19 @@ export class FsmjsEditor extends HTMLElement {
     this.#chip = make("button", "rename");
     this.#chip.type = "button";
     this.#chip.hidden = true;
-    const tag = make("div", "tag");
-    tag.append(make("span", "what", "code"), this.#chip);
+    this.#tag = make("div", "tag");
+    this.#tag.append(make("span", "what", "code"), this.#chip);
 
     // One strip at the foot: the parser's complaint while there is one, the counts otherwise,
     // never both. Always present, so the page does not move on unparsed keystrokes.
     this.#say = make("p", "say");
-    this.#root.append(tag, this.#sheet, this.#say);
     // A line here is a rule, and a rule is a row of the figure: one height, from one place.
     rhythm(this);
+  }
+
+  /** One render, placing the nodes the constructor built; the engine mutates them in place. */
+  override render(): TemplateResult {
+    return html`${this.#tag}${this.#sheet}${this.#say}`;
   }
 
   set wiring(w: Wiring) {
@@ -212,7 +220,8 @@ export class FsmjsEditor extends HTMLElement {
     return this.#w!;
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.#stop();
   }
 

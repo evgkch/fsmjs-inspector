@@ -151,6 +151,14 @@ try {
   eq("diagram far arcs (B→A, C→B, C→D)", farArcs(), 3);
   eq("diagram dim chips (D unreachable this step)", dimChips(), 1);
 
+  console.log("— M1f: the figure, in detail —");
+  eq("lit cells under the press", q(fig, ".box.lit") > 0, true);
+  eq("shining names", q(fig, "text.name.lit") > 0, true);
+  eq("the standing mark is drawn", q(fig, "circle.mark"), 1);
+  eq("hot cells offer the next press", q(fig, ".box.hot") > 0, true);
+  eq("dim cells exist while running", q(fig, ".box.dim") > 0, true);
+  eq("the here class sits on the state's names", q(fig, "text.name.here") > 0, true);
+
   console.log("— M2: chip B hovered while A held → the corner —");
   enter(chip("B"));
   await tick();
