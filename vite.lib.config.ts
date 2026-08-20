@@ -62,7 +62,7 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: [/^@evgkch\//],
+      external: [/^@evgkch\//, /^lit/],
       // Named after the entry that carries it, which is `ui` — the main entry has no stylesheet at
       // all, and a file called `index.css` beside a JavaScript file that never mentions a document
       // would be the manifest's one confusing sentence.

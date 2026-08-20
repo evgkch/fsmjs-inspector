@@ -5,16 +5,18 @@
  * them; a switch turns its widget's `hidden` on and off.
  *
  * Custom element `<fsmjs-desk>`: `wiring = { subject, focus? }`, then `enroll(widget, name?)`.
+ * A page that runs its own layout takes `seat(name)` — a switch alone — and reads `panels`.
  */
+import { LitElement, html, nothing } from "lit";
+import type { TemplateResult } from "lit";
+import { TRANSITION } from "@evgkch/fsmjs";
 import type { Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { newPanels } from "../../features/show-panels/index.js";
 import type { Panels } from "../../features/show-panels/index.js";
 import { ensemble } from "../../pages/inspector/ensemble.js";
 import type { Ensemble, Member } from "../../pages/inspector/ensemble.js";
-import { TRANSITION } from "@evgkch/fsmjs";
-import { make } from "../../shared/lib/dom.js";
-import { shadow } from "../../shared/lib/shadow.js";
+import { sheets } from "../../shared/lib/element.js";
 import deskCss from "./ui/desk.css?raw";
 
 export type Wiring = {
@@ -23,27 +25,32 @@ export type Wiring = {
   focus?: Focus;
 };
 
-/** One switch: the box, and — when the desk itself shows and hides it — the widget. */
-type Seat = { box: HTMLInputElement; member?: Member & HTMLElement };
+/** One switch: its word, whether it can be turned, and — when the desk itself shows and hides
+ * it — the widget. */
+type Seat = {
+  name: string;
+  locked: boolean;
+  title?: string;
+  member?: Member & HTMLElement;
+};
 
-export class FsmjsDesk extends HTMLElement {
-  #root: ShadowRoot;
-  #row: HTMLDivElement;
+export class FsmjsDesk extends LitElement {
+  static override styles = sheets(deskCss);
 
   #band: Ensemble | null = null;
-  #panels: Panels | null = null;
-  #seats = new Map<string, Seat>();
+  #panels: Panels;
+  #seats: Seat[] = [];
 
   constructor() {
     super();
     this.className = "desk";
-    this.#root = shadow(this, deskCss);
-    this.#row = make("div", "switches");
-    this.#root.append(this.#row);
     // The menu stands without a subject: a page that runs its own layout only takes seats.
-    this.#panels = newPanels([]);
     // The machine and the element live and die together; nothing to unsubscribe.
-    this.#panels.rx.on(TRANSITION, () => this.#apply());
+    this.#panels = newPanels([]);
+    this.#panels.rx.on(TRANSITION, () => {
+      this.#apply();
+      this.requestUpdate();
+    });
   }
 
   set wiring(w: Wiring) {
@@ -59,7 +66,7 @@ export class FsmjsDesk extends HTMLElement {
 
   /** Which widgets are up — for a page that lays panels out itself. */
   get panels(): Panels {
-    return this.#panels!;
+    return this.#panels;
   }
 
   /**
@@ -67,19 +74,8 @@ export class FsmjsDesk extends HTMLElement {
    * `panels`. A locked seat is shown as it stands and takes no click.
    */
   seat(name: string, opts: { locked?: boolean; title?: string } = {}): void {
-    const label = make("label", "");
-    if (opts.title !== undefined) label.title = opts.title;
-    const box = make("input", "");
-    box.type = "checkbox";
-    box.checked = true;
-    if (opts.locked) box.disabled = true;
-    else
-      box.addEventListener("change", () =>
-        this.#panels?.dispatch("put", { panel: name, up: box.checked }),
-      );
-    label.append(box, make("span", "", name));
-    this.#row.append(label);
-    this.#seats.set(name, { box });
+    this.#seats.push({ name, locked: opts.locked ?? false, title: opts.title });
+    this.requestUpdate();
   }
 
   /**
@@ -92,18 +88,37 @@ export class FsmjsDesk extends HTMLElement {
     if (!band) return;
     const word = name ?? member.tagName.toLowerCase().replace(/^fsmjs-/, "");
     band.enroll(member);
-    this.seat(word);
-    this.#seats.get(word)!.member = member;
+    this.#seats.push({ name: word, locked: false, member });
+    this.requestUpdate();
   }
 
   /** What the panels machine says, worn: absent from the context is up. */
   #apply(): void {
-    const up = this.#panels?.state.context ?? {};
-    for (const [word, seat] of this.#seats) {
-      const on = up[word] !== false;
-      seat.box.checked = on;
-      if (seat.member) seat.member.hidden = !on;
-    }
+    const up = this.#panels.state.context;
+    for (const seat of this.#seats)
+      if (seat.member) seat.member.hidden = up[seat.name] === false;
+  }
+
+  override render(): TemplateResult {
+    const up = this.#panels.state.context;
+    return html`<div class="switches">
+      ${this.#seats.map(
+        (seat) =>
+          html`<label title=${seat.title ?? nothing}>
+            <input
+              type="checkbox"
+              .checked=${up[seat.name] !== false}
+              ?disabled=${seat.locked}
+              @change=${(e: Event) =>
+                this.#panels.dispatch("put", {
+                  panel: seat.name,
+                  up: (e.target as HTMLInputElement).checked,
+                })}
+            />
+            <span>${seat.name}</span>
+          </label>`,
+      )}
+    </div>`;
   }
 }
 

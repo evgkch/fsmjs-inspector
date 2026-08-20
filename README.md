@@ -41,7 +41,7 @@ if (import.meta.env.DEV) inspect(fsm, { name: "cart" });
 
 If the widgets are part of the page's interface, the dependency is a regular one.
 
-The package is ESM-only. Peer dependencies — `@evgkch/fsmjs >= 0.2.1` and `@evgkch/channeljs >= 1.1.0`: neither is bundled, and the application must have exactly one copy of `fsmjs` (see [Limitations](#limitations)).
+The package is ESM-only. Its one dependency of its own is `lit`, the custom-elements base. Peer dependencies — `@evgkch/fsmjs >= 0.2.1` and `@evgkch/channeljs >= 1.1.0`: neither is bundled, and the application must have exactly one copy of `fsmjs` (see [Limitations](#limitations)).
 
 Entry points:
 
