@@ -10,9 +10,9 @@
  * their stretch; meeting at a shared cell alone does not push an arrow up.
  *
  * The ends stand in the halves of their cells: on top a departure in the left half, an arrival
- * in the right one; under the row mirrored. A self-loop is no exception — it leaves in the
- * departures' half and arrives in the arrivals' one, so its line runs against the grain of the
- * other arrows on its side. Within a half the shallower
+ * in the right one; under the row mirrored. A self-loop leaves and arrives in the same halves as
+ * its neighbours — so its line runs against their grain — but takes the innermost slot of each
+ * half, hugs the row at the first level, and is drawn last, over everything. Within a half the shallower
  * arrow stands nearer the edge and the deeper nearer the centre, at a pitch of (half-width −
  * padding) / (ends in that half) — so a vertical never lands on another and never crosses the
  * horizontal of a shallower arrow sharing the cell. What does cross a loop is bridged by the
@@ -164,7 +164,10 @@ export function lay(graph: Graph, start: string): Lay {
     const cx = c ? c.x + c.w / 2 : SIDE;
     const unit = inset(c) / Math.max(1, list.length);
     [...list]
-      .sort((p, n) => p.l.level - n.l.level)
+      // The self-loop last: it takes the innermost slot, nearest the cell's centre.
+      .sort(
+        (p, n) => Number(p.l.self) - Number(n.l.self) || p.l.level - n.l.level,
+      )
       .forEach(({ l, end }, i) => {
         const at = cx + (h === "R" ? 1 : -1) * (inset(c) - i * unit);
         pos.set(l, { ...pos.get(l), [end]: at });
@@ -194,6 +197,13 @@ export function lay(graph: Graph, start: string): Lay {
       dead: group.every((r) => bad.dead(idOf(rows, r))),
     };
   });
+
+  // The self-loops last in the drawing order: their casing bridges whatever they cross.
+  arcs.sort(
+    (a, b) =>
+      Number(a.rows[0]!.from === a.rows[0]!.to) -
+      Number(b.rows[0]!.from === b.rows[0]!.to),
+  );
 
   const deep = (side: Arc["side"]) =>
     Math.max(0, ...arcs.filter((r) => r.side === side).map((r) => r.level));
