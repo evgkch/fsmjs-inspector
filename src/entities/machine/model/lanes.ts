@@ -1,14 +1,7 @@
 /**
- * One colour per state, and the same one wherever that state is written.
- *
- * The figure gives every state a lane and colours its column, its row and its cells by it. The
- * editor writes the same states as words, and the reading and the history write them again. If
- * each of those picked its own colour they would agree by accident and disagree by drift, so
- * there is one order and one function, and everything asks them.
- *
- * The order is the one a run meets the states in: `analyze` fills `reachable` breadth-first from
- * the start, so the near states are near the origin and the ones nothing reaches come last, where
- * their empty column is easy to see.
+ * One colour per state, the same wherever the state is written — figure, editor, history. One
+ * order and one function, so the surfaces cannot drift apart. The order is breadth-first from
+ * the start (`analyze`'s `reachable`), unreachable states last.
  */
 import { analyze } from "@evgkch/fsmjs/analysis";
 import type { Graph } from "./graph.js";
@@ -25,9 +18,8 @@ export function lanes(graph: Graph, start: string): string[] {
 export const hue = (i: number): string => `--c: var(--lane-${i % LANES})`;
 
 /**
- * A state's colour, ready to put on a word — or nothing at all for a name this graph does not
- * have. Nothing is not a colour to fall back on: lane 0 belongs to the start state, and a word
- * wearing it because it was half-typed reads as an answer the figure has not given.
+ * A state's colour for a word, or `undefined` for a name this graph does not have — no fallback
+ * to lane 0, which belongs to the start state.
  */
 export type Lane = (state: string) => string | undefined;
 

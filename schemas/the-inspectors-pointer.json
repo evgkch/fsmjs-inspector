@@ -1,25 +1,7 @@
 {
-  "away": {
-    "enter": [
-      {
-        "to": "over",
-        "when": "named",
-        "with": "onto"
-      }
-    ]
-  },
+  "away": { "enter": [{ "to": ["over", "onto"], "when": "named" }] },
   "over": {
-    "enter": [
-      {
-        "to": "over",
-        "when": "named",
-        "with": "onto"
-      }
-    ],
-    "leave": [
-      {
-        "to": "away"
-      }
-    ]
+    "enter": [{ "to": ["over", "onto"], "when": "named" }],
+    "leave": [{ "to": "away" }]
   }
 }

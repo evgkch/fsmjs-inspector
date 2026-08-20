@@ -1,39 +1,30 @@
 /**
- * What one machine says about itself to a drawing somewhere else.
+ * The wire protocol: names, and — only where the publisher said `carry` — the data beside them.
+ * By default an application's data does not leave it; what crosses is the shape of the machine
+ * and the path it took.
  *
- * The figure needs a graph, where the machine stands, and what it has done. All three are names:
- * `Graph` is what `JSON.stringify` left of a schema, and a step is drawn from the *types* of its
- * source, input, target and output — the contexts and payloads are never drawn anywhere. So the
- * wire carries names and nothing else, which is not a limitation but the same fact the whole tool
- * rests on, arriving one hop later.
- *
- * That has a consequence worth saying out loud: an application's data does not leave it. Whatever
- * is in a context — a session, a basket, a user — is not serialized, not sent, and cannot be seen
- * through this. What is sent is the shape of the machine and the path it took through it.
- *
- * Four sentences, and every one of them is complete on its own:
- *
- *   hail   a page has opened and does not know who is out there
- *   hello  a machine says what it is, what can be done to it, and everything it has done
+ *   hail   a page asks who is out there
+ *   hello  a machine states everything about itself
  *   step   one transition, and where it left the machine
- *   jump   the other way down the wire: go back to a slice
+ *   jump   the other way: put that machine at a slice
  *   bye    a machine has stopped publishing
  *
- * `hello` restates rather than continues, so nothing has to be replayed and no order has to be
- * kept: a viewer that missed messages, or was not running yet, hails and is whole again. A `step`
- * carries `at` for the same reason — a machine can be restored from outside, and the target of a
- * transition is not always where the machine now is.
+ * `hello` restates rather than continues, so order and delivery do not matter: a viewer that
+ * missed anything hails and is whole again. A `step` carries `at` because a machine can be
+ * restored from outside, so the target of a transition is not always where it now stands.
  */
-import type { Edge } from "@evgkch/fsmjs";
+import type { Row } from "../../../shared/lang/rules.js";
 import type { Graph } from "./graph.js";
 
-/**
- * One step as it crosses: the transition in names, and when it happened.
- *
- * The time is the publisher's, taken where the step was taken. A reader's clock would say when the
- * page heard about it, which is a fact about the network.
- */
-export type Went = { edge: Edge; t: number };
+/** What a step carries beside its names, when the publisher chose to send it. */
+export type Kept = {
+  payload?: unknown;
+  context?: unknown;
+  emitted?: unknown;
+};
+
+/** One step as it crosses: the transition in names, the publisher's timestamp, the data. */
+export type Went = { edge: Row; t: number; keep?: Kept };
 
 export type Wire =
   | { say: "hail" }
@@ -47,40 +38,21 @@ export type Wire =
       note: string;
       graph: Graph;
       at: string;
-      /**
-       * Where in `steps` the machine is standing — the end of them, unless somebody has walked it
-       * back. Sent rather than assumed: a run that has been rewound looks exactly like one that
-       * has not, and the difference is the whole reason to rewind.
-       */
+      /** Where in `steps` the machine stands — not the end of them, once walked back. */
       step: number;
       steps: Went[];
-      /**
-       * What the application let the inspector do, and it is not a setting — it is a report of
-       * what exists over there. `history` is here because a `History` was handed to `inspect`, and
-       * a `History` is there because somebody wrote one: the inspector never conjures one up to
-       * satisfy a flag, since a debugger that instruments a machine on its own behalf is a
-       * debugger you cannot take out by deleting a line.
-       */
+      /** What the application allows: `history` is true when a `History` was handed to `inspect`. */
       can: { history: boolean };
     }
   | { say: "step"; who: string; went: Went; at: string }
-  /**
-   * Back up the wire: put that machine at slice `step`.
-   *
-   * The only message that travels the other way, and the only thing this tool ever asks of an
-   * application rather than hearing from it. It is refused unless a `History` was handed over,
-   * which is the same thing as saying it is refused unless somebody meant it.
-   */
+  /** The one message travelling the other way: put that machine at slice `step`. Ignored
+      unless a `History` was handed over. */
   | { say: "jump"; who: string; step: number }
   | { say: "bye"; who: string };
 
 /**
- * Is this one of ours?
- *
- * Anything at all can arrive on a socket, so this is a gate and not a cast. It checks the shape
- * each sentence needs to be read — no more: a `graph` is `Record<string, unknown>` by definition
- * and the reader below it is written for a schema that may be nonsense, which is the same reader
- * the editor uses on hand-typed JSON.
+ * A gate, not a cast: anything can arrive on a socket. Checks only the shape each message needs
+ * to be read; a `graph` stays `Record<string, unknown>` and its readers accept nonsense.
  */
 export function isWire(msg: unknown): msg is Wire {
   if (typeof msg !== "object" || msg === null) return false;

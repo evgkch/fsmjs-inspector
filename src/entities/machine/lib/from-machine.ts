@@ -1,16 +1,7 @@
 /**
- * A subject that is a machine already running — the difference between a demonstration and a
- * debugger.
- *
- * Nothing is built here and nothing is parsed. The graph comes from the machine itself, because
- * `JSON.stringify` of a machine *is* its graph — the claim the whole tool rests on, used rather
- * than described. Where it stands is where it stands. What has happened is what the machine said
- * happened, on the channel it says it on.
- *
- * What this subject cannot do is choose which rule of a cell applies. Those guards are real code
- * in somebody's program; the inspector can send the event and watch. So `take` sends, and the
- * rule that fires is whichever one the machine's own guards let through — which may not be the
- * one that was pressed, and seeing that is the point of pointing the tool at a live machine.
+ * A subject over a machine already running. The graph is the machine's own dump; steps come off
+ * its transition channel. This subject cannot choose which rule of a cell applies — the guards
+ * are real code — so `take` sends the event, and whichever rule the guards pass is what fires.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
 import type { AnyMachine, Off } from "@evgkch/fsmjs";
@@ -18,26 +9,11 @@ import type { Graph, Step } from "../model/graph.js";
 import { partsOf } from "../model/rule.js";
 import type { Change, Subject } from "../model/subject.js";
 
-/**
- * Any machine at all: the inspector reads labels and names, never types.
- *
- * `AnyMachine` is the library's own word for that now. It used to be `StateMachine<Ctx, Ev, Ev>` —
- * the erased shape a dump has — which is the one shape a real application's machine is never in,
- * so every caller with a machine worth watching had to cast.
- */
+/** Any machine at all: the inspector reads labels and names, never types. */
 type Any = AnyMachine;
 
 export type Options = {
-  /**
-   * A recorder you already have — `history(fsm)` from `@evgkch/fsmjs/debug` — and handing it over
-   * is the whole of turning rewinding on.
-   *
-   * Not a flag, for the same reason `inspect` does not take one: a flag would mean this calling
-   * `history(fsm)` on somebody's behalf, and then the line that switches the tool off is also the
-   * line that removes a recorder their undo may have been using. It also cannot be a flag any
-   * more, honestly — recording needs a machine that can be restored, and what is read here is any
-   * machine at all.
-   */
+  /** A recorder from `history(fsm)` (`@evgkch/fsmjs/debug`); passing one turns rewinding on. */
   history?: Past;
 };
 
@@ -50,8 +26,7 @@ export type Past = {
 };
 
 export function fromMachine(fsm: Any, opts: Options = {}): Subject {
-  // The graph, taken the way the tool's own lede says it can be: a machine is a projection of
-  // itself, and this is that projection.
+  // The machine's own dump is its graph.
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
 
   const steps: Step[] = [];
@@ -63,15 +38,14 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
   const past = opts.history ?? null;
 
   const off: Off[] = [
-    // The recorder says `moved` only when it is walked back or forward — a `jump`, `undo`, `redo`.
-    // A fired transition records silently, so this and the transition below cannot both fire for
-    // the same event, which is what makes the two kinds of change tellable apart.
+    // `moved` fires only on jump/undo/redo — a fired transition records silently — so this and
+    // the transition listener below never fire for the same event.
     ...(past
       ? [past.rx.on("moved", (i) => say({ say: "rewind", step: i }))]
       : []),
     fsm.rx.on(TRANSITION, (t) => {
-      // `history` subscribed first when there is one, so its index already points at the state
-      // this transition reached, and cutting to it drops a redo future the same way.
+      // `history` subscribed first, so its index already points at the reached state; cutting to
+      // it drops the redo future the same way.
       if (past) steps.length = past.index - 1;
       steps.push(t as Step);
       say({ say: "step" });
@@ -80,8 +54,9 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
 
   return {
     graph,
+    // The tool works with string names; the machine's state type may be any `PropertyKey`.
     get at() {
-      return fsm.state.type;
+      return String(fsm.state.type);
     },
     get steps() {
       return steps;
@@ -95,18 +70,16 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
         const { from, on } = partsOf(rule);
         return fsm.state.type === from && fsm.can(on as never);
       },
-      // The event, and nothing more. Which rule of the cell takes it is the machine's to decide,
-      // and what it decided arrives back as a step.
+      // Sends the event only; which rule of the cell takes it is the machine's guards' decision.
       take: (rule) => void fsm.dispatch(partsOf(rule).on as never),
     },
-    // Told, not assumed: the recorder says `moved` whenever it moves the machine, including when
-    // something other than this walked it back, so there is nothing to remember to redraw after.
+    // The recorder reports every move via `moved`, including moves made by the application.
     ...(past && { rewind: (step: number) => void past.jump(step) }),
     watch: (on) => {
       watchers.add(on);
       return () => watchers.delete(on);
     },
-    // Somebody else's machine: the subject lets go of it and leaves it exactly as it was.
+    // Unsubscribes and leaves the machine as it was.
     stop: () => {
       for (const it of off) it();
       past?.stop();

@@ -1,358 +1,261 @@
 /* The page that watches: a roster along the top, and one machine under it. */
 
-/*
- * The same page as the standalone one — the same margin, the same measure, the same rhythm — and
- * the difference is what is missing from it. A reader who has both open should not have to notice
- * that they are two pages.
- */
-body {
-    margin: 0;
-    padding: var(--step-6);
-    background: var(--bg);
-    color: var(--ink);
-    font: 400 15px/1.6 var(--main-font);
-}
+@layer tokens, controls, page;
 
-/*
- * The page is the height of the window and the work is what stretches: the run is read at its end
- * and the source scrolls inside its own frame, so neither of them may push the other off the page.
- */
-main {
-    max-width: 96rem;
-    min-height: 100vh;
-    margin: 0 auto;
-    display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    gap: var(--step-4) var(--step-5);
-}
-
-/*
- * Inset by a panel's own name, so the first word of the page and the first word of the panel under
- * it stand on one line down the left edge. One row of the module, like every other line here.
- */
-.bar[hidden] {
-    display: none;
-}
-
-.bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--step-3) var(--step-5);
-    min-height: var(--cell);
-    padding: 0 var(--step-3);
-}
-
-.bar .tag {
-    color: var(--faint);
-    font: 500 var(--micro)/1 var(--mono-font);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-/* The machines out there. Peers, so one distance between them and no other. */
-.roster[hidden] {
-    display: none;
-}
-
-.roster {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--step-2);
-}
-
-/*
- * One machine, named. It is a tab and not a menu: a menu asks what to load, and there is nothing
- * to load — these are the machines that exist, and the page is on one of them.
- */
-.roster .who {
-    padding: var(--step-1) var(--step-2);
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
-    corner-shape: superellipse(1.25);
-    background: transparent;
-    color: var(--muted);
-    font: 500 var(--name)/1 var(--mono-font);
-    cursor: pointer;
-}
-
-.roster .who:hover {
-    background: color-mix(in oklab, var(--accent) var(--wash), var(--surface));
-    color: var(--ink);
-}
-
-/* The one being drawn. Bordered rather than filled: it is where you are, not what fires. */
-.roster .now,
-.roster .now:hover {
-    border-color: var(--line-firm);
-    background: var(--surface);
-    color: var(--ink);
-}
-
-/*
- * The source over the figure and the run. Two rows and not two columns: the source is read here
- * rather than written, so it is a reference — a band of it across the top is enough, and the
- * drawing gets the rest.
- */
-/*
- * Two bands: what is read, and what is drawn.
- *
- * The source and the log are both text, both scrolled, both read a line at a time — so they stand
- * together, side by side, and the figure and the run get the rest of the page as the one drawing
- * they are. The log had a band of its own along the bottom, which put the newest thing that
- * happened as far from the run that drew it as the page allows.
- */
-.panes {
-    display: grid;
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
-    gap: var(--step-4);
-    min-height: 0;
-}
-
-/*
- * What is down is not drawn, and the room it stood in goes with it — a hidden panel that keeps its
- * share of the page is a gap where a reader expects a panel. The page says which are down and the
- * stylesheet does the rest: no widget here has ever heard that it can be switched off.
- *
- * Each of these is a widget's outermost node, which is the one that carries its frame, its name
- * and its background. Naming an inner part instead — `.figure` is the board inside the figure's
- * frame — empties the panel and leaves the empty panel standing, which is worse than either
- * showing it or not.
- */
-main[data-off~="code"] #text,
-main[data-off~="figure"] .out,
-main[data-off~="history"] .history {
-    display: none;
-}
-
-/*
- * The rows are as many as the panels that are up.
- *
- * A track of `0` for a panel that is gone is not the same thing: `display: none` takes it out of
- * the grid altogether, so what is left slides up into the first track — which was the zero — and
- * the visible panel is the one that ends up with no height. One track, one panel.
- */
-main[data-off~="code"] .panes,
-main[data-off~="figure"][data-off~="history"] .panes {
-    grid-template-rows: minmax(0, 1fr);
-}
-
-/*
- * One of the two drawings down, and the other takes the whole row rather than half of it. The
- * figure's column is normally its own measured width, which is a width for a figure that is there.
- */
-main[data-off~="figure"] .work,
-main[data-off~="history"] .work {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-/* Both drawings down, and the pane that held them goes with them. */
-main[data-off~="figure"][data-off~="history"] #watch {
-    display: none;
-}
-
-/* And nothing at all left up: the page says so rather than standing empty. */
-main[data-off~="code"][data-off~="figure"][data-off~="history"] .panes {
-    display: none;
-}
-
-/* The four switches. Words, in the tool's own quiet, with the box beside the name — the same pair
-   the standalone page's explore switch is, and in the same order. */
-.panels {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--step-3);
-    margin-left: auto;
-}
-
-.panels .panel {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--step-1);
-    color: var(--faint);
-    font: 500 var(--micro)/1 var(--mono-font);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-.panels .panel:hover {
-    color: var(--ink);
-}
-
-/* The input is what the keyboard and the screen reader work with; the box is what is seen. */
-.panels .panel input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
-/*
- * A tick, not a switch. A switch says which of two modes the tool is in; these say which drawings
- * are included, and a box that fills with the accent is how a page says "included". The corner is
- * the shared superellipse — the rule in `tokens.css` shapes anything with a radius, and this is one
- * more of those things, so no platform blue and no square survives.
- */
-.panels .panel .check {
-    position: relative;
-    width: var(--step-3);
-    height: var(--step-3);
-    border: 1px solid var(--line-firm);
-    border-radius: var(--step-1);
-    background: var(--surface);
-    transition:
-        background-color var(--quick) var(--ease),
-        border-color var(--quick) var(--ease);
-}
-
-/* The tick, drawn — the two strokes of a border, rotated to say "checked". Nothing here is a
-   picture of itself; the mark is the same kind of thing the caret beside the select is. */
-.panels .panel .check::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 5px;
-    height: 9px;
-    border: solid var(--surface);
-    border-width: 0 2px 2px 0;
-    transform: translate(-50%, -55%) rotate(45deg);
-    opacity: 0;
-    transition: opacity var(--quick) var(--ease);
-}
-
-.panels .panel input:checked + .check {
-    background: var(--accent);
-    border-color: var(--accent);
-}
-
-.panels .panel input:checked + .check::after {
-    opacity: 1;
-}
-
-.panels .panel input:focus-visible + .check {
-    outline: 2px solid var(--accent);
-    outline-offset: var(--step-1);
-}
-
-.panes[hidden] {
-    display: none;
-}
-
-.pane {
-    display: grid;
-    min-width: 0;
-    min-height: 0;
-}
-
-/*
- * What is being inspected: the machine's name, and the line its author wrote about what it is for.
- *
- * A heading and a paragraph, because that is what they are — the subject of the page and a
- * sentence about it. They were a button and a caption inside the bar, which said the name was
- * something to press and made the one thing the page is about look like a control.
- */
-.what {
-    display: grid;
-    gap: var(--step-1);
-    padding: 0 var(--step-3);
-}
-
-.what[hidden] {
-    display: none;
-}
-
-.what .name {
-    margin: 0;
-    color: var(--ink);
-    font: 600 1.125rem/1.2 var(--mono-font);
-}
-
-/* The schema cannot say what a machine is for; this is the only place it is said at all. */
-.what .note {
-    margin: 0;
-    color: var(--muted);
-    font: 400 0.875rem/1.5 var(--main-font);
-}
-
-.what .note[hidden] {
-    display: none;
-}
-
-/*
- * Before anything has said hello.
- *
- * Two things are true here in turn and the page says which: the wire is not up, or it is up and
- * nothing is being inspected. The second is not an error and is not drawn as one — it is a page
- * waiting for a line that has not been written yet, so it shows the line.
- */
-.wait {
-    display: grid;
-    justify-items: start;
-    gap: var(--step-3);
-    padding: var(--step-3);
-    color: var(--faint);
-    font: 400 var(--name)/1.6 var(--mono-font);
-}
-
-.wait[hidden] {
-    display: none;
-}
-
-.said {
-    margin: 0;
-}
-
-/* The line to write, set as the source it is — the same face the editor sets a schema in.
-   Scoped to the waiting panel, and named for what it is: `.line` is what the editor calls a line
-   of a schema, and an unscoped rule here drew a box around every line of every source on the
-   page. A page-level stylesheet has no business owning a word that general. */
-.wait .snippet {
-    margin: 0;
-    padding: var(--step-3);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    corner-shape: superellipse(1.25);
-    background: var(--surface);
-    color: var(--muted);
-    font: 400 var(--code)/1.6 var(--mono-font);
-    overflow-x: auto;
-}
-
-/*
- * The one moving thing on the page, and it moves only while the wire is down: a debugger that
- * animates something on every screen is a debugger you stop reading. Still and solid means the
- * connection is up and the wait is for the application, not for the network.
- */
-.dot {
-    width: var(--step-2);
-    height: var(--step-2);
-    border-radius: 50%;
-    background: var(--faint);
-}
-
-.dialling .dot {
-    animation: dial 1.6s ease-in-out infinite;
-}
-
-@keyframes dial {
-    0%,
-    100% {
-        opacity: var(--undone);
+@layer page {
+    /* The same margin, measure and rhythm as the standalone page. */
+    body {
+        margin: 0;
+        padding: var(--step-6);
+        background: var(--bg);
+        color: var(--ink);
+        font: 400 15px/1.6 var(--main-font);
     }
-    50% {
-        opacity: 1;
-    }
-}
 
-@media (prefers-reduced-motion: reduce) {
+    /* The page is the window's height; the work row stretches, everything scrolls inside itself. */
+    main {
+        max-width: 96rem;
+        min-height: 100vh;
+        margin: 0 auto;
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        gap: var(--step-4) var(--step-5);
+    }
+
+    /* Inset by a panel's own name, so text aligns with text down the left edge. */
+    .bar[hidden] {
+        display: none;
+    }
+
+    .bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--step-3) var(--step-5);
+        min-height: var(--control);
+        padding: 0 var(--step-4);
+    }
+
+    .bar .tag {
+        color: var(--faint);
+        font: 500 var(--micro)/1 var(--mono-font);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    /* The machines out there. Peers, so one distance between them and no other. */
+    .roster[hidden] {
+        display: none;
+    }
+
+    .roster {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--step-2);
+    }
+
+    /* One machine, as a tab: the header's own box — height, inset and stadium. */
+    .roster .who {
+        display: inline-flex;
+        align-items: center;
+        box-sizing: border-box;
+        height: var(--control);
+        padding: 0 var(--step-3);
+        border: 1px solid transparent;
+        border-radius: var(--control);
+        background: transparent;
+        color: var(--muted);
+        font: 500 var(--name)/1 var(--mono-font);
+        cursor: pointer;
+    }
+
+    .roster .who:hover {
+        background: color-mix(
+            in oklab,
+            var(--accent) var(--wash),
+            var(--surface)
+        );
+        color: var(--ink);
+    }
+
+    /* The one being drawn: bordered, not filled. */
+    .roster .now,
+    .roster .now:hover {
+        border-color: var(--line-firm);
+        background: var(--surface);
+        color: var(--ink);
+    }
+
+    /* Three bands: the source across the top (read, not written — a band is enough), the classic
+   diagram at its own height, the drawing under them with the rest of the page. */
+    /* Two floors: the schema — the text beside its diagram — and the run under them. */
+    .panes {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+        gap: var(--step-4);
+        min-height: 0;
+    }
+
+    /* The run floor runs the whole width. */
+    #watch {
+        grid-column: 1 / -1;
+    }
+
+    /* The diagram band is content-sized. */
+    #chart {
+        min-height: 0;
+    }
+
+    /*
+ * A panel that is down is not drawn and yields its room; the page carries the answer, no widget
+ * is told. Each selector names the widget's outermost node — hiding an inner part would leave an
+ * empty frame standing.
+ */
+    main[data-off~="diagram"] #chart,
+    main[data-off~="figure"] .out,
+    main[data-off~="history"] .history,
+    main[data-off~="states"] fsmjs-legend[kind="states"],
+    main[data-off~="in"] fsmjs-legend[kind="in"],
+    main[data-off~="out"] fsmjs-legend[kind="out"] {
+        display: none;
+    }
+
+    main[data-off~="states"][data-off~="in"][data-off~="out"] .alphabet {
+        display: none;
+    }
+
+    /* The diagram down: the text takes the schema floor. The source cannot go down. */
+    main[data-off~="diagram"] #text {
+        grid-column: 1 / -1;
+    }
+
+    /* The run floor empty: the schema floor takes the height. */
+    main[data-off~="figure"][data-off~="history"] .panes {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    /* A frameless line over the drawings, inset like every panel's name. */
+    .alphabet {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--step-2) var(--step-5);
+        padding: 0 var(--step-4);
+    }
+
+    .alphabet[hidden] {
+        display: none;
+    }
+
+    /* One drawing down: the other takes the whole row. */
+    main[data-off~="figure"] .work,
+    main[data-off~="history"] .work {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Both drawings down: their pane goes too. */
+    main[data-off~="figure"][data-off~="history"] #watch {
+        display: none;
+    }
+
+    .panes[hidden] {
+        display: none;
+    }
+
+    .pane {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    /* The watched machine's name and description: a heading and a paragraph, not controls. */
+    .what {
+        display: grid;
+        gap: var(--step-1);
+        padding: 0 var(--step-4);
+    }
+
+    .what[hidden] {
+        display: none;
+    }
+
+    .what .name {
+        margin: 0;
+        color: var(--ink);
+        font: 600 1.125rem/1.2 var(--mono-font);
+    }
+
+    /* The one place a machine's purpose is written. */
+    .what .note {
+        margin: 0;
+        color: var(--muted);
+        font: 400 0.875rem/1.5 var(--main-font);
+    }
+
+    .what .note[hidden] {
+        display: none;
+    }
+
+    /* Before any hello: the wire is down, or up with nothing inspected — the second is not drawn as
+   an error. */
+    .wait {
+        display: grid;
+        justify-items: start;
+        gap: var(--step-3);
+        padding: var(--step-3);
+        color: var(--faint);
+        font: 400 var(--name)/1.6 var(--mono-font);
+    }
+
+    .wait[hidden] {
+        display: none;
+    }
+
+    .said {
+        margin: 0;
+    }
+
+    /* The line to write, in the editor's face. Scoped: an unscoped `.line` rule once boxed every
+   source line on the page. */
+    .wait .snippet {
+        margin: 0;
+        padding: var(--step-3);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        corner-shape: superellipse(1.25);
+        background: var(--surface);
+        color: var(--muted);
+        font: 400 var(--code)/1.6 var(--mono-font);
+        overflow-x: auto;
+    }
+
+    /* The one animation, and only while the wire is down; still and solid means connected. */
+    .dot {
+        width: var(--step-2);
+        height: var(--step-2);
+        border-radius: 50%;
+        background: var(--faint);
+    }
+
     .dialling .dot {
-        animation: none;
-        opacity: var(--dim);
+        animation: dial 1.6s ease-in-out infinite;
+    }
+
+    @keyframes dial {
+        0%,
+        100% {
+            opacity: var(--undone);
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .dialling .dot {
+            animation: none;
+            opacity: var(--dim);
+        }
     }
 }

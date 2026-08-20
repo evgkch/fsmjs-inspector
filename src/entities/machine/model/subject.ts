@@ -16,14 +16,9 @@ import type { Graph, Step } from "./graph.js";
 import type { RuleId } from "./rule.js";
 
 /**
- * Moving the machine — and the two kinds of subject differ here, which is the whole of what makes
- * one a demonstration and the other a debugger.
- *
- * On a dump the naming is exact: the guards were lost with the code, the inspector puts its own
- * back, and naming a rule is what makes that rule fire. On a machine that is running the guards
- * are real code. The inspector can send the event; it cannot decide which rule of the cell
- * applies, and must not pretend to — so you press an outcome and watch the machine take a
- * different one. That is not a shortcoming of the tool, it is the thing you opened it to see.
+ * Moving the machine. On a dump, naming a rule fires exactly that rule (the inspector's own
+ * guards). On a running machine the guards are real code: the inspector sends the event, and the
+ * rule that fires may differ from the one pressed.
  */
 export type Drive = {
   /** Would this rule's event move the machine at all, from where it stands. */
@@ -33,17 +28,9 @@ export type Drive = {
 };
 
 /**
- * What changed, as opposed to *that* it changed.
- *
- * The watch used to say only "something moved", and every drawing answered by rebuilding itself
- * whole. Three things can move, and they cost three different amounts, which is why they are told
- * apart:
- *
- *   — `step`: the run grew by one. A column can be appended; nothing already drawn is wrong.
- *   — `rewind`: the machine was walked to another slice. Nothing is new and nothing is gone, so
- *     what moves is the mark of where it stands.
- *   — `restore`: the whole run was restated — a reconnection, or a machine rebuilt from scratch.
- *     Nothing of the last drawing is safe to keep.
+ * What changed, told apart because the redraws cost differently: `step` — the run grew by one
+ * (append a column); `rewind` — the machine was walked to another slice (move the mark);
+ * `restore` — the whole run was restated (rebuild).
  */
 export type Change =
   { say: "step" } | { say: "rewind"; step: number } | { say: "restore" };

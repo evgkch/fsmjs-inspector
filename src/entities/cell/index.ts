@@ -4,6 +4,7 @@ export {
   EFFECT,
   HALVES,
   MIRROR,
+  SOURCE,
   causeOf,
   effectOf,
   halvesOf,

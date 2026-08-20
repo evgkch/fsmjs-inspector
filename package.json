@@ -26,18 +26,20 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "dump": "node --no-warnings scripts/dump.mjs",
+    "matrix": "node scripts/matrix.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json && cp src/shared/ui/tokens.css dist-lib/tokens.css",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json",
     "prepublishOnly": "npm run build:lib"
   },
   "peerDependencies": {
     "@evgkch/channeljs": ">=1.1.0",
-    "@evgkch/fsmjs": "file:../fsmjs"
+    "@evgkch/fsmjs": ">=0.2.1"
   },
   "devDependencies": {
     "@evgkch/channeljs": "^1.1.0",
     "@evgkch/fsmjs": "file:../fsmjs",
+    "happy-dom": "^20.11.2",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "vite": "^8.2.0",
@@ -58,7 +60,7 @@
       "default": "./dist-lib/ui.js"
     },
     "./style.css": "./dist-lib/ui.css",
-    "./tokens.css": "./dist-lib/tokens.css"
+    "./tokens.css": "./dist-lib/shared/ui/tokens/tokens.css"
   },
   "sideEffects": [
     "*.css"

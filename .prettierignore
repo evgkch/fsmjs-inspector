@@ -6,3 +6,9 @@ dist/
 *.md
 
 package-lock.json
+
+# Tool configuration, written by the tool.
+.claude/
+
+# The shared vocabulary is a submodule, formatted in its own repository.
+src/shared/ui/tokens/

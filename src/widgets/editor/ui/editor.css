@@ -1,21 +1,10 @@
 /*
- * Three layers with one set of metrics between them.
- *
- * Underneath, a `pre` with the text in it, coloured. Over it, a textarea whose own glyphs are
- * transparent, so what you see is the colour and what you move is the caret. Beside them, a
- * gutter: one row per line, the same height as a line, carrying the number and the mark that says
- * this rule can fire. Every metric below has to hold for all three at once — the same font, the
- * same padding, the same line height, the same tab stop — or the caret drifts off the word it is
- * on and the marks stop pointing at the lines they are about.
- *
- * What scrolls is the sheet, and the sheet holds all three. A textarea has no children, so its own
- * scroll has nothing to snap to; the sheet's children are the lines, and a line is the only place
- * in a source worth stopping at. So the textarea is given the height of its text — `--lines` and
- * `--cols`, counted where the text is counted — and does not scroll at all, and the sheet scrolls
- * the whole page of them together, a line at a time. The gutter is on that page rather than beside
- * it: the wheel works over the numbers because there is nothing there that is not the text.
+ * Three layers, one set of metrics: a coloured `pre` under a transparent textarea, a gutter
+ * beside them. Any metric that differs puts the caret off its word. The sheet scrolls all three
+ * together, snapping by line; the textarea is sized to its text (`--lines`/`--cols`) and never
+ * scrolls itself.
  */
-.editor {
+:host {
     position: relative;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
@@ -28,33 +17,26 @@
     overflow: hidden;
 }
 
-.editor:focus-within {
+:host(:focus-within) {
     border-color: var(--accent);
 }
 
-/*
- * One module down the page.
- *
- * A line of the source is a rule; a row of the figure is a rule; a slice of the run is a step
- * between two. They are the same thing seen three ways, so they are the same height — `--cell`,
- * handed to the stylesheet by the one file that owns the number. Nothing here is a ratio chosen to
- * look right beside a ratio chosen somewhere else.
- */
-.editor .ink,
-.editor textarea,
-.editor .gutter {
+/* One module: a source line, a figure row and a run slice are the same height — `--cell`. */
+.ink,
+textarea,
+.gutter {
     margin: 0;
     font: 400 var(--code)/var(--cell) var(--mono-font);
     tab-size: 2;
 }
 
-.editor .ink,
-.editor textarea {
+.ink,
+textarea {
     padding: var(--step-4) var(--step-3);
     white-space: pre;
 }
 
-.editor .sheet {
+.sheet {
     overflow: auto;
     overscroll-behavior: contain;
     /* A line at a time, and there is nothing between two lines to stop at. */
@@ -66,7 +48,7 @@
 }
 
 /* The gutter and the text, side by side on the page that scrolls. */
-.editor .page {
+.page {
     display: flex;
     align-items: stretch;
     min-height: 100%;
@@ -74,7 +56,7 @@
 
 /* A grid of one, so the text layer is as tall as the page and never shorter than its own text:
    the whole box is the textarea, and clicking anywhere in it puts the caret in the source. */
-.editor .stack {
+.stack {
     position: relative;
     display: grid;
     flex: 1 1 auto;
@@ -82,7 +64,7 @@
 }
 
 /* Behind, and never in the way. It scrolls because the page does, so it needs no moving. */
-.editor .ink {
+.ink {
     position: absolute;
     top: 0;
     left: 0;
@@ -90,30 +72,20 @@
     color: var(--muted);
 }
 
-/*
- * The same box as the textarea over it, to the character: a band drawn on a line has to end where
- * the line's own room ends, and two layers that agree on every metric but their width are two
- * layers that disagree about where a line stops.
- */
-.editor .ink {
+/* The same width as the textarea over it, or the layers disagree where a line stops. */
+.ink {
     width: max(100%, calc(var(--cols, 0) * 1ch + var(--step-3) * 2));
 }
 
-.editor .ink code {
+.ink code {
     display: block;
 }
 
 /*
- * One line, one block — and one place the scroll can stop. The height is set for the empty ones:
- * a blank line is still a line the caret can stand on, and a block with nothing in it would be no
- * line at all.
- *
- * A line runs the whole width of the box it is in, and the box has padding — so the line reaches
- * out through it and puts the padding back inside itself. Without that, a band drawn on a line
- * starts half a module after the gutter's edge and ends the same distance before the text's,
- * and a highlight with a white margin down both sides is two things on one row.
+ * One line, one block, one snap target. `min-height` keeps blank lines a line tall. The negative
+ * margin reaches through the box's padding so a highlight band runs edge to edge.
  */
-.editor .line {
+.line {
     display: block;
     margin: 0 calc(-1 * var(--step-3));
     padding: 0 var(--step-3);
@@ -121,30 +93,15 @@
     scroll-snap-align: start;
 }
 
-/*
- * The last line rests against the bottom instead, and without that rule the end of the source
- * cannot be reached at all.
- *
- * Snapping is mandatory, so the scroll must always come to rest on a target. The targets are the
- * tops of the lines, and the furthest of them is a whole port above the end of the text — so the
- * final stretch, the last line and the padding under it, has no position to rest at and the scroll
- * springs back off it. A box you cannot scroll to the bottom of reads as a broken box, and it was
- * one.
- */
-.editor .line:last-child {
+/* The last line snaps to the bottom; with only top targets the end of the source is unreachable
+   under mandatory snapping. */
+.line:last-child {
     scroll-snap-align: end;
 }
 
-/*
- * This line's rule is what the figure is about — the same tint the figure's own bands use, because
- * it is the same fact: one cell was pointed at, and everything it holds is lit.
- *
- * The number wears it too, so the band is one band. The gutter stands still while the text scrolls
- * sideways under it, so a stripe that began after the gutter would be a stripe with a white bar
- * across its left end, and the line it is about would start outside its own highlight.
- */
-.editor .line.lit,
-.editor .gutter .row.lit {
+/* The figure's own tint, on line and number both, so the band has no break at the gutter. */
+.line.lit,
+.gutter .row.lit {
     background: color-mix(
         in oklab,
         var(--accent) var(--wash-firm),
@@ -152,29 +109,20 @@
     );
 }
 
-/*
- * A line that can never run, read as one. The gutter says which of the two faults it is; the line
- * itself says only that there is no point reading it closely.
- */
-.editor .line.dead {
+/* A line that can never run; the gutter says which fault. */
+.line.dead {
     opacity: var(--quiet);
 }
 
-/*
- * What would finish the word being typed, where it would go. Quiet, because it is not there: it is
- * an offer, and the same quiet the figure uses for what is out of reach. TAB takes it.
- */
-.editor .ghost {
+/* The completion offer, in the quiet of things not there. TAB takes it. */
+.ghost {
     color: var(--faint);
     pointer-events: none;
 }
 
-/*
- * As tall and as wide as its text, so that it never scrolls on its own and the page under it has
- * something to scroll. The two counts come from the text itself; the units are the ones the layer
- * above is set in, so the two layers cannot drift.
- */
-.editor textarea {
+/* Sized to its text so it never scrolls itself; the counts come from the text, the units from
+   the shared metrics. */
+textarea {
     display: block;
     width: max(100%, calc(var(--cols, 0) * 1ch + var(--step-3) * 2));
     min-height: calc(var(--lines, 1) * var(--cell) + var(--step-4) * 2);
@@ -189,7 +137,7 @@
     overflow: hidden;
 }
 
-.editor textarea::selection {
+textarea::selection {
     background: color-mix(
         in oklab,
         var(--accent) var(--wash-hard),
@@ -197,43 +145,27 @@
     );
 }
 
-/* Where every panel's name sits: half a module down and half a module in, in all three of them
-   — and the figure's and the run's, which stand side by side, then share a baseline as well. */
-.editor .tag {
+/* Where every panel's name sits: the same inset in all three. */
+.tag {
     display: flex;
     align-items: center;
     gap: var(--step-2);
-    padding: var(--step-3) var(--step-3) var(--step-2);
+    padding: var(--step-4) var(--step-4) var(--step-2);
 }
 
 /*
- * Rename this name in every line it is written on.
- *
- * It appears when a word is double-clicked and does nothing until it is pressed, because
- * double-clicking a word is how the text is read. Pressed, it is a mode and says so: what is typed
- * next lands in every line at once, and there is no undoing that by eye.
- *
- * Out of the flow, on the corner of the box. In the header row it was a thing that arrives and
- * leaves, and it is taller than the word beside it — so double-clicking a word grew the row by the
- * difference and pushed every line of the source down under the caret you had just put in it. What
- * it belongs to is the editor and not that row: it is about the whole text, it is the only thing on
- * the page that acts on all of it at once, and it now stands in the one place a box keeps for
- * something that is about the box. `.editor` is the positioned ancestor, so it is written here and
- * the markup stays as it reads: the name of the panel, then what can be done to it.
- *
- * Both its offsets are the row's own inset less the padding it wears: that puts its word on the
- * line of the word opposite and its last letter over the panel's inside edge, where the name on the
- * left starts. Text lines up with text — the box a control is drawn as is not what a reader reads
- * the column of the page from.
+ * The rename chip: appears on double-click, does nothing until pressed. Out of the flow, on the
+ * corner of the box — in the flow it changed the row's height on arrival and shifted the source
+ * under the caret. Offsets are the row's inset less its padding, so text aligns with text.
  */
-.editor .rename {
+.rename {
     position: absolute;
-    top: calc(var(--step-3) - var(--step-1));
-    right: calc(var(--step-3) - var(--step-2));
+    top: calc(var(--step-4) - var(--step-1));
+    right: calc(var(--step-4) - var(--step-2));
     z-index: 2;
     padding: var(--step-1) var(--step-2);
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--cell);
     background: transparent;
     color: var(--muted);
     font: inherit;
@@ -242,11 +174,11 @@
     cursor: pointer;
 }
 
-.editor .rename:hover {
+.rename:hover {
     color: var(--accent);
 }
 
-.editor .rename.on {
+.rename.on {
     background: color-mix(
         in oklab,
         var(--accent) var(--wash-firm),
@@ -255,47 +187,34 @@
     color: var(--accent);
 }
 
-.editor .rename[hidden] {
+.rename[hidden] {
     display: none;
 }
 
 /*
- * The one strip at the foot, and the one thing it says.
- *
- * How big the schema is and what is wrong with it, or — while the text does not read — what the
- * reader stopped at. Never both: the counts are about the last text that parsed, and a stale
- * caption under a live complaint is a quiet lie in a second footer.
- *
- * It is inside the frame, and always there. A strip that comes and goes moves everything under it
- * on every keystroke that does not parse, which is most of the keystrokes in a rule. Set in the
- * mono of the language, because every word in it is about the language: states, rules, and the
- * line the reader would not read.
+ * The foot strip: the counts, or the parser's complaint — never both. Always present, so the
+ * page does not move on unparsed keystrokes. Deep enough that its top rule stands clear of the
+ * superellipse corner's clip.
  */
-.editor .say {
+.say {
     margin: 0;
-    padding: var(--step-2) var(--step-3);
+    padding: var(--step-3) var(--step-4);
     border-top: 1px solid var(--line);
     color: var(--faint);
     font: 400 var(--name)/1.4 var(--mono-font);
 }
 
 /* The gutter marks the line; this says what about it. */
-.editor .say.wrong {
+.say.wrong {
     background: color-mix(in oklab, var(--warn) var(--wash), transparent);
     color: var(--warn);
 }
 
 /* ── the gutter ─────────────────────────────────────────────────────────── */
 
-/*
- * The line numbers the parser counts in, and — where a rule can fire from where the machine
- * stands — the mark that says so. A debugger's gutter, and it does what one does: it says where
- * you are in the text, and it is what you press to go one step.
- *
- * It stands still while the text scrolls sideways and moves with it while the text scrolls down,
- * which is what a gutter is: the same rows, always beside their lines.
- */
-.editor .gutter {
+/* Line numbers and fire marks. Sticky left: still under horizontal scroll, moving with
+   vertical. */
+.gutter {
     position: sticky;
     left: 0;
     z-index: 1;
@@ -306,9 +225,8 @@
     user-select: none;
 }
 
-/* The mark, then the number: what you press is on the outside edge, where the hand goes and where
-   every debugger has put it. */
-.editor .gutter .row {
+/* The mark on the outside edge, then the number. */
+.gutter .row {
     display: grid;
     grid-template-columns: var(--step-2) minmax(1.4rem, auto);
     align-items: center;
@@ -317,9 +235,8 @@
     padding: 0 var(--step-2);
 }
 
-/* The number of a line is the same furniture as the number of a step in the run — the index of
-   a thing you can point at — so it is the same size in both. */
-.editor .gutter .num {
+/* The same size as a step number in the run. */
+.gutter .num {
     color: var(--faint);
     font-size: var(--micro);
     font-variant-numeric: tabular-nums;
@@ -327,19 +244,14 @@
 }
 
 /* Nothing in the column shifts when a mark appears: the room for it is always there. */
-.editor .gutter .run {
+.gutter .run {
     justify-self: center;
 }
 
-/*
- * The mark for "the machine is standing here", and it is the figure's mark: the same dot, the
- * same lane colour, on the same fact. The column is always there, so a line that gains one does
- * not shift the text sideways.
- *
- * A circle and not a squircle — the one shape on the page that is not a box. `corner-shape` is
- * set on everything with a radius, and 50% of it is a superellipse unless this says otherwise.
- */
-.editor .gutter .run {
+/* The figure's own dot, in the lane colour. The column is always present, so a line gaining a
+   mark does not shift the text. A true circle: `corner-shape: round` overrides the global
+   superellipse. */
+.gutter .run {
     width: var(--step-2);
     height: var(--step-2);
     border-radius: 50%;
@@ -348,41 +260,32 @@
     visibility: hidden;
 }
 
-/*
- * There is no hover rule here, and that is the point. Pointing at a row dispatches the same `enter`
- * the figure's cells do, and what comes back is `lit` — on the row *and* on the line, one band. A
- * second highlight for the same act would cover the gutter and stop, in a different tint, which is
- * what a break in a stripe is made of.
- */
-.editor .gutter .row.can {
+/* No hover rule: pointing dispatches `enter`, and the returned `lit` covers row and line as one
+   band. */
+.gutter .row.can {
     cursor: pointer;
 }
 
-.editor .gutter .row.can .run {
+.gutter .row.can .run {
     visibility: visible;
 }
 
-.editor .gutter .row.can .num {
+.gutter .row.can .num {
     color: var(--muted);
 }
 
-/*
- * A rule that can never fire, whatever you do: nothing reaches the state it leaves, or an unguarded
- * rule ahead of it in the same cell always wins. A debugger says that in the gutter, on the line it
- * is about — where the mark for "this one can fire right now" already is, because they are answers
- * to the same question at two ends of it.
- */
-.editor .gutter .row.dead .num {
+/* A rule that can never fire: unreachable source, or shadowed by an unguarded rule. */
+.gutter .row.dead .num {
     color: var(--warn);
     text-decoration: line-through;
 }
 
 /* Where the reader stopped. The message says the same thing in words, once, underneath. */
-.editor .gutter .row.blame {
+.gutter .row.blame {
     background: color-mix(in oklab, var(--warn) var(--wash-firm), transparent);
 }
 
-.editor .gutter .row.blame .num {
+.gutter .row.blame .num {
     color: var(--warn);
     font-weight: 700;
 }
@@ -398,15 +301,11 @@
     font-weight: 600;
 }
 
-/*
- * Where the machine is standing, on the state it is standing in — every line the state is written
- * on, arriving or leaving, which is the whole of what is near you from here. The figure marks the
- * same fact with a dot on the same state in the same colour; this is that dot, in a text.
- */
+/* The current state, marked on every line its word appears in — the figure's dot, in text. */
 .ink .q.here {
     padding: 0.1em 0.25em;
     margin: 0 -0.25em;
-    border-radius: var(--radius-sm);
+    border-radius: var(--cell);
     background: color-mix(
         in oklab,
         var(--c, var(--accent)) var(--wash),
@@ -422,16 +321,8 @@
     color: var(--emit);
 }
 
-/*
- * What is true of a state, written on the state.
- *
- * `off` — nothing reaches it from the start, so every line it is the FROM of is dead text. It is
- * struck through here and struck through on the figure's own index: the same fact, the same mark,
- * and no list anywhere naming the states a third time.
- *
- * `end` — nothing leaves it. Not a fault: a run that arrives there stops, and that may be exactly
- * what it is for. So it is the quietest mark on the page, an underline the colour of the state.
- */
+/* `off` — unreachable from the start: struck through, as on the figure's index. `end` — nothing
+   leaves it; not a fault, so the quietest mark: a dotted underline. */
 .ink .q.off {
     text-decoration: line-through;
     text-decoration-thickness: 1px;

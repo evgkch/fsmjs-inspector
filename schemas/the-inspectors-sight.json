@@ -1,85 +1,25 @@
 {
   "blank": {
-    "moved": [
-      {
-        "to": "blank",
-        "emit": "redraw"
-      }
-    ],
+    "moved": [{ "to": "blank", "emit": "redraw" }],
     "measured": [
-      {
-        "to": "beside",
-        "emit": "aside",
-        "when": "fits",
-        "with": "sized",
-        "by": "wide"
-      },
-      {
-        "to": "under",
-        "emit": "below",
-        "with": "sized",
-        "by": "wide"
-      }
+      { "to": ["beside", "sized"], "emit": ["aside", "wide"], "when": "fits" },
+      { "to": ["under", "sized"], "emit": ["below", "wide"] }
     ]
   },
   "under": {
-    "moved": [
-      {
-        "to": "under",
-        "emit": "redraw"
-      }
-    ],
-    "looked": [
-      {
-        "to": "under",
-        "emit": "redress"
-      }
-    ],
+    "moved": [{ "to": "under", "emit": "redraw" }],
+    "looked": [{ "to": "under", "emit": "redress" }],
     "measured": [
-      {
-        "to": "beside",
-        "emit": "aside",
-        "when": "fits",
-        "with": "sized",
-        "by": "wide"
-      },
-      {
-        "to": "under",
-        "emit": "below",
-        "when": "grew",
-        "with": "sized",
-        "by": "wide"
-      }
+      { "to": ["beside", "sized"], "emit": ["aside", "wide"], "when": "fits" },
+      { "to": ["under", "sized"], "emit": ["below", "wide"], "when": "grew" }
     ]
   },
   "beside": {
-    "moved": [
-      {
-        "to": "beside",
-        "emit": "redraw"
-      }
-    ],
-    "looked": [
-      {
-        "to": "beside",
-        "emit": "redress"
-      }
-    ],
+    "moved": [{ "to": "beside", "emit": "redraw" }],
+    "looked": [{ "to": "beside", "emit": "redress" }],
     "measured": [
-      {
-        "to": "under",
-        "emit": "below",
-        "when": "tight",
-        "with": "sized",
-        "by": "wide"
-      },
-      {
-        "to": "beside",
-        "emit": "aside",
-        "when": "grew",
-        "with": "sized",
-        "by": "wide"
-      }
+      { "to": ["under", "sized"], "emit": ["below", "wide"], "when": "tight" },
+      { "to": ["beside", "sized"], "emit": ["aside", "wide"], "when": "grew" }
     ]
   }
 }

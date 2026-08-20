@@ -1,15 +1,7 @@
 /**
- * The wire, in the middle.
- *
- * An application with machines in it and a page drawing them are two clients; this is what lets
- * them find each other. It is a relay and not a server: every message that arrives is handed to
- * everyone else and to nobody twice, and that is the whole of it.
- *
- * It understands nothing it carries — it does not parse a message, does not know a hello from a
- * step, keeps no list of who is out there and no copy of what they said. That is deliberate. The
- * protocol is between the two ends: they restate rather than continue, so a relay that remembers
- * nothing loses nothing, and the one that has to be running for a debugger to work is the one with
- * the least in it that can be wrong.
+ * The relay: every message that arrives is handed to every other client, and nothing else. It
+ * parses nothing and stores nothing — the protocol restates rather than continues, so a relay
+ * that remembers nothing loses nothing.
  *
  *   node scripts/relay.mjs [port]
  */
@@ -17,6 +9,22 @@ import { WebSocketServer } from "ws";
 
 const port = Number(process.argv[2] ?? process.env["PORT"] ?? 8999);
 const wss = new WebSocketServer({ port });
+
+wss.on("error", (err) => {
+  // A relay from an earlier run is already listening on this port. One line instead of a stack
+  // trace, and exit 0: the relay this script was asked for is running.
+  if (err.code === "EADDRINUSE") {
+    console.log(`fsmjs inspector relay — ws://localhost:${port} (already up)`);
+    process.exit(0);
+  }
+  throw err;
+});
+
+// Printed on `listening`, not at startup: on a busy port the listen fails after the constructor
+// returns, and a line printed earlier would be wrong.
+wss.on("listening", () => {
+  console.log(`fsmjs inspector relay — ws://localhost:${port}`);
+});
 
 wss.on("connection", (sock) => {
   sock.on("message", (data, binary) => {
@@ -28,5 +36,3 @@ wss.on("connection", (sock) => {
   // next time they are asked, which is what makes that true.
   sock.on("error", () => sock.close());
 });
-
-console.log(`fsmjs inspector relay — ws://localhost:${port}`);

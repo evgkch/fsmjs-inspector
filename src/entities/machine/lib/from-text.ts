@@ -1,13 +1,8 @@
 /**
- * A subject built from a dump: the schema as text, and a real machine made out of it.
- *
- * This is the page's subject, and the whole trick of the tool is in `guarded`. A dumped schema
- * keeps the *name* of every guard and none of the code, so every `when` reads as ⊤ and the first
- * rule of a cell is the only one that could ever fire. That is honest about a dump and useless
- * here: the second press names one of a cell's rules, and naming it has to be what makes it the
- * one that fires. So each rule is given a real guard, and what it asks is whether this is the
- * rule that was named. Nothing is faked around the machine — the choice goes in where a machine's
- * choices actually live.
+ * A subject built from a dump: a real machine made from the graph. A dump keeps guard names
+ * without code, so every `when` would read as ⊤ and only the first rule of a cell could fire.
+ * `guarded` gives each rule a real guard instead — "is this the rule that was named" — so naming
+ * a rule is what makes it fire.
  */
 import { StateMachine, TRANSITION } from "@evgkch/fsmjs";
 import type { Off } from "@evgkch/fsmjs";
@@ -18,10 +13,7 @@ import { partsOf, ruleId } from "../model/rule.js";
 import type { RuleId } from "../model/rule.js";
 import type { Change, Subject } from "../model/subject.js";
 
-/**
- * One transition, kept with the line `rules` wrote for it. The history shows it on hover, and it
- * is the library's own sentence for what happened — not a second one written here.
- */
+/** One transition, with the line `rules` wrote for it — shown by the history on hover. */
 export type Told = Step & { line: string };
 
 export type Text = Subject;
@@ -71,15 +63,8 @@ export function fromText(graph: Graph, start: string): Text {
         steps.push(Object.assign(t, { line }));
       }),
     ),
-    /**
-     * Nothing is told anything while a rule is being taken.
-     *
-     * The guard below is a question about *which rule was named*, and it is asked of every rule
-     * in the machine, `can` included. So for as long as `taking` is set, this subject answers
-     * "could you take that" and not "where do you stand" — and anything that redraws itself on
-     * the strength of the second answer while the first is being given reads a machine where
-     * nothing at all can fire. The figure did: one click and every cell on it went dim.
-     */
+    // Silent while a rule is being taken: with `taking` set, the guards answer "which rule was
+    // named", and a redraw at that moment would read a machine where nothing can fire.
     fsm.rx.on(TRANSITION, () => {
       if (taking === null) say({ say: "step" });
     }),

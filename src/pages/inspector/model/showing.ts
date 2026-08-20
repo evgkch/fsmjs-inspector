@@ -7,22 +7,11 @@
  *     └── measured ▸ aside / below ────────────────┘      │
  *                          looked ▸ redress ──────────────┘
  *
- * The figure is *redrawn* when the machine it shows moves and merely *re-dressed* when the reader
- * looks somewhere else. Those are two different events costing two different amounts, and telling
- * them apart is the whole reason this is not one repaint function — but it was told apart by an
- * optional chain on a callback that happened to be null before the first draw. That is a state
- * written as a `?.`, and this is the state: `blank` has no `looked` rule, so there is nothing to
- * dress before there is something drawn, and nothing has to remember that.
- *
- * Where the run goes is the other half, and it is a *state* rather than a measurement repeated on
- * every tick. The question is not how wide the window is: it is whether *this* board still fits in
- * what is left after the run takes its column, and a schema six states wide and one thirty states
- * wide are different answers on the same screen. So the room is measured and handed in, and the
- * two guards decide — with no rule for being told what is already true, so a window dragged across
- * a hundred pixels moves nothing at all unless it moves the answer.
- *
- * The figure is what the tool is for, and it is never the thing that gets cut: `beside` is only
- * reachable while the whole board fits, so the run goes under it rather than the figure narrowing.
+ * Redraw (the machine moved) and redress (the looking changed) cost differently, so they are
+ * separate events; `blank` has no `looked` rule, so nothing is dressed before it is drawn. The
+ * run's placement is a state: the room is measured and handed in, the guards decide, and being
+ * told what is already true is no transition. `beside` is reachable only while the whole board
+ * fits — the run moves under it, the figure never narrows.
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
@@ -35,15 +24,14 @@ export type Showing = Merge<
 >;
 
 /**
- * The facts, measured. `run` is whether there is a run to place at all — exploring there is none,
- * and a board that fits beside nothing is a board that fits.
+ * The facts, measured.
  */
 export type Told = Merge<
   | IEvent<"moved">
   | IEvent<"looked">
   | IEvent<
       "measured",
-      { board: number; room: number; gap: number; min: number; run: boolean }
+      { board: number; room: number; gap: number; min: number }
     >
 >;
 
@@ -54,10 +42,8 @@ export type Shows = Merge<
   | IEvent<"below", Wide>
 >;
 
-/**
- * Read in order, and the order is the argument: the second rule of each cell is reached only when
- * the first was refused, so it means "still the way it was — but is it the same width".
- */
+// The second rule of each `measured` cell is reached only when the first was refused: same
+// arrangement, possibly a new width.
 const showing: Schema<Showing, Told, Shows> = {
   blank: {
     moved: [{ to: "blank", emit: "redraw" }],
@@ -93,23 +79,18 @@ export function newSight(): Sight {
   });
 }
 
-// ── the operations, below the schema ─────────────────────────────────────────
-//
-// Declarations, and after the rules rather than before them: that is the order the thing was
-// designed in — the states, then what may happen in each, then whatever those rules turned out to
-// need.
+// ── the operations, declared after the schema that names them ────────────────
 
 type Room = {
   board: number;
   room: number;
   gap: number;
   min: number;
-  run: boolean;
 };
 
 /** Whole, and with room to spare for the run: both, or it does not fit. */
 function fits(_: unknown, p: Room): boolean {
-  return p.run && p.room >= p.board + p.gap + p.min;
+  return p.room >= p.board + p.gap + p.min;
 }
 
 function tight(_: unknown, p: Room): boolean {

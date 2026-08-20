@@ -1,57 +1,32 @@
 {
-  "nothing": {
-    "press": [
-      {
-        "to": "half",
-        "when": "isHalf",
-        "with": "hold"
-      }
-    ]
-  },
+  "nothing": { "press": [{ "to": ["half", "hold"], "when": "isHalf" }] },
   "half": {
     "press": [
       {
-        "to": "nothing",
-        "when": "same"
+        "to": ["whole", "corner"],
+        "emit": ["took", "both"],
+        "when": "sourcePair"
+      },
+      { "to": "nothing", "when": "same" },
+      {
+        "to": ["whole", "pairUp"],
+        "emit": ["took", "both"],
+        "when": "causeHeld"
       },
       {
-        "to": "whole",
-        "emit": "took",
-        "when": "causeHeld",
-        "with": "pairUp",
-        "by": "both"
+        "to": ["whole", "pairDown"],
+        "emit": ["took", "both"],
+        "when": "effectHeld"
       },
-      {
-        "to": "whole",
-        "emit": "took",
-        "when": "effectHeld",
-        "with": "pairDown",
-        "by": "both"
-      }
+      { "to": ["half", "hold"], "when": "swap" }
     ],
-    "drop": [
-      {
-        "to": "nothing"
-      }
-    ]
+    "drop": [{ "to": "nothing" }]
   },
   "whole": {
     "press": [
-      {
-        "to": "half",
-        "when": "isCause",
-        "with": "keepEffect"
-      },
-      {
-        "to": "half",
-        "when": "isEffect",
-        "with": "keepCause"
-      }
+      { "to": ["half", "keepEffect"], "when": "isCause" },
+      { "to": ["half", "keepCause"], "when": "isEffect" }
     ],
-    "drop": [
-      {
-        "to": "nothing"
-      }
-    ]
+    "drop": [{ "to": "nothing" }]
   }
 }

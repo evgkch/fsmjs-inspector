@@ -1,185 +1,60 @@
 {
   "plain": {
     "input": [
-      {
-        "to": "plain",
-        "when": "nothing"
-      },
-      {
-        "to": "ahead",
-        "when": "something",
-        "with": "seen"
-      }
+      { "to": "plain", "when": "nothing" },
+      { "to": ["ahead", "seen"], "when": "something" }
     ],
     "moved": [
-      {
-        "to": "plain",
-        "when": "nothing"
-      },
-      {
-        "to": "ahead",
-        "when": "something",
-        "with": "seen"
-      }
+      { "to": "plain", "when": "nothing" },
+      { "to": ["ahead", "seen"], "when": "something" }
     ],
-    "dblclick": [
-      {
-        "to": "picked",
-        "when": "isName",
-        "with": "picking"
-      }
-    ]
+    "dblclick": [{ "to": ["picked", "picking"], "when": "isName" }]
   },
   "ahead": {
     "input": [
-      {
-        "to": "plain",
-        "when": "nothing"
-      },
-      {
-        "to": "ahead",
-        "when": "something",
-        "with": "seen"
-      }
+      { "to": "plain", "when": "nothing" },
+      { "to": ["ahead", "seen"], "when": "something" }
     ],
     "moved": [
-      {
-        "to": "plain",
-        "when": "nothing"
-      },
-      {
-        "to": "ahead",
-        "when": "something",
-        "with": "seen"
-      }
+      { "to": "plain", "when": "nothing" },
+      { "to": ["ahead", "seen"], "when": "something" }
     ],
-    "dblclick": [
-      {
-        "to": "picked",
-        "when": "isName",
-        "with": "picking"
-      }
-    ],
-    "blur": [
-      {
-        "to": "plain"
-      }
-    ],
+    "dblclick": [{ "to": ["picked", "picking"], "when": "isName" }],
+    "blur": [{ "to": "plain" }],
     "keydown": [
-      {
-        "to": "ahead",
-        "emit": "filled",
-        "when": "tabbed",
-        "by": "filling"
-      },
-      {
-        "to": "plain",
-        "when": "escaped"
-      }
+      { "to": "ahead", "emit": ["filled", "filling"], "when": "tabbed" },
+      { "to": "plain", "when": "escaped" }
     ],
-    "drop": [
-      {
-        "to": "plain"
-      }
-    ]
+    "drop": [{ "to": "plain" }]
   },
   "picked": {
     "input": [
-      {
-        "to": "plain",
-        "when": "nothing"
-      },
-      {
-        "to": "ahead",
-        "when": "something",
-        "with": "seen"
-      }
+      { "to": "plain", "when": "nothing" },
+      { "to": ["ahead", "seen"], "when": "something" }
     ],
     "moved": [
-      {
-        "to": "plain",
-        "when": "nothing"
-      },
-      {
-        "to": "ahead",
-        "when": "something",
-        "with": "seen"
-      }
+      { "to": "plain", "when": "nothing" },
+      { "to": ["ahead", "seen"], "when": "something" }
     ],
-    "dblclick": [
-      {
-        "to": "picked",
-        "when": "isName",
-        "with": "picking"
-      }
-    ],
-    "mousedown": [
-      {
-        "to": "plain",
-        "when": "single"
-      }
-    ],
-    "keydown": [
-      {
-        "to": "plain",
-        "when": "escaped"
-      }
-    ],
-    "press": [
-      {
-        "to": "renaming",
-        "emit": "armed",
-        "with": "arming",
-        "by": "selecting"
-      }
-    ],
-    "drop": [
-      {
-        "to": "plain"
-      }
-    ]
+    "dblclick": [{ "to": ["picked", "picking"], "when": "isName" }],
+    "mousedown": [{ "to": "plain", "when": "single" }],
+    "keydown": [{ "to": "plain", "when": "escaped" }],
+    "press": [{ "to": ["renaming", "arming"], "emit": ["armed", "selecting"] }],
+    "drop": [{ "to": "plain" }]
   },
   "renaming": {
     "input": [
       {
-        "to": "renaming",
-        "emit": "rewritten",
-        "when": "inside",
-        "with": "typing",
-        "by": "rewriting"
+        "to": ["renaming", "typing"],
+        "emit": ["rewritten", "rewriting"],
+        "when": "inside"
       },
-      {
-        "to": "plain"
-      }
+      { "to": "plain" }
     ],
-    "dblclick": [
-      {
-        "to": "picked",
-        "when": "isName",
-        "with": "picking"
-      }
-    ],
-    "mousedown": [
-      {
-        "to": "plain",
-        "when": "single"
-      }
-    ],
-    "keydown": [
-      {
-        "to": "plain",
-        "when": "escaped"
-      }
-    ],
-    "press": [
-      {
-        "to": "plain"
-      }
-    ],
-    "drop": [
-      {
-        "to": "plain"
-      }
-    ]
+    "dblclick": [{ "to": ["picked", "picking"], "when": "isName" }],
+    "mousedown": [{ "to": "plain", "when": "single" }],
+    "keydown": [{ "to": "plain", "when": "escaped" }],
+    "press": [{ "to": "plain" }],
+    "drop": [{ "to": "plain" }]
   }
 }

@@ -1,27 +1,12 @@
 /**
- * A run, read as what it actually was: the same transition taken twice in a row is one thing that
- * happened twice, not two things.
- *
- * A drag is one rule fired per pointer sample. Sixty of them are sixty slices of a run and one
- * fact, and a picture that gives each of them a column is a picture whose ends cannot both be
- * reached — the interesting step is a screen and a half back, and the reader is scrolling through
- * a fact they already understood. Folded, the same drag is one curve with `×60` under it, and a
- * long session stays a thing you can look at whole.
- *
- * This says only what the run *is* — which steps were the same turn taken again. What to do about
- * it is the drawing's: the history draws two in a row as two, since there is nothing to save, and
- * three or more as three — the first, a dashed one for the middle, and the last.
- *
- * What is folded is *consecutive* and *identical*: the same rule, taken from the same state to the
- * same state, on the same event, emitting the same letter. Two different rules that happen to join
- * the same pair of states are not the same transition and are never folded together — the history
- * already cannot say which rule of a cell was taken, and folding would make that worse rather than
- * shorter.
+ * Consecutive identical transitions folded into one entry with a count — a drag of sixty pointer
+ * samples becomes one fold of ×60, and a long run stays viewable whole. Only consecutive and
+ * identical steps fold (same from, on, to, emit); how a fold is drawn is the history's business.
  */
-import type { Edge } from "@evgkch/fsmjs";
+import type { Row } from "../../../shared/lang/rules.js";
 
 export type Fold = {
-  readonly edge: Edge;
+  readonly edge: Row;
   /** How many times in a row. One unless it repeated. */
   readonly count: number;
   /** Which step this began at, counting from one, as the run counts its steps. */
@@ -30,7 +15,7 @@ export type Fold = {
   readonly last: number;
 };
 
-export function folds(steps: readonly Edge[]): Fold[] {
+export function folds(steps: readonly Row[]): Fold[] {
   const out: Fold[] = [];
   for (const [i, edge] of steps.entries()) {
     const back = out[out.length - 1];
@@ -41,5 +26,5 @@ export function folds(steps: readonly Edge[]): Fold[] {
   return out;
 }
 
-const same = (a: Edge, b: Edge) =>
+const same = (a: Row, b: Row) =>
   a.from === b.from && a.on === b.on && a.to === b.to && a.emit === b.emit;

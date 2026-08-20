@@ -1,33 +1,24 @@
 /**
- * A cell of the figure, and what it says about a rule.
+ * A cell of the figure, as a key. Block 1 is the **cause** (FROM × ON), block 3 the **effect**
+ * (TO × EMIT), block 2 the **crossing** (FROM × TO) — shown and pointed at, never held.
  *
- * The figure draws δ×λ as three blocks. 1 is FROM × ON and 3 is TO × EMIT — the two halves of a
- * transition, and the library already names them: a `Transition` carries `source` and `input`
- * going in and `target` and `output` coming out, so one half is the **cause** and the other the
- * **effect**. 2 is FROM × TO, where the row out of a cause meets the column into an effect: not
- * a half of anything, but the **crossing** the two are connected through.
+ *   `cause\0from\0on`  ·  `effect\0emit\0to` (empty emit = no output)  ·  `corner\0from\0to`
  *
- * A cell is a key rather than the rules in it, because every redraw builds fresh rows and holding
- * the rows themselves would go stale. What a key is comes first:
- *
- *   `cause\0from\0on`    block 1 — a transition's source and input, the pair `dispatch` takes
- *   `effect\0emit\0to`   block 3 — its output and target, an empty emit being no output at all
- *   `corner\0from\0to`   block 2 — the crossing, which is shown and pointed at, never held
- *
- * And `holds` is the whole of what a key means: a cell is a subset of the rules, so read in the
- * block where the inputs live that subset is the preimage of a choice, and in the block where the
- * outputs live it is the image — the same set, projected the two ways. That is why narrowing needs
- * no code of its own, why pointing at any one of the three blocks says something about the other
- * two, and why the editor can light a line without knowing the figure exists.
+ * A cell is a key rather than the rules in it, because every redraw builds fresh rows. `holds`
+ * is the whole of what a key means — one predicate, which is why the editor can light a line
+ * without knowing the figure exists.
  */
-import type { Edge } from "@evgkch/fsmjs";
+import type { Row } from "../../../shared/lang/rules.js";
 
 /** The two halves of a transition, and the crossing they meet at. */
 export const CAUSE = "cause";
 export const CORNER = "corner";
 export const EFFECT = "effect";
 
-export type Kind = typeof CAUSE | typeof CORNER | typeof EFFECT;
+/** A state as a source: every rule leaving it. Held, it completes no pair. */
+export const SOURCE = "source";
+
+export type Kind = typeof CAUSE | typeof CORNER | typeof EFFECT | typeof SOURCE;
 
 export type Key = `${Kind}\0${string}\0${string}`;
 
@@ -45,13 +36,15 @@ export const MIRROR: Partial<Record<Kind, Kind>> = {
 export const HALVES: Kind[] = [CAUSE, EFFECT];
 
 /** Does this cell hold that rule. */
-export function holds(key: Key, r: Edge): boolean {
+export function holds(key: Key, r: Row): boolean {
   const [kind, a, b] = key.split("\0");
   switch (kind) {
     case CAUSE:
       return r.from === a && r.on === b;
     case CORNER:
       return r.from === a && r.to === b;
+    case SOURCE:
+      return r.from === a;
     case EFFECT:
       // `a` is empty for the outcome "arrives at b and emits nothing". That outcome has no cell
       // in block 3 — there is no output to give it one — so it is named on the `to` axis itself.
@@ -62,13 +55,8 @@ export function holds(key: Key, r: Edge): boolean {
 }
 
 /**
- * The two cells a rule is written in — its cause and its effect, which is the whole of what the
- * figure has to say about one rule. Naming a rule from outside the figure means naming both: a
- * line of text is not half a transition, and lighting only the half it starts at would say the
- * figure has nothing to show about where it ends up.
- *
- * A rule that emits nothing still has an effect cell. It is the name of its column — there is no
- * output to give it a square, and that name is where `TO r` is written and has been all along.
+ * The two cells a rule is written in — its cause and its effect; naming a rule from outside the
+ * figure names both. A rule that emits nothing still has an effect cell: the name of its column.
  */
 export const causeOf = (r: { from: string; on: string }): Key =>
   keyOf(CAUSE, r.from, r.on);
@@ -76,14 +64,11 @@ export const causeOf = (r: { from: string; on: string }): Key =>
 export const effectOf = (r: { to: string; emit?: string }): Key =>
   keyOf(EFFECT, r.emit ?? "", r.to);
 
-export const halvesOf = (r: Edge): Key[] => [causeOf(r), effectOf(r)];
+export const halvesOf = (r: Row): Key[] => [causeOf(r), effectOf(r)];
 
 /**
- * Is the figure about this rule right now — asked of the cells `look` says are shown.
- *
- * The figure asks it of every rule it drew and the editor asks it of every line it read, and they
- * must not answer differently: a cell lighting up while the line naming its rule stays dark is two
- * readings of one word. So there is one predicate, and neither of them has a copy.
+ * Is the figure about this rule right now — one predicate, asked by the figure of its rules and
+ * by the editor of its lines, so the two cannot answer differently.
  */
-export const shows = (shown: readonly Key[], r: Edge): boolean =>
+export const shows = (shown: readonly Key[], r: Row): boolean =>
   shown.length > 0 && shown.every((k) => holds(k, r));

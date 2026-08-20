@@ -5,7 +5,7 @@
  * is and letting it go. The one line of prose is the tool's own claim about itself, said where a
  * tool says such things.
  */
-import "../shared/ui/tokens.css";
+import "../shared/ui/tokens/tokens.css";
 import { workbench } from "../pages/workbench/workbench.js";
 
 console.log(

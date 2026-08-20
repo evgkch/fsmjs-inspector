@@ -1,30 +1,18 @@
 /**
- * Subjects that are somewhere else — machines running in another tab, another process or another
- * host, drawn here from what they say about themselves.
+ * Subjects for machines in another tab, process or host, built from wire messages (`model/wire`)
+ * over a `Link`. Returns a roster, not one subject: an application publishes several machines.
  *
- * This is the third implementation of `Subject`, and the figure will not know: a dump, a machine
- * in this scope, and now a machine at the end of a pipe. What arrives is described in
- * `model/wire`; what carries it is a `Link`; neither of them appears above this file.
- *
- * It answers with a *roster* rather than with one subject, because one application has more than
- * one machine in it and the interesting ones are usually running at once. Every publisher names
- * itself, so what comes back is a list of who is out there, and the page picks.
- *
- * What such a subject can do is what the application said it can, and the application said it by
- * handing `inspect` the things it already had. No `drive`: sending an event to a machine in
- * another process is a debugger's right and is not this hop's business yet. `rewind` only where a
- * `History` was handed over — then walking the run does move somebody else's machine, which is
- * what rewinding a machine is, and is why it takes an instance and not a flag.
- *
- * Both are absent rather than refused. A missing `rewind` is the whole of "this run is a record
- * and not a control", and every drawing already asks.
+ * No `drive` — events are not sent to remote machines. `rewind` exists only where the
+ * application handed `inspect` a `History`; both are absent rather than refused, and every
+ * drawing already checks.
  */
 import Channel from "@evgkch/channeljs";
 import type { Rx } from "@evgkch/channeljs";
-import type { Edge } from "@evgkch/fsmjs";
+import type { Row } from "../../../shared/lang/rules.js";
 import type { Graph, Step } from "../model/graph.js";
 import type { Change, Subject } from "../model/subject.js";
 import { isWire } from "../model/wire.js";
+import type { Kept } from "../model/wire.js";
 import type { Link } from "../../../shared/api/link.js";
 
 /** One machine out there: who it is, what to call it, and the subject drawn from it. */
@@ -47,21 +35,18 @@ export type Presence = {
 };
 
 /**
- * A step, built back from the names it was sent as.
- *
- * The two contexts and the payload are gone, and nothing downstream reaches for them: the history
- * reads four `type`s off a step and the figure reads none. What a state carries cannot survive a
- * wire anyway, so it is not pretended into existence here — it is `undefined`, which is what a
- * state of a dumped machine carries.
+ * A step rebuilt from what was sent. Contexts and payloads cross only when the publisher said
+ * `carry`; otherwise they are `undefined`, as in a dumped machine.
  */
-const stepOf = (e: Edge, at: number): Step =>
+const stepOf = (e: Row, at: number, keep?: Kept): Step =>
   ({
     source: { type: e.from, context: undefined },
-    input: { type: e.on },
-    target: { type: e.to, context: undefined },
-    ...(e.emit === undefined ? {} : { output: { type: e.emit } }),
-    // The time it happened at, over there. A transition carries its own now, so the run arrives
-    // whole rather than as a list of steps beside a list of clocks.
+    input: { type: e.on, payload: keep?.payload },
+    target: { type: e.to, context: keep?.context },
+    ...(e.emit === undefined
+      ? {}
+      : { output: { type: e.emit, payload: keep?.emitted } }),
+    // The publisher's clock, not the page's.
     at,
   }) as Step;
 
@@ -86,14 +71,9 @@ export function fromWire(link: Link): Presence {
   const roster = new Channel<Roster>();
   const moved = () => void roster.tx.send("roster");
 
-  // The entry and the subject reading it are one object: the subject is getters over the fields
-  // above it, so a `hello` that lands in the entry is on screen without anything being told twice.
-  /**
-   * What that machine allows arrives with the hello that made this entry, and is fixed for it: a
-   * `rewind` that appears halfway through the life of a subject would be a drawing that becomes a
-   * control while somebody is reading it. An application that starts allowing something else has
-   * called `inspect` again, which is a different machine to this page and gets its own entry.
-   */
+  // The subject is getters over the entry's fields, so a `hello` landing in the entry is on
+  // screen at once. What the machine allows is fixed at the hello that made the entry: an
+  // application that changes it has called `inspect` again and gets a new entry.
   const entry = (
     who: string,
     name: string,
@@ -123,20 +103,16 @@ export function fromWire(link: Link): Presence {
       get steps() {
         return it.steps;
       },
-      // Where the far end says it is standing. Not the end of the steps: a run that has been
-      // walked back looks exactly like one that has not, and the difference is the point.
+      // Where the far end says it stands — not the end of the steps, once walked back.
       get step() {
         return it.pos;
       },
-      // Asked of the far end, which does the walking. There is no local guess at what it will do
-      // and no local record of where it went: `jump` goes up the wire and what comes back is a
-      // hello, which is the whole state of that machine restated.
+      // `jump` goes up the wire; what comes back is a hello with the whole state restated.
       ...(can.history && {
         rewind: (step: number) => link.send({ say: "jump", who, step }),
       }),
       watch: (on) => it.said.rx.on("moved", (what) => on(what)),
-      // Let go of this drawing's listeners. The pipe is the roster's, and one panel closing is not
-      // a reason to stop hearing the machine it was drawing.
+      // Drops this drawing's listeners only; the pipe is the roster's.
       stop: () => it.said.clear(),
     };
     return Object.assign(it, { subject });
@@ -155,21 +131,19 @@ export function fromWire(link: Link): Presence {
         case "hello": {
           const text = JSON.stringify(msg.graph);
           const old = seen.get(msg.who);
-          // The same machine saying hello again — a reconnection, or the application restarted
-          // with its schema unchanged. Its run is whatever it now says it is, and the panel
-          // drawing it stays where it is, because it is the same machine.
+          // The same machine again (reconnection or restart with the schema unchanged): take its
+          // run as restated, keep the panel.
           if (old && old.text === text) {
             old.name = msg.name;
             old.note = msg.note;
             old.at = msg.at;
             old.pos = msg.step;
-            old.steps = msg.steps.map((w) => stepOf(w.edge, w.t));
+            old.steps = msg.steps.map((w) => stepOf(w.edge, w.t, w.keep));
             told(old, { say: "restore" });
             return;
           }
-          // A different schema under the same name is a different machine, and gets a different
-          // subject: everything a figure works out — its lanes, its colours, its axes — is read
-          // off the graph once, and a graph swapped underneath it would be a figure of neither.
+          // A different schema under the same name is a different machine and gets a new subject:
+          // a figure's lanes, colours and axes are read off the graph once.
           const it = entry(
             msg.who,
             msg.name,
@@ -180,7 +154,7 @@ export function fromWire(link: Link): Presence {
           );
           it.at = msg.at;
           it.pos = msg.step;
-          it.steps = msg.steps.map((w) => stepOf(w.edge, w.t));
+          it.steps = msg.steps.map((w) => stepOf(w.edge, w.t, w.keep));
           seen.set(msg.who, it);
           moved();
           return;
@@ -188,13 +162,11 @@ export function fromWire(link: Link): Presence {
 
         case "step": {
           const it = seen.get(msg.who);
-          // A step from somebody we have no graph for: it arrived before the hello, or after a
-          // pipe came back. Ask, rather than draw a run through a machine we cannot draw.
+          // A step with no graph for it (it beat the hello, or the pipe came back): hail.
           if (!it) return void link.send({ say: "hail" });
-          // A step taken after a walk back drops the future it was walked back from, which the
-          // far end has already done to its own list — this follows rather than decides.
+          // A step after a walk back drops the redo future, as the far end already has.
           it.steps.length = it.pos;
-          it.steps.push(stepOf(msg.went.edge, msg.went.t));
+          it.steps.push(stepOf(msg.went.edge, msg.went.t, msg.went.keep));
           it.pos = it.steps.length;
           it.at = msg.at;
           told(it, { say: "step" });
@@ -211,16 +183,13 @@ export function fromWire(link: Link): Presence {
         }
       }
     }),
-    // Every time the pipe comes up, and not only the first: whoever is out there answers with
-    // everything they have, so a viewer opened late and a viewer that lost the connection are the
-    // same case and take the same path.
+    // On every (re)connect: a viewer opened late and one that lost the pipe take the same path.
     link.rx.on("open", () => link.send({ say: "hail" })),
   ];
   link.send({ say: "hail" });
 
   return {
-    // Built on the way out. What lasts is the subject — a panel is remounted when it is a
-    // different one and left alone when it is not — and a name is only ever a name.
+    // Built on the way out; what lasts is the subject.
     list: () =>
       [...seen].map(([who, it]) => ({
         who,

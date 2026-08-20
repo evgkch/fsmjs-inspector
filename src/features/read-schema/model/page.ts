@@ -1,29 +1,15 @@
 /**
- * The page's own machine — the library running the page that explains it.
- *
- * Two machines live on this page and they are not the same kind of thing. The one in the figure
- * is data: a graph read back from JSON, every operation reduced to a name, driven by clicks.
- * This one is code: three states, real guards, real `with`, and two output events the DOM
- * listens to. So what happens when the text in the editor changes is not a chain of ifs but a
- * cell of two rules — the first applies when the text parsed, the second is what is left.
- *
- * The three states carry different things, which is the reason there are three of them. `ready`
- * carries the graph on screen and the state it runs from; `broken` carries the parser's
- * complaint and, if there ever was one, the last graph that worked. That last field is why a
- * half-typed brace does not blank the figure: the schema shown is still the last one that
- * parsed, and entering `broken` from `blank` cannot pretend otherwise, because there is nothing
- * to carry over and the type says so.
+ * The page's own machine: what the editor's text parses to. `ready` carries the graph on screen
+ * and its start; `broken` carries the parser's complaint and the last graph that worked — which
+ * is why a half-typed brace does not blank the figure. `broken` entered from `blank` has nothing
+ * to carry, and the type says so.
  */
 import { StateMachine, nodes } from "@evgkch/fsmjs";
 import type { FsmState, IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
 import type { Graph } from "../../../entities/machine/index.js";
 import type { Written } from "../../../shared/lang/rules.js";
 
-/**
- * What the figure is drawing: a graph, the state its run starts from, and where every rule of it
- * was written. The last of those is what makes the text beside the figure a source rather than an
- * input box — and it belongs here, with the graph, because the two are one reading of one text.
- */
+/** What the figure draws: the graph, its start, and where every rule was written. */
 export type Shown = { graph: Graph; start: string; rules: readonly Written[] };
 
 export type Q = Merge<
@@ -35,10 +21,7 @@ export type Q = Merge<
     >
 >;
 
-/**
- * The parsing is done by the caller and its outcome arrives as the payload, so the guard stays
- * a question about the input rather than a second attempt at it.
- */
+/** Parsing is the caller's; its outcome arrives as the payload, and the guard reads it. */
 export type In = Merge<
   | IEvent<
       "parsed",
@@ -59,8 +42,6 @@ export type Out = Merge<
   | IEvent<"stopped", { message: string; line: number | null }>
 >;
 
-// Named, like everything else here: a dump keeps the name of an operation and none of its code,
-// and this machine's dump is one of the schemas the page offers.
 type Broke = { message: string; line: number | null };
 
 const schema: Schema<Q, In, Out> = {
@@ -73,8 +54,7 @@ const schema: Schema<Q, In, Out> = {
   ready: {
     parsed: [
       { when: readable, to: ["ready", adopt], emit: ["built", made] },
-      // Leaving `ready` is the one transition that has somewhere to put the graph it is
-      // leaving, and the only reason the figure survives a typo.
+      // The one transition with a graph to keep — why the figure survives a typo.
       { to: ["broken", keep], emit: ["stopped", told] },
     ],
     begin: [{ to: ["ready", begun], emit: ["built", made] }],
@@ -101,11 +81,7 @@ export function shown(at: FsmState<Q>): Shown | null {
       : null;
 }
 
-// ── the operations, below the schema ─────────────────────────────────────────
-//
-// Declarations, and after the rules rather than before them: that is the order the thing was
-// designed in — the states, then what may happen in each, then whatever those rules turned out to
-// need.
+// ── the operations, declared after the schema that names them ────────────────
 
 /** The one guard: did the editor's text parse. */
 function readable(_: unknown, p: { graph: Graph | null }): boolean {
@@ -118,8 +94,7 @@ function from(graph: Graph, keep: string, rules: readonly Written[]): Shown {
   return { graph, start: all.includes(keep) ? keep : (all[0] ?? ""), rules };
 }
 
-// The guard has already decided by the time `with` runs — that split is what the pair of words
-// is for, and it is why the cast here states a fact rather than a hope.
+// By the time `with` runs the guard has decided, so the cast states a fact.
 function adopt(
   _: unknown,
   p: { graph: Graph | null; keep: string; rules: readonly Written[] },

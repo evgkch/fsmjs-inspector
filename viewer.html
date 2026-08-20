@@ -23,7 +23,7 @@
                 <div id="who" class="roster" hidden></div>
                 <!-- Three drawings of one machine. Which of them you want depends on what you are
                      looking for, so it is asked rather than assumed. -->
-                <div class="panels" id="panels"></div>
+                <div class="switches panels" id="panels"></div>
             </div>
 
             <!-- What is being inspected, said as a page says what it is about: the machine's name,
@@ -33,10 +33,16 @@
                 <p class="note" id="note" hidden></p>
             </header>
 
+            <!-- The machine's alphabet: three legends, no frame, each its own switch. -->
+            <div class="alphabet" id="alphabet" hidden></div>
+
             <div class="panes" id="work" hidden>
                 <!-- The schema, read and not written. The editor is three layers that have to
                      agree on every metric, so it is built where those metrics are. -->
                 <section class="pane" id="text"></section>
+
+                <!-- The classic diagram: the same schema as one row of states and arcs. -->
+                <section class="pane" id="chart"></section>
 
                 <!-- And the drawing under them, which is one drawing with a gap in it. -->
                 <section class="pane" id="watch"></section>

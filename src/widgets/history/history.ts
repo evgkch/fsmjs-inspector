@@ -1,34 +1,20 @@
 /**
- * What the run did, drawn on the figure's own rows.
+ * The run, drawn on the figure's rows: the same states, lanes and colours as the figure's axis,
+ * carried right across time. A column is a slice — the machine was in exactly one state at each —
+ * and a step is the turn between two columns, so a run of n steps is n + 1 columns.
  *
- * This is not a list of sentences. It is the third projection of the same relation: the figure
- * shows δ×λ with the states as an axis, and the history carries that axis to the right across
- * time. A row here is the row there — the same state, the same lane, the same colour — so the
- * strings run on and a step is a curve from one string to another.
+ * The history cannot say which rule was taken: two rules between the same pair of states are one
+ * curve here. Pointing at a column therefore also lights the figure and the line of text, which
+ * do distinguish them.
  *
- * A column is a slice — the machine was in exactly one state at each — and a step is the turn from
- * one to the next. So a run of n steps is n + 1 columns, and there is nothing between two of them.
- *
- * It was drawn with two columns per step and a straight run along the string between the target of
- * one and the source of the next, on the grounds that a rule is a cause and an effect. That is a
- * fact about a rule and not about a run: nothing happened in that straight stretch, and drawing
- * time passing where no time passes made every transition look as though it were taken one slice
- * late. Rewind and take a rule and you watched the machine sit through a slice it was already past
- * before it moved — which is exactly how it was read, and it was reading the picture correctly.
- *
- * What the history *cannot* say is which rule was taken: two rules between the same pair of
- * states are one curve here. That is why pointing at a column lights the figure and the line of
- * text — the figure narrows it to a cell and the text says the rule outright. A projection is
- * worth having as long as it does not pretend to be the whole thing.
- *
- * It is a custom element — `<fsmjs-history>` — and the element *is* the `.history` panel: light
- * DOM, so a page can stand it beside a figure on its own grid, or hide it by the same rule it
- * hides anything else.
+ * Custom element `<fsmjs-history>`: the element is the `.history` panel, drawn into a shadow
+ * root; the palette reaches in through inherited custom properties, and the page hides the panel
+ * by its light-DOM class.
  */
 import { edges } from "@evgkch/fsmjs";
-import type { Edge, Off } from "@evgkch/fsmjs";
-import { halvesOf } from "../../entities/cell/index.js";
-import { folds, hue, lanes, partsOf } from "../../entities/machine/index.js";
+import type { Off } from "@evgkch/fsmjs";
+import { halvesOf, holds } from "../../entities/cell/index.js";
+import { folds, hue, lanes } from "../../entities/machine/index.js";
 import type {
   Change,
   Fold,
@@ -36,38 +22,28 @@ import type {
   Step,
   Subject,
 } from "../../entities/machine/index.js";
-import { exploring } from "../../features/explore/index.js";
-import type { Mode } from "../../features/explore/index.js";
 import type { Focus } from "../../features/focus/index.js";
-import { between } from "../../features/take-rule/index.js";
 import { make, svg } from "../../shared/lib/dom.js";
 import { CELL, EM, HEAD } from "../../shared/lib/grid.js";
-import "./ui/history.css";
+import { rowOf } from "../../shared/lang/rules.js";
+import type { Row } from "../../shared/lang/rules.js";
+import { shadow } from "../../shared/lib/shadow.js";
+import historyCss from "./ui/history.css?raw";
 
 /**
- * The strip under the columns: which step this is, and — where a fold covers several — how many.
- *
- * The numbers count the run's own steps, so a fold breaks the sequence: 1, 2, then a column that
- * arrived at step 62. The count goes in that break, on the boundary the fold's curve turns at,
- * which is where the missing numbers would have been. Both facts are in the strip and neither is
- * in the way of the other — the number says where you are, the multiplier says what is not drawn.
- *
- * The bands over the columns are laid out in CSS and one of them has to stop where this strip
- * begins, which means the stylesheet needs this number too. It is handed over rather than written
- * down twice.
+ * Height of the strip under the columns, holding the step numbers and fold counts. The numbers
+ * count the run's own steps, so a fold breaks the sequence and its count stands in the break.
+ * The stylesheet needs the same height for the bands, so it is handed over as `--foot`.
  */
 const FOOT = 18;
 
 /**
- * A column of the board: one step, or the ones between the first and the last of a long run.
- *
- * Two identical steps in a row are drawn as two — there is nothing to save and nothing to hide.
- * Three or more are drawn as three: the first, a dashed one for everything in the middle, and the
- * last. The run keeps its shape — it enters, it goes on, it leaves — and what it stops doing is
- * spending a screen of columns saying the same turn sixty times.
+ * A column of the board: one step, or the elided middle of a long repetition. Two identical
+ * steps in a row are drawn as two; three or more as three — the first, a dashed column for the
+ * middle, and the last.
  */
 type Col = {
-  edge: Edge;
+  edge: Row;
   /** Which step of the run this is. Meaningless on the elided one, which is several. */
   step: number;
   first: number;
@@ -99,12 +75,7 @@ const spread = (list: readonly Fold[]): Col[] =>
     ];
   });
 
-/**
- * The clock on a step, to the millisecond.
- *
- * Not a date: a run is read in the sitting it happened in. The milliseconds are the point — two
- * steps in the same one are a loop, and two a second apart are somebody typing.
- */
+/** The time of a step, to the millisecond — enough to tell a loop from typing. Not a date. */
 const clock = (t: number) => {
   const d = new Date(t);
   const two = (n: number) => String(n).padStart(2, "0");
@@ -112,25 +83,13 @@ const clock = (t: number) => {
 };
 
 /**
- * How far along a step the curve stays level before it turns.
- *
- * A cubic whose control points sit at the midpoint leaves one row and arrives at the other
- * turning the whole way, which reads as a diagonal with rounded ends. Pushed out past the middle
- * they cross, and what that draws is what a step is: a run along one string, a turn, a run along
- * the next. The horizontal is the state; the turn is the transition.
+ * How far along a step the curve stays level before it turns. Control points at the midpoint
+ * would draw a rounded diagonal; pushed past it, the curve reads as run — turn — run.
  */
 const BEND = 0.82;
 
-/**
- * The arrow on the end of an offer. As tall as the dot of a slice is wide and half again as long,
- * which is the smallest a head can be and still read as one at this size — and it points along
- * the curve, because the curve arrives level.
- */
-const HEAD_LEN = 8;
-const HEAD_HALF = 4;
-
 /** A transition that happened, read as the rule it took. */
-const asEdge = (t: Step): Edge => ({
+const asEdge = (t: Step): Row => ({
   from: t.source.type,
   on: t.input.type,
   to: t.target.type,
@@ -138,9 +97,8 @@ const asEdge = (t: Step): Edge => ({
 });
 
 /**
- * The same column twice, in every field a column has. Used to tell a step that appends — the run
- * grew, and everything already drawn still stands — from one that rewrites the tail, where a fold
- * grew a third column or a walked-back run dropped its future.
+ * Equality of columns, field by field. Tells an appending step (everything drawn still stands)
+ * from one that rewrites the tail (a fold grew, or a walked-back run dropped its future).
  */
 const sameCol = (a: Col, b: Col): boolean =>
   a.edge.from === b.edge.from &&
@@ -155,7 +113,6 @@ const sameCol = (a: Col, b: Col): boolean =>
 export type Wiring = {
   subject: Subject;
   focus: Focus;
-  mode: Mode;
   /** Go to a slice. Clicking a step is the whole of undo and redo. */
   rewind: (step: number) => void;
 };
@@ -195,27 +152,22 @@ export class FsmjsHistory extends HTMLElement {
   /** Stops hearing the subject while this is put down. */
   #off: Off | null = null;
 
+  /** The shadow root the run is drawn into. */
+  #root: ShadowRoot;
+
   constructor() {
     super();
     this.className = "history";
+    this.#root = shadow(this, historyCss);
     this.style.setProperty("--foot", `${FOOT}px`);
 
     this.#cols = make("div", "cols");
     this.#tag = make("div", "tag", "history");
-    // The run is walked by clicking a step, and by the two keys that mean the same thing. A control
-    // nobody can find is a control nobody has, and the name of the panel is where you would look.
+    // The keyboard shortcuts, named where the panel is named.
     this.#tag.title = "← and → walk the run · Home and End for its ends";
 
-    /**
-     * Both ends of the run, which is the one place a fold does not save you: a session is long, and
-     * "the beginning" and "where it is now" are the two slices anyone actually asks for.
-     *
-     * What they do is asked of the subject and not decided here. A machine that can be walked back
-     * is walked back — the panel follows the mark, because the mark is what moved. One that cannot,
-     * which is any machine being watched from another process, is not moved at all and the panel
-     * scrolls instead: the reader wanted to see the start of the run, not to reach into somebody
-     * else's application and put their machine there.
-     */
+    // Shortcuts to both ends of the run. With a rewindable subject they rewind the machine;
+    // a machine watched from another process is not moved, so they scroll instead.
     this.#ends = make("div", "ends");
     const goto = (
       name: string,
@@ -242,11 +194,16 @@ export class FsmjsHistory extends HTMLElement {
     );
 
     this.#tag.append(this.#ends);
-    this.append(this.#tag, this.#cols);
+    this.#root.append(this.#tag, this.#cols);
   }
 
   set wiring(w: Wiring) {
+    // Rewired: stop hearing the old subject; already in the page, hear the new one now.
+    this.#off?.();
+    this.#off = null;
     this.#w = w;
+    if (this.isConnected)
+      this.#off = w.subject.watch((what) => this.#moved(what));
   }
 
   get wiring(): Wiring {
@@ -265,11 +222,6 @@ export class FsmjsHistory extends HTMLElement {
     this.#off = null;
   }
 
-  /** Exploring there is no run: no state is current, so nothing has been taken from one. */
-  #away(): boolean {
-    return exploring(this.#w!.mode);
-  }
-
   #x(col: number): number {
     return col * CELL + CELL / 2;
   }
@@ -283,15 +235,9 @@ export class FsmjsHistory extends HTMLElement {
   }
 
   /**
-   * A symmetric curve from one string to the next: the two control points are the same distance
-   * in from their own ends, so a step out and a step back look alike, which they are.
-   *
-   * A step that arrives where it left comes out of this as a straight segment along its own
-   * string, and that is right. It was drawn as a bump out of the string and back, on the grounds
-   * that a flat line reads as the machine doing nothing — true of the old board, where a step took
-   * two columns and the stretch between two of them was flat. There is no such stretch now: every
-   * column boundary is a step, so a flat segment between two slices *is* a step, and one that goes
-   * where it was. Nothing has to be arched to be told apart from a thing that no longer exists.
+   * A symmetric curve from one string to the next. A step that arrives where it left comes out
+   * as a straight segment along its own string — every column boundary is a step, so a flat
+   * segment between two slices reads correctly as a step to the same state.
    */
   #arc(x0: number, y0: number, x1: number, y1: number): string {
     const bend = (x1 - x0) * BEND;
@@ -299,55 +245,58 @@ export class FsmjsHistory extends HTMLElement {
   }
 
   /**
-   * What would happen if the rule now under the pointer were taken: the same curve a step is
-   * drawn with, out of the slice the machine is standing in and into the one it would arrive at,
-   * with an arrow on the end of it.
-   *
-   * One column, exactly as the step would be. It is lighter than a step that happened and it ends
-   * in an arrow instead of a slice, which is the whole of what marks it as an offer — a dot is a
-   * state the machine was in, and half of one at the end of a line is a state it half was in.
+   * The step the rule under the pointer would take: the same curve as a real step, one column,
+   * lighter. No arrowhead — a position in this panel is a dot, and the curve ends where the next
+   * dot would stand.
    */
   #preview(): void {
     const maybe = this.#maybe;
     if (!maybe) return;
     maybe.replaceChildren();
-    if (this.#away()) return;
     const w = this.#w!;
     const { shown, offer } = w.focus.look();
-    // Nothing is being pointed at, or what is under the pointer is not on offer — a step of this
-    // run, recalled. `between` would answer either happily: with no cells at all every rule is
-    // held by all of them, and with a past step it answers with the step. Both are a phantom.
+    // Nothing pointed at, or the pointed-at thing is a past step rather than an offer.
     if (!offer || !shown.length) return;
-    const rows = edges(this.#graph);
-    const id = between(w.subject, rows, shown);
-    if (!id) return;
-    const { from, on, at } = partsOf(id);
-    const rule = rows.filter((r) => r.from === from && r.on === on)[at];
-    if (!rule) return;
+    // The rules the cells name, if they leave the position the machine stands in. Resolved here
+    // and not by `between`: that also asks whether the machine can be driven, and a preview is
+    // a drawing — a watched machine previews too. A first press names a whole cell or a whole
+    // source, so there may be several candidates, one curve each.
+    const here = w.subject.at;
+    const rows = edges(this.#graph).map(rowOf);
+    const want = rows.filter(
+      (r) => r.from === here && shown.every((k) => holds(k, r)),
+    );
+    if (!want.length) return;
 
-    // Out of the slice the machine is standing in and into the next, which is where the step
-    // would be drawn, because a slice is a column and a step is the turn between two of them.
-    // Out of the column the machine is standing in — which is a fold and not a step, since that is
-    // what the board is drawn in. Worked out again rather than kept from the last draw: it is one
-    // pass over a short list, and a copy would be a second answer to go stale.
+    // The column the machine stands in, in fold coordinates — recomputed each time rather than
+    // cached from the last draw.
     const sits = spread(folds(w.subject.steps.map(asEdge))).findIndex(
       (c) => w.subject.step >= c.first && w.subject.step <= c.last,
     );
     const x0 = this.#x(sits < 0 ? 0 : sits + 1);
     const x1 = x0 + CELL;
-    const y1 = this.#y(rule.to);
-    maybe.append(
-      svg("path", {
-        d: this.#arc(x0, this.#y(rule.from), x1, y1),
-        class: "maybe",
-        style: this.#colour(rule.to),
-      }),
-      svg("path", {
-        d: `M ${x1 - HEAD_LEN} ${y1 - HEAD_HALF} L ${x1} ${y1} L ${x1 - HEAD_LEN} ${y1 + HEAD_HALF} Z`,
-        class: "maybe tip",
-        style: this.#colour(rule.to),
-      }),
-    );
+    // One curve per distinct target: two rules into one state would draw the same curve twice.
+    const seen = new Set<string>();
+    for (const rule of want) {
+      if (seen.has(rule.to)) continue;
+      seen.add(rule.to);
+      const y1 = this.#y(rule.to);
+      maybe.append(
+        svg("path", {
+          d: this.#arc(x0, this.#y(rule.from), x1, y1),
+          class: "maybe",
+          style: this.#colour(rule.to),
+        }),
+        // Where the offered step would stand: the position as a ring, not yet a dot.
+        svg("circle", {
+          cx: x1,
+          cy: y1,
+          r: 4,
+          class: "maybe-at",
+          style: this.#colour(rule.to),
+        }),
+      );
+    }
   }
 
   #build(): void {
@@ -363,25 +312,20 @@ export class FsmjsHistory extends HTMLElement {
     this.#strings = null;
     this.#run = null;
     this.#dotsG = null;
-    if (this.#away()) return;
 
     const steps = w.subject.steps.map(asEdge);
     const at = w.subject.step;
-    // What the run *was*, as opposed to how many times it said so: the same transition twice in a
-    // row is one turn that happened twice, and a column each is how a drag of sixty samples put
-    // both ends of the picture out of reach. Everything below counts in these, and the numbers a
-    // step is known by — for going back to it, for what is undone — stay the run's own.
+    // Folded columns: a long repetition is drawn as first + elided middle + last. Step numbers
+    // stay the run's own.
     const list = spread(folds(steps));
     this.#list = list;
     // A column per slice: where the run started, and where each fold took it.
     const end = this.#x(list.length) + CELL / 2;
-    // Room past the end for what could happen next, and no more — one step, which is one column.
-    // A string running on further than that promises a run that has not been made yet.
+    // One column of room past the end — for the preview of the next step, and no more.
     const width = end + CELL;
     const height = HEAD + this.#row.size * CELL + FOOT;
 
-    // The names, on the left of the strings and out of the scroll: this is the same index the
-    // figure writes down its middle, and a row of the run means nothing without it.
+    // The names, left of the strings and out of the scroll — the same index the figure writes.
     const wide =
       14 + Math.max(0, ...[...this.#row.keys()].map((n) => n.length * EM));
     this.#index = svg("svg", {
@@ -405,9 +349,8 @@ export class FsmjsHistory extends HTMLElement {
         ),
       );
 
-    // The board, and the layers a step appends into, in draw order: the strings under the curves,
-    // the curves, the slices over them, and the offer layer over all of it. Kept as groups so a
-    // step taken at the end can drop one column in without re-laying the run.
+    // The board's layers in draw order: strings, curves, slices, preview. Kept as groups so an
+    // appended step drops one column in without re-laying the run.
     this.#board = svg("svg", {
       class: "run",
       width,
@@ -420,8 +363,7 @@ export class FsmjsHistory extends HTMLElement {
     this.#maybe = svg("g", { class: "ahead-of" });
     this.#board.append(this.#strings, this.#run, this.#dotsG, this.#maybe);
 
-    // The strings: the figure's rows, carried across. They are the same lines, the same colours
-    // and the same weight — what makes this a continuation rather than a picture beside one.
+    // The strings: the figure's rows carried across — same lines, colours and weight.
     for (const [state] of this.#row)
       this.#strings.append(
         svg("line", {
@@ -434,41 +376,23 @@ export class FsmjsHistory extends HTMLElement {
         }),
       );
 
-    // The run itself: one curve per column. A run of the same step three times or more is drawn
-    // as three — the first, a dashed one standing for the ones not drawn, and the last — so the
-    // shape of the run survives the shortening: you see it enter, you see it go on, you see it
-    // leave.
+    // One curve per column.
     list.forEach((c, i) => this.#trail(c, i, at));
 
-    // A slice, and the machine was in exactly one state at each of them.
-    // Slice 0 is where the run began; after that there is one per fold, and it is where that fold
-    // left the machine — the same dot the next one leaves from, drawn once, because it is one
-    // moment. A fold's own repetitions arrive and leave at the same two slices, which is the whole
-    // reason they can be folded at all.
+    // Slices: slice 0 is where the run began, then one per fold — where that fold ended, which is
+    // also where the next one starts, drawn once.
     this.#slice(0, list.length ? list[0]!.edge.from : w.subject.at, false);
     list.forEach((c, i) => this.#slice(i + 1, c.edge.to, c.first > at));
 
     this.#cols.append(this.#board);
-    this.replaceChildren(this.#tag, this.#index, this.#cols);
-    // Nothing to walk and nothing to scroll: a run of no steps has one slice, and both ends of it
-    // are where you already are.
+    this.#root.replaceChildren(this.#tag, this.#index, this.#cols);
+    // A run of no steps has one slice; there is nothing to walk or scroll.
     this.#ends.hidden = !list.length;
 
-    // One band per fold, standing on the slice it arrived in: what is pointed at, what is
-    // clicked, what the scroll snaps to, and what the count belongs to. Going back to a fold is
-    // going to the slice its last step reached, so the band is that slice.
-    //
-    // What is *drawn* is wider than what is pressed, and the stylesheet does that: a step is a turn
-    // between two slices and both of them are in it, so the tint reaches back over the slice the
-    // step left, and the number stands on the boundary between the two. Pressing stays one column,
-    // or every column but the last would be claimed by two bands and the one underneath would be
-    // unreachable.
-    //
-    // At the end of the run nothing is marked. The mark says the machine is standing somewhere
-    // other than where the run ends — which is a thing you can only do by clicking one of these,
-    // and which the run itself cannot show, since a slice you have walked back to looks exactly
-    // like the slice you passed through. Sitting at the tip is the ordinary case and needs nothing
-    // said about it; marking it anyway put a permanent selection on a panel nobody had touched.
+    // One band per fold, standing on the slice it arrived in: the click target, the snap target,
+    // and the holder of the number. The tint drawn is two columns wide (both slices of the step);
+    // the pressed area stays one column, or adjacent bands would overlap. At the tip of the run
+    // nothing is marked — the mark means the machine stands behind the end.
     const stood = this.#stood(list, at, steps.length);
     list.forEach((c, i) => this.#band(c, i, i === stood, c.first > at));
 
@@ -525,42 +449,29 @@ export class FsmjsHistory extends HTMLElement {
     );
     band.style.left = `${k * CELL}px`;
     band.style.width = `${CELL}px`;
-    // The step this column arrived at, under the column, as it always was. The dashed column is
-    // not a step and has no number of its own: what stands under it is how many steps are not
-    // drawn, in the break the missing numbers left. Two of them always are — the first and the
-    // last, either side of it — so the count is the run's own count less those two, and the
-    // smallest it can be is one.
+    // The step number under the column. The dashed column is several steps, so it carries a
+    // count instead — the fold's count minus the drawn first and last.
     band.append(
       c.count === undefined
         ? make("span", "no", String(c.step))
         : make("span", "no gap", `×${c.count - 2}`),
     );
-    // Everything the log widget used to be a panel for, on the thing it is about: when it
-    // happened, what it was, and how many times. A title is the browser's own, costs nothing,
-    // and does not need a quarter of the page to say four words.
-    // Nothing is pointed at here that cannot be pressed, and the dashed column cannot: it is not
-    // one step, so it is not one moment, and there is nothing to go back to. It says only how
-    // many, which is written under it.
+    // The dashed column is several steps, not one moment: no title, no click.
     this.#bands.push(band);
     if (c.count !== undefined) {
       this.#cols.append(band);
       return;
     }
     const when = w.subject.steps[c.step - 1]?.at;
-    // The step, said the way the library says a transition and the way the figure draws one:
-    // `ready × down ⇀ resizing × draw`. The two halves are the two blocks — the cause is a pair
-    // (state, event) and the effect is a pair (state, letter) — and the harpoon is the partial
-    // arrow out of the signature, because δ is partial: not every pair on the left has a right.
-    // A step with no output is a pair on the left and a state on the right, which is what a
-    // codomain with no letter in it looks like.
+    // The step in the figure's notation: cause pair, partial arrow, effect —
+    // `ready × down ⇀ resizing × draw`.
     band.title = [
       when === undefined ? "" : `${clock(when)}  `,
       `${c.edge.from} × ${c.edge.on} ⇀ ${c.edge.to}`,
       c.edge.emit === undefined ? "" : ` × ${c.edge.emit}`,
       w.subject.rewind ? "\nclick to go back here" : "",
     ].join("");
-    // Lit like anything else that names a rule, but not on offer: this one has been taken
-    // already, and the dashes are about what could happen next.
+    // Lights the figure and the text, but is not an offer: this rule was already taken.
     band.addEventListener("mouseenter", () =>
       w.focus.pointer.dispatch("enter", {
         keys: halvesOf(c.edge),
@@ -571,16 +482,14 @@ export class FsmjsHistory extends HTMLElement {
     band.addEventListener("mouseleave", () =>
       w.focus.pointer.dispatch("leave"),
     );
-    // Back to the last of them: a fold is one column, and the slice that column stands on is
-    // where its last repetition left the machine.
+    // A fold rewinds to the slice its last repetition reached.
     band.addEventListener("click", () => w.rewind(c.step));
     this.#cols.append(band);
   }
 
   /**
-   * The run grew, and nothing already drawn changed: one column appended, and the strings run on
-   * to meet it. Called only when the new columns are exactly the old columns with more after them;
-   * a fold that grew a third column re-lays the board instead.
+   * Append columns without re-laying the board. Called only when the new columns are the old
+   * ones with more after them; a fold that grew a third column rebuilds instead.
    */
   #append(list: Col[], n: number, at: number, count: number): void {
     const end = this.#x(list.length) + CELL / 2;
@@ -643,7 +552,7 @@ export class FsmjsHistory extends HTMLElement {
   /** The machine moved. A step appends, a rewind re-marks, a restore re-lays the board. */
   #moved(what: Change): void {
     const w = this.#w;
-    if (!w || !this.#board || this.#away()) return;
+    if (!w || !this.#board) return;
     if (what.say === "step") {
       const steps = w.subject.steps.map(asEdge);
       const at = w.subject.step;
@@ -671,7 +580,6 @@ export class FsmjsHistory extends HTMLElement {
   }
 
   draw(): void {
-    this.hidden = this.#away();
     this.#build();
   }
 

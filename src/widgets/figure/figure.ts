@@ -4,24 +4,23 @@
  * they are two methods and not one.
  *
  * It is a custom element — `<fsmjs-figure>` — so a page can put a figure down on its own, wired to
- * a subject and a focus, without lifting the whole inspector. The element *is* the `.out` box:
- * light DOM, so the shared tokens and the page's own grid both reach it unchanged.
+ * a subject and a focus, without lifting the whole inspector. The element *is* the `.out` box,
+ * drawn on the host with a shadow root inside it: the palette reaches in through the variables,
+ * and the page still hides it by the class it wears in the light DOM.
  */
 import type { Off } from "@evgkch/fsmjs";
 import type { Change, Subject } from "../../entities/machine/index.js";
-import { exploring } from "../../features/explore/index.js";
-import type { Mode } from "../../features/explore/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { make } from "../../shared/lib/dom.js";
+import { shadow } from "../../shared/lib/shadow.js";
 import { plan } from "./model/plan.js";
 import type { Draw } from "./model/plan.js";
 import { board } from "./ui/board.js";
-import "./ui/figure.css";
+import figureCss from "./ui/figure.css?raw";
 
 export type Wiring = {
   subject: Subject;
   focus: Focus;
-  mode: Mode;
   /** Let the whole selection go. */
   forget: () => void;
 };
@@ -29,18 +28,15 @@ export type Wiring = {
 export class FsmjsFigure extends HTMLElement {
   #w?: Wiring;
 
-  /**
-   * How the board now on screen puts its classes on, set by `draw`. Nothing before the first draw
-   * has anything to dress — which is not said here with a `?.` but by the page's own machine,
-   * where `blank` has no rule for looking.
-   */
+  /** The shadow root the board is drawn into. */
+  #root: ShadowRoot;
+
+  /** How the board on screen puts its classes on; set by `draw`. */
   #redress: () => void = () => {};
 
   /**
-   * The plan of the board now on screen, kept so a step does not have to re-lay the whole figure
-   * out. Only `here` in it goes stale when the machine moves: reach (`fires`) is read off the
-   * subject live, and the axes, lanes and geometry belong to the graph, which a step does not
-   * touch. `restore` restates the same graph on the same subject, so it leaves this alone too.
+   * The plan of the board on screen, kept so a step does not re-lay the figure. Only `here` goes
+   * stale on a move: reach is read off the subject live, and the rest belongs to the graph.
    */
   #d: Draw | null = null;
 
@@ -50,16 +46,13 @@ export class FsmjsFigure extends HTMLElement {
   /** Stops hearing the subject, while this is put down. */
   #off: Off | null = null;
 
-  /**
-   * How wide the board came out. The box around it says nothing about that: it is a scroll
-   * container stretched to its column, so what it reports is the column's width, never the
-   * board's.
-   */
+  /** How wide the board came out; the box around it only reports the column's width. */
   #drawn = 0;
 
   constructor() {
     super();
     this.className = "out";
+    this.#root = shadow(this, figureCss);
   }
 
   connectedCallback(): void {
@@ -75,7 +68,12 @@ export class FsmjsFigure extends HTMLElement {
   }
 
   set wiring(w: Wiring) {
+    // Rewired: stop hearing the old subject; already in the page, hear the new one now.
+    this.#off?.();
+    this.#off = null;
     this.#w = w;
+    if (this.isConnected)
+      this.#off = w.subject.watch((what) => this.#moved(what));
   }
 
   get wiring(): Wiring {
@@ -86,7 +84,7 @@ export class FsmjsFigure extends HTMLElement {
     const w = this.#w;
     if (!w) return;
     this.#start = start;
-    const d = plan(w.subject.graph, start, w.subject, exploring(w.mode));
+    const d = plan(w.subject.graph, start, w.subject);
     this.#d = d;
     this.#drawn = d.geo.width;
     const { node: svg, dress } = board(d, {
@@ -95,21 +93,19 @@ export class FsmjsFigure extends HTMLElement {
     });
     const wrap = make("div", "figure");
     wrap.append(svg);
-    this.replaceChildren(make("div", "tag", "figure"), wrap);
+    this.#root.replaceChildren(make("div", "tag", "figure"), wrap);
     this.#redress = dress;
   }
 
   /**
-   * The machine moved, and the one thing that moves with it is the mark of where it stands — reach
-   * is answered from the subject fresh each pass, so re-dressing re-marks and re-dims without a
-   * layout. `what` is read for nothing beyond that: a step, a rewind and a restore all land here
-   * the same way, because the figure has no memory of *how* it was reached, only of where it is.
+   * The machine moved: only the mark moves with it, so re-dressing is enough. A step, a rewind
+   * and a restore all land here the same way.
    */
   #moved(_what: Change): void {
     const w = this.#w;
     const d = this.#d;
     if (!w || !d) return;
-    d.here = exploring(w.mode) ? "" : w.subject.at || this.#start;
+    d.here = w.subject.at || this.#start;
     this.#redress();
   }
 

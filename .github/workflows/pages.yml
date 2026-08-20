@@ -1,0 +1,76 @@
+name: Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. A run already in flight is left to finish rather
+# than cancelled: the site it publishes is a valid one either way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Two checkouts side by side: the library is a `file:../fsmjs` dependency,
+      # taken from the checkout rather than the registry. Recursive, because the
+      # inspector pins a submodule of its own — the shared tokens.
+      - uses: actions/checkout@v4
+        with:
+          path: fsmjs-inspector
+          submodules: recursive
+
+      - uses: actions/checkout@v4
+        with:
+          repository: evgkch/fsmjs
+          path: fsmjs
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            fsmjs/package-lock.json
+            fsmjs-inspector/package-lock.json
+
+      # A `file:` dependency is a symlink, and npm does not copy the target's own
+      # dependencies into the consumer's tree — the library must carry them, and
+      # its `dist`, before anything typechecks against it.
+      - name: Build the library
+        working-directory: fsmjs
+        run: |
+          npm ci
+          npm run build
+
+      # `build` validates the machines and typechecks on its own; `matrix`
+      # presses every widget against every other and fails on the first mismatch.
+      - name: Build the inspector
+        working-directory: fsmjs-inspector
+        run: |
+          npm ci
+          npm run build
+          npm run matrix
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: fsmjs-inspector/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

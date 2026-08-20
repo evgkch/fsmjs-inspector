@@ -1,16 +1,12 @@
 /**
- * Which machine out there this page is drawing.
- *
- * One fact, remembered rather than derived — the roster says who is out there and cannot say which
- * of them you are looking at — so it is a machine, like every other remembered thing here.
+ * Which machine this page is drawing.
  *
  *   nobody   ──pick(who)──▸ watching {who}
  *   watching ──pick(who)──▸ watching {who}
  *   watching ──gone(who)──▸ nobody      when it is the one being watched
  *
- * `gone` is guarded rather than checked by the caller: machines come and go while you are reading
- * one of them, and an application restarting its worker is not a reason to look away from its
- * checkout. The page says what happened; what follows is here.
+ * `gone` is guarded here, not checked by the caller: another machine leaving is no reason to
+ * look away from this one.
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";

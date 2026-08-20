@@ -1,27 +1,11 @@
 /**
- * The schemas the page offers, read out of `schemas/` as text.
- *
- * Files rather than literals, because a schema is a document: something to open, to diff, to
- * hand to somebody. Three of them are written by hand. The other seven are not written at all —
- * they are `JSON.stringify` of every machine this tool runs on, produced by `scripts/dump.mjs`
- * before every build, so the page's first subject is the page. Every machine the tool has is in
- * that list, which is what makes the list checkable: write an eighth and it belongs here.
- *
- * Open `the inspector's choice` and the figure draws the thing that was deciding what the figure
- * did while you were pointing at it — three states, one cell of three rules, and every guard by
- * name. Open `the inspector's editor` and it draws what the box on the left is doing with the
- * keystrokes you type into it while you read it; `the inspector's panel` is the drag that moves the
- * floating window `inspect()` puts over an application; and `the inspector's sight` is the figure
- * in front of you deciding when to redraw itself and where to stand the run. Nothing was written
- * twice to make any of that work: a dump is what a machine says about itself.
- *
- * They are kept as JSON because that is what `JSON.stringify(machine)` writes, and `dump.mjs`
- * has nothing else to write. What the editor shows is `toRules` of the same thing: the schema in
- * the language it is written in, which is also the language every line of the history is in.
+ * The schemas the page offers, read out of `schemas/` as text. Three are written by hand; the
+ * other seven are `JSON.stringify` of the tool's own machines, produced by `scripts/dump.mjs`
+ * before every build, so they cannot drift from the code. Kept as JSON — the form a dump has;
+ * the editor shows `toRules` of the same thing.
  */
 import choice from "../../../../schemas/the-inspectors-choice.json?raw";
 import editor from "../../../../schemas/the-inspectors-editor.json?raw";
-import mode from "../../../../schemas/the-inspectors-mode.json?raw";
 import page from "../../../../schemas/the-inspectors-page.json?raw";
 import pointer from "../../../../schemas/the-inspectors-pointer.json?raw";
 import panel from "../../../../schemas/the-inspectors-panel.json?raw";
@@ -41,7 +25,6 @@ export const SAMPLES: Sample[] = [
   { name: "The inspector's pointer", json: pointer },
   { name: "The inspector's page", json: page },
   { name: "The inspector's editor", json: editor },
-  { name: "The inspector's mode", json: mode },
   { name: "The inspector's panel", json: panel },
   { name: "The inspector's sight", json: sight },
 ];

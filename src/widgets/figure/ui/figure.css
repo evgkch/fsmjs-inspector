@@ -2,15 +2,16 @@
 
 /* The figure's own box: it fills the band it is in and scrolls inside itself, so a schema too
    wide or too tall for the page never makes the page itself scroll. */
-.out {
+:host {
     /* The element is a custom element, which is inline until told otherwise. The box is a block —
        it fills its band, and a `<fsmjs-figure>` dropped into a page of its own stands on its own
        line like any panel. */
     display: block;
-    min-height: 12rem;
+    min-height: 16rem;
     max-height: 100%;
-    /* The same inset as the source's name and the run's, so the three read as one row of names. */
-    padding: var(--step-3) var(--step-3) var(--step-4);
+    /* The same inset as the source's name and the run's, so the three read as one row of names —
+       one step below the margin, because the radius it stands inside has grown to the same. */
+    padding: var(--step-4);
     border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
@@ -19,7 +20,7 @@
 }
 
 /* It stays in its corner while the board scrolls under it: a name is not part of the drawing. */
-.out .tag {
+.tag {
     position: sticky;
     top: 0;
     left: 0;
@@ -34,6 +35,10 @@
     min-width: 100%;
 }
 
+/* The board is drawn at the size the schema makes it and stays there: its own `width` and `height`
+   are the size, the viewBox agrees with them, and the box around it scrolls. A percentage width
+   here would let the viewport decide the scale, and then a cell, a row of the run and a line of
+   the source — one height, declared once — would be three different heights on a narrow page. */
 svg.board {
     display: block;
 }
@@ -48,12 +53,7 @@ line.rail {
     stroke-width: 1;
 }
 
-/*
- * The name of an index, which is a keyword of the language: FROM, ON, TO, EMIT are four of the
- * seven words a rule is written in, and the figure's four coordinates are exactly those four. So
- * they are set the way the editor sets them — the same face, the same weight, the same quiet —
- * and a reader who has met them in the text has already met them here.
- */
+/* An index name is a keyword of the language, set as the editor sets keywords. */
 text.cap {
     font: 500 var(--micro)/1 var(--mono-font);
     fill: var(--faint);
@@ -93,14 +93,9 @@ circle.mark {
 /* ── the cells ──────────────────────────────────────────────────────────── */
 
 /*
- * A cell is in one of three states and there is no fourth. It is *there*; it is *lit*, meaning
- * the figure is about it — under the pointer, or held by a press, which look the same because
- * they are the same thing seen twice; or it is *dim*, out of reach. The diagram is a hard enough
- * object without shades to tell apart.
- *
- * One cell is one intersection. The controls address (from, on), and there a cell is one
- * `dispatch` — what is inside it are alternatives its guards decide between, not a choice
- * offered to the reader, so nothing is divided up.
+ * A cell has three states and no fourth: plain, lit (pointed at or held — the same look), dim
+ * (out of reach). One cell is one intersection; the rules inside are the guards' alternatives,
+ * so nothing is subdivided.
  */
 .box rect {
     fill: color-mix(
@@ -125,8 +120,7 @@ circle.mark {
     stroke: var(--c, var(--accent));
 }
 
-/* Out of reach: the machine cannot get there from where it stands, or a held half rules it out.
-   What that costs is the press, so the cursor is the other half of saying it. */
+/* Out of reach: unreachable from here, or ruled out by a held half. No pointer cursor. */
 .box.dim {
     opacity: var(--dim);
 }
@@ -160,35 +154,20 @@ text.name:focus {
     outline: none;
 }
 
-/* The outcome `TO r` with nothing emitted has no cell in the grid above — there is no output to
-   make one, and no symbol in the language to stand in for one. The name of the column is where
-   that outcome is written, so the name is what is clicked: nothing is drawn behind it. */
+/* `TO r` with nothing emitted has no cell; the column's name is what is clicked. */
 text.name.hot {
     cursor: pointer;
 }
 
-/*
- * A name is lit or it is not. Which half was held is what the bands say, and a name is one
- * coordinate — it is already saying less than the cell it belongs to.
- *
- * Lit is not a colour of its own. A state's colour is the state, everywhere in the tool, and
- * painting it in the ink of the page while the pointer is on it means the one moment you are
- * asking about a state is the one moment it stops looking like itself — white on a dark ground,
- * black on a light one. So the lane stays and the weight carries the emphasis. Only a name with
- * no lane — an event, which is not a state — falls back to the ink.
- */
+/* Lit keeps the lane colour — the state must keep looking like itself — and the weight carries
+   the emphasis. Only a laneless name (an event) falls back to ink. */
 text.name.lit {
     fill: var(--c, var(--ink));
     font-weight: 700;
 }
 
-/* The two bands of a cell: the figure's own row and column, run out to the names on both axes,
-   with the one the middle block has an axis for carrying on across it. Where the bands of the
-   two halves of a transition cross is the corner the rule goes through.
- *
- * They are the background of a row and a column, so they are drawn before anything stands on
- * them. A band over the top of the cells tints whatever it crosses and makes one lit cell look
- * unlike another for no reason but where it happens to sit. */
+/* A cell's bands: its row and column, run out to the names. Background — drawn under the cells,
+   or the tint would cross them. */
 .wash {
     pointer-events: none;
 }
@@ -203,9 +182,7 @@ circle.far {
     fill: color-mix(in oklab, var(--faint) var(--wash-full), transparent);
 }
 
-/* The outcome `TO r` with nothing emitted is named on the name of its column, and a word stood
-   on end is a small thing to hit: the heading it stands in takes the clicks, painted as nothing
-   at all, because what a name has behind it is the page. */
+/* A word on end is a small target; the invisible heading it stands in takes the clicks. */
 rect.grab {
     fill: transparent;
     cursor: pointer;

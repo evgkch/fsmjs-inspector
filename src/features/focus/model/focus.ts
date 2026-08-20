@@ -1,56 +1,32 @@
 /**
- * What the reader is looking at: two small machines, and one function that reads them together.
- *
- * Two things go on at once and they are not the same thing. One is the *choice*: nothing held,
- * one half held, both held. The other is the *pointer*: away, or over some cell. Written as one
- * machine they multiply — a state for the pointer before a press and another for the pointer
- * after one — and then the two have to be kept saying the same thing by hand. They were not.
- * Pointing at a half worked before the first press and did nothing after it, which is not a rule
- * anybody asked for; it is what two copies of a rule do when only one of them gets edited.
- *
- * So they are two machines, and neither knows about the other:
+ * What the reader is looking at: two machines, read together by `look`.
  *
  *       press(half)          press(other half) ▸ took            enter(cell)
  *   nothing ─────────▸ half ─────────────────────────▸ whole      away ⇄ over
  *      ▴  ◀─press(same)  ▴  ◀──── press(either half) ──┘             leave
  *      └───── drop ──────┴─────────── drop ────────────┘
  *
- * There is exactly one `enter` rule and one `leave` rule on the whole page, so the pointer cannot
- * behave one way before a press and another way after: the pointer machine does not know a press
- * happened. Nor does it know *what* moved it — the figure's own cells and the editor's gutter
- * dispatch the same `enter`, which is why a rule lights the same way whichever of the two you are
- * over. Where the machines meet is `look`, in one line, and that line is the only place that can
- * ever decide what the pointer adds to what is held.
- *
- * The choice is three states because it carries three different things, and its guards are the
- * whole of its logic. `half` is a cell of three rules: the half already held, pressed again, lets
- * go; anything else is the other half, and which slot it lands in is not the order it was pressed
- * in but what it *is*, so there is one rule for each way round and nothing is worked out
- * afterwards. `whole` is that cell read backwards — pressing either named half drops that one and
- * keeps the other, so a choice walks back a step rather than all the way.
- *
- * `drop` is in every state but `nothing`, and it is not there for Esc. The figure is about one
- * graph, one position of the machine and one mode; change any of those and what is held names
- * something that is no longer there. Whoever changes one says `drop`, and that is the whole of
- * the reset — there is no state it can fail to reach from.
- *
- * Every operation here is a named function and not an inline one, and that is not a style. A
- * dump keeps the *name* of an operation and none of its code, so a machine whose guards are
- * anonymous dumps as a graph full of `?`. This machine's dump is one of the schemas the page
- * offers, and a schema that cannot say what decides its own cells is not worth reading.
- *
- * What neither machine knows is the mode. Running and exploring differ in which cells are on the
- * table and in what happens once both halves are named, and neither is a question either of them
- * could answer: the first depends on the subject, so it arrives with the press as `alive` and one
- * guard reads it; the second is `took`, and what to do about it belongs to whoever is listening.
+ * The *choice* holds nothing, one half, or both; the *pointer* is away or over a place. They are
+ * separate machines, neither knowing about the other, so pointing behaves the same before and
+ * after a press. A source — a state pressed on the diagram — is held like a half; a second
+ * source completes the pair as the corner the two make — the same state twice makes the corner
+ * of its own transition. A pressed half moves a held source, and a pressed source moves a held
+ * half. The figure's cells and the editor's gutter dispatch the same `enter`. `drop` is
+ * a rule of every state but `nothing`: whoever changes the graph, the position or the mode says
+ * it. Every operation is a named function so this machine's own dump reads without `?`. Whether a
+ * cell is in reach arrives with the press as `alive`; what to do once both halves are named is
+ * `took`, and the listener's.
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
 import {
   CAUSE,
+  CORNER,
   EFFECT,
   HALVES,
   MIRROR,
+  SOURCE,
+  keyOf,
   kindOf,
 } from "../../../entities/cell/index.js";
 import type { Key, Kind } from "../../../entities/cell/index.js";
@@ -64,12 +40,8 @@ export type Held = Merge<
 >;
 
 /**
- * A press, and whether what was pressed is still on the table.
- *
- * The second half is a fact the machine cannot work out and must not guess at: whether a cell is
- * in reach depends on the subject and on the mode, and this machine knows neither. What it must
- * not do is let the *caller* decide what to do about it — the surface says what it knows, the
- * guards say what it means, and a cell nobody can take is a press with no rule for it.
+ * A press, and whether what was pressed is still in reach — a fact of the subject and the mode,
+ * which this machine knows neither of, so it arrives with the event and a guard reads it.
  */
 export type Pressing = Merge<
   IEvent<"press", { key: Key; alive: boolean }> | IEvent<"drop">
@@ -84,9 +56,12 @@ const choosing: Schema<Held, Pressing, Took> = {
   },
   half: {
     press: [
+      // Sources first: the same state twice is the self-pair, not a let-go — `drop` lets go.
+      { when: sourcePair, to: ["whole", corner], emit: ["took", both] },
       { to: "nothing", when: same },
       { when: causeHeld, to: ["whole", pairUp], emit: ["took", both] },
       { when: effectHeld, to: ["whole", pairDown], emit: ["took", both] },
+      { when: swap, to: ["half", hold] },
     ],
     drop: [{ to: "nothing" }],
   },
@@ -102,18 +77,9 @@ const choosing: Schema<Held, Pressing, Took> = {
 // ── the pointer: which cell it is over ───────────────────────────────────────
 
 /**
- * Where the pointer is: away, or over a *place* — and a place is one or more cells.
- *
- * One, when it is a cell of the figure that is being pointed at. Two, when it is a line of the
- * text: a line names a rule, and a rule is written in the figure twice, as its cause and as its
- * effect. The pointer does not know which of the two it got, and `look` does not either — they
- * both go into `shown`, and a rule is lit when every shown cell holds it, which for the two
- * halves of a rule is that rule and nothing else.
- *
- * What it does carry is whether the thing under it is being *offered*. A cell of the figure and a
- * line of the text are both an invitation: point at them and you may take them. A step of the
- * history is not — it is a rule being recalled, and one already taken. Both light the same cells,
- * because they are about the same rule; only one of them means "you could do this now".
+ * Where the pointer is: away, or over a place of one or more cells — one for a figure cell, two
+ * for a text line, which names both halves of its rule. `offer` says whether the thing under it
+ * can be taken now; a step of the history lights the same cells but is not an offer.
  */
 export type Where = Merge<
   IState<"away"> | IState<"over", { at: Key[]; offer: boolean }>
@@ -157,10 +123,8 @@ export type Look = {
 };
 
 /**
- * One focus per figure, not one per page — but one focus for a figure *and* the text beside it.
- * Two inspectors on a screen are two of these, and a pointer over one of them says nothing about
- * the other; the editor and the figure showing the same machine are one, and that is why hovering
- * a cell lights a line.
+ * One focus per figure-plus-text, not per page: two inspectors on a screen are two of these; an
+ * editor and figure showing the same machine share one.
  */
 export type Focus = {
   readonly choice: StateMachine<Held, Pressing, Took>;
@@ -192,50 +156,60 @@ function look(
       : held.type === "whole"
         ? [held.context.cause, held.context.effect]
         : [];
-  /**
-   * Whatever the pointer is over is shown — over a half or over a crossing, with a half held or
-   * with nothing held. There is exactly one exception, and it is the one rule in this whole tool
-   * that belongs to neither of two machines: a choice with nothing left to decide. Both halves are
-   * named, so a third cell could only empty the set, and the pointer stops adding anything.
-   *
-   * That rule is why the join exists at all, and it is written once, here, rather than folded into
-   * a merged machine — which would have to carry the pointer through every state of the choice and
-   * write every press rule twice over. Two things that go on at the same time are two machines;
-   * what is true of the pair is a reading of both, and a reading is a function.
-   */
+  // The one join rule: with both halves named the pointer stops adding anything — a third cell
+  // could only empty the set. Written once, here.
   const over =
     held.type !== "whole" && pointer.state.type === "over"
       ? pointer.state.context
       : null;
   return {
     fixed,
-    offer: over?.offer ?? false,
-    // A set, because the pointer is usually still over the cell that was just pressed: the same
-    // key twice would draw the same band twice, and two translucent bands on one row are darker
-    // than one for no reason a reader could ever work out.
+    // A press was an offer when it was made — `alive` guarded it — so a hold with the pointer
+    // away still is one.
+    offer: over?.offer ?? fixed.length > 0,
+    // A set: the pointer is usually still over the pressed cell, and a duplicate key would draw
+    // its band twice.
     shown: [...new Set([...fixed, ...(over?.at ?? [])])],
+    // A held source has no mirror: it fixes no half, so both are still asked for.
     open:
       held.type === "half"
-        ? [MIRROR[kindOf(held.context.end)]!]
+        ? (mirror(held.context.end) ?? HALVES)
         : held.type === "whole"
           ? []
           : HALVES,
   };
 }
 
-// ── the operations, below the two schemas ────────────────────────────────────
-//
-// Declarations, and after the rules rather than before them, because that is the order the thing
-// was designed in: the states, then what may happen in each, then whatever those rules turned out
-// to need. A file written the other way round asks its reader to hold a dozen small functions in
-// mind before showing them what any of them is for.
+// ── the operations, declared after the schemas that name them ────────────────
 
-/**
- * A half of a transition, still on the table — a crossing is a crossing, and a crossing is not
- * something to hold; a cell out of reach is not something to name.
- */
+/** The other half as a list, or nothing to mirror. */
+function mirror(key: Key): Kind[] | null {
+  const kind = MIRROR[kindOf(key)];
+  return kind ? [kind] : null;
+}
+
+/** A half of a transition or a source, still in reach — a crossing cannot be held. */
 function isHalf(_: unknown, p: { key: Key; alive: boolean }): boolean {
-  return p.alive && kindOf(p.key) in MIRROR;
+  const kind = kindOf(p.key);
+  return p.alive && (kind in MIRROR || kind === SOURCE);
+}
+
+/** A held source and a pressed one: out of the first state, into the second. */
+function sourcePair(c: { end: Key }, p: { key: Key; alive: boolean }): boolean {
+  return p.alive && kindOf(c.end) === SOURCE && kindOf(p.key) === SOURCE;
+}
+
+/** A source against a half, either way round: no pair to make, the press moves the hold. */
+function swap(c: { end: Key }, p: { key: Key; alive: boolean }): boolean {
+  return (
+    isHalf(c, p) && (kindOf(c.end) === SOURCE) !== (kindOf(p.key) === SOURCE)
+  );
+}
+
+/** The corner the two sources make. `took` carries two keys; here they are the same one. */
+function corner(c: { end: Key }, p: { key: Key }): { cause: Key; effect: Key } {
+  const at = keyOf(CORNER, c.end.split("\0")[1]!, p.key.split("\0")[1]!);
+  return { cause: at, effect: at };
 }
 
 function same(c: { end: Key }, p: { key: Key }): boolean {
@@ -286,16 +260,12 @@ function both(c: { cause: Key; effect: Key }): { cause: Key; effect: Key } {
   return { cause: c.cause, effect: c.effect };
 }
 
-/**
- * Something to point at: cells, and cells that can still be reached. A row of the gutter with no
- * rule on it names nothing, and a cell out of reach does not answer the pointer — both are a move
- * onto a place there is nothing to say about, and the pointer stays where it was.
- */
+/** Something to point at: named cells that are still in reach. Otherwise the pointer stays. */
 function named(_: unknown, p: { keys: Key[]; alive: boolean }): boolean {
   return p.alive && p.keys.length > 0;
 }
 
-/** The one `with` the pointer has: written once, and named by both of the rules that need it. */
+/** The pointer's one `with`, named by both rules that need it. */
 function onto(
   _: unknown,
   p: { keys: Key[]; offer: boolean },

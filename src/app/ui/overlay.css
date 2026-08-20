@@ -1,125 +1,86 @@
 /* `inspect(fsm)` with nowhere to go puts the tool on top of the page it is inspecting. It sits
    above everything, carries its own frame, and is dragged by its bar — a panel over somebody's
    application is always over the wrong part of it. */
-.fsmjs-overlay {
-    position: fixed;
-    right: var(--step-4);
-    bottom: var(--step-4);
-    z-index: 2147483000;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    max-width: min(92vw, 68rem);
-    max-height: 86vh;
-    border: 1px solid var(--line-firm);
-    border-radius: var(--radius);
-    background: var(--bg);
-    color: var(--ink);
-    font: 400 15px/1.6 var(--main-font);
-    box-shadow: 0 var(--step-5) 60px -20px rgb(0 0 0 / 0.35);
-    overflow: hidden;
-}
 
-.overlay-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--step-3);
-    padding: var(--step-2) var(--step-2) var(--step-2) var(--step-3);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
-    font: 500 var(--name)/1 var(--mono-font);
-    color: var(--muted);
-    cursor: grab;
-    user-select: none;
-}
+@layer tokens, controls, page;
 
-.overlay-bar:active {
-    cursor: grabbing;
-}
+@layer page {
+    .fsmjs-overlay {
+        position: fixed;
+        right: var(--step-4);
+        bottom: var(--step-4);
+        z-index: 2147483000;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        max-width: min(92vw, 68rem);
+        max-height: 86vh;
+        border: 1px solid var(--line-firm);
+        border-radius: var(--radius);
+        background: var(--bg);
+        color: var(--ink);
+        font: 400 15px/1.6 var(--main-font);
+        box-shadow: 0 var(--step-5) 60px -20px rgb(0 0 0 / 0.35);
+        overflow: hidden;
+    }
 
-.overlay-bar .flag {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--step-2);
-    margin-left: auto;
-    cursor: pointer;
-}
+    .overlay-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--step-3);
+        padding: var(--step-2) var(--step-2) var(--step-2) var(--step-4);
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        font: 500 var(--name)/1 var(--mono-font);
+        color: var(--muted);
+        cursor: grab;
+        user-select: none;
+    }
 
-/* The input is what the keyboard and the screen reader work with; the track is what is seen — the
-   same switch the standalone page's explore flag is, so the embedded panel and the page read as one
-   tool. A mode is a switch, not a tick. */
-.overlay-bar .flag input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: 0;
-    opacity: 0;
-    pointer-events: none;
-}
+    .overlay-bar:active {
+        cursor: grabbing;
+    }
 
-.overlay-bar .flag .track {
-    position: relative;
-    width: var(--step-5);
-    height: var(--step-3);
-    border-radius: 999px;
-    corner-shape: round;
-    background: var(--line-firm);
-    transition: background-color var(--quick) var(--ease);
-}
+    /* The same button the header of the standalone page draws: one height, the panel's own line around
+   it, the small corner, and quiet until you go to it. */
+    .overlay-bar button {
+        height: var(--control);
+        padding: 0 var(--step-3);
+        border: 1px solid var(--line-firm);
+        border-radius: var(--control);
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        cursor: pointer;
+        transition:
+            border-color var(--quick) var(--ease),
+            background-color var(--quick) var(--ease),
+            color var(--quick) var(--ease);
+    }
 
-.overlay-bar .flag .track::after {
-    content: "";
-    position: absolute;
-    top: var(--step-1);
-    left: var(--step-1);
-    width: var(--step-2);
-    height: var(--step-2);
-    border-radius: 50%;
-    corner-shape: round;
-    background: var(--surface);
-    transition: translate var(--quick) var(--ease);
-}
+    .overlay-bar button:hover {
+        border-color: var(--muted);
+        background: color-mix(
+            in oklab,
+            var(--accent) var(--wash),
+            var(--surface)
+        );
+        color: var(--accent);
+    }
 
-.overlay-bar .flag input:checked + .track {
-    background: var(--accent);
-}
+    .overlay-body {
+        padding: var(--step-3);
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
 
-.overlay-bar .flag input:checked + .track::after {
-    translate: var(--step-3) 0;
-}
+    /* Free-standing, the work surface is as tall as what is in it and no taller. */
+    .overlay-body .work {
+        height: auto;
+    }
 
-.overlay-bar .flag input:focus-visible + .track {
-    outline: 2px solid var(--accent);
-    outline-offset: var(--step-1);
-}
-
-.overlay-bar button {
-    padding: var(--step-1) var(--step-2);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--muted);
-    font: inherit;
-    cursor: pointer;
-}
-
-.overlay-bar button:hover {
-    background: var(--bg);
-    color: var(--ink);
-}
-
-.overlay-body {
-    padding: var(--step-3);
-    overflow: auto;
-    overscroll-behavior: contain;
-}
-
-/* Free-standing, the work surface is as tall as what is in it and no taller. */
-.overlay-body .work {
-    height: auto;
-}
-
-.overlay-body .out {
-    min-height: 0;
-    height: auto;
-    max-height: 60vh;
+    .overlay-body .out {
+        min-height: 0;
+        height: auto;
+        max-height: 60vh;
+    }
 }

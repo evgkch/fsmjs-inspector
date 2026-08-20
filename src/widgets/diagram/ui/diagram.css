@@ -1,0 +1,193 @@
+/* ── the classic diagram: one row of cells, arcs over and under it ───────── */
+
+/* The panel box, as the figure's: fills its band, scrolls inside itself. */
+:host {
+    display: block;
+    max-height: 100%;
+    padding: var(--step-4);
+    border: 1px solid var(--line-firm);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* The name stays in its corner while the chart scrolls under it. */
+.tag {
+    position: sticky;
+    top: 0;
+    left: 0;
+    padding: 0 0 var(--step-2);
+}
+
+/* Drawn at the size the schema makes it; the box around it scrolls. */
+.plot {
+    width: max-content;
+    min-width: 100%;
+}
+
+svg.chart {
+    display: block;
+}
+
+/* A state: an inline cell, its name in its lane's colour. Pointing at it keeps only its own
+   transitions on the table; pressing holds that. */
+.chip {
+    cursor: pointer;
+}
+
+/* A capsule, its name in its lane's colour. */
+.chip rect {
+    fill: var(--surface);
+    stroke: var(--line-firm);
+    transition: fill var(--quick) var(--ease);
+}
+
+.chip:hover rect {
+    fill: color-mix(in oklab, var(--c, var(--accent)) var(--wash), var(--bg));
+}
+
+.chip text {
+    font: 500 var(--name)/1 var(--mono-font);
+    fill: var(--c, var(--muted));
+}
+
+/* An end of a named arrow — the weight carries the shine, the colour is already its own. */
+.chip.lit text {
+    font-weight: 700;
+}
+
+/* Where the machine stands: washed in its own colour, the line in it too. */
+.chip.here rect {
+    stroke: var(--c, var(--accent));
+    fill: color-mix(
+        in oklab,
+        var(--c, var(--accent)) var(--wash-firm),
+        var(--surface)
+    );
+}
+
+.chip.here text {
+    font-weight: 700;
+}
+
+/* Pressed: the one place a state spends its lane colour — unmistakably not the standing mark. */
+.chip.held rect {
+    stroke: var(--c, var(--accent));
+    fill: var(--c, var(--accent));
+}
+
+.chip.held text {
+    fill: var(--surface);
+    font-weight: 700;
+}
+
+/* A state no run reaches from the start — struck through, as in the editor and the figure. */
+.chip.off text {
+    text-decoration: line-through;
+    fill: var(--faint);
+}
+
+/* A transition: the arc and its head in the target's colour. */
+.arc .line {
+    fill: none;
+    stroke: var(--c, var(--accent));
+    stroke-width: 1.5;
+}
+
+/* The casing under the ink: a crossing reads as a bridge, not a join. */
+.arc .gap {
+    fill: none;
+    stroke: var(--surface);
+    stroke-width: 4.5;
+}
+
+.arc polygon {
+    fill: var(--c, var(--accent));
+}
+
+/* The labels, in a layer above every line and cell; the halo keeps them legible where lines
+   pass close. A label answers for its arrow; the space between labels falls through. */
+.caps {
+    pointer-events: none;
+}
+
+.caps text {
+    pointer-events: auto;
+}
+
+.caps text.can {
+    cursor: pointer;
+}
+
+.caps text.mute,
+.caps text.dead {
+    pointer-events: none;
+}
+
+.caps text {
+    font: 500 var(--micro)/1 var(--mono-font);
+    fill: var(--c, var(--accent));
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 3;
+}
+
+.caps text.dead {
+    opacity: var(--dim);
+}
+
+/* The label of an arrow that is dimmed or outside the selection. */
+.caps text.mute {
+    opacity: var(--undone);
+}
+
+/* The rule the reader is on — here, in the text or in the figure: dashed and marching, as the
+   history draws the offered step. */
+.arc.lit .line {
+    stroke-width: 2.5;
+    stroke-dasharray: 3 2;
+    animation: march 0.5s linear infinite;
+}
+
+/* A transition the machine can take from where it stands: a click takes it. */
+.arc.can {
+    cursor: pointer;
+}
+
+/* Out of reach from where the machine stands — dimmed and deaf to the pointer, as on the
+   figure. */
+.arc.dim {
+    opacity: var(--dim);
+}
+
+/* A cell is pointed at or pressed, and this arrow does not leave it. */
+.arc.far {
+    opacity: var(--undone);
+}
+
+.arc.dim,
+.arc.far {
+    pointer-events: none;
+}
+
+/* A state the selection cannot reach. */
+.chip.far {
+    opacity: var(--dim);
+}
+
+/* A state this step cannot end in — dimmed and deaf to the pointer, as on the figure. */
+.chip.dim {
+    opacity: var(--dim);
+}
+
+.chip.far,
+.chip.dim {
+    pointer-events: none;
+}
+
+/* A rule `validate` marks dead. */
+.arc.dead {
+    opacity: var(--dim);
+}

@@ -1,11 +1,6 @@
 /**
- * The four ways this tool touches the DOM, and it has no others.
- *
- * A debugger is a lot of small nodes with a class on them, and written out longhand that is the
- * bulk of the code — `createElement`, `className`, `textContent`, three lines to say one thing.
- * These say the one thing. `svg` is separate from `make` because SVG needs a namespace and takes
- * its attributes as attributes, not as properties, and pretending otherwise is how a `class` ends
- * up on a node that never wears one.
+ * The four ways this tool touches the DOM. `svg` is separate from `make` because SVG needs a
+ * namespace and takes attributes, not properties.
  */
 export const el = <T extends HTMLElement>(id: string): T =>
   document.getElementById(id) as T;

@@ -1,0 +1,59 @@
+/* ── a legend: one row of capsules, no frame around the row ──────────────── */
+
+:host {
+    display: inline-block;
+}
+
+.line {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--step-2) var(--step-3);
+}
+
+/* The kind, written the way every panel writes its name; the row's own margin. */
+.tag {
+    margin-right: var(--step-2);
+    color: var(--faint);
+    font: 500 var(--micro) / 1 var(--mono-font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* A capsule, its name in its lane's colour: one module tall, as a cell of the diagram. */
+.word {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: var(--cell);
+    padding: 0 var(--step-3);
+    border: 1px solid var(--line-firm);
+    /* Larger than the box: a stadium at any width. */
+    border-radius: var(--cell);
+    color: var(--c, var(--muted));
+    font: 500 var(--name) / 1 var(--mono-font);
+}
+
+/* An output is not a state: the one warm colour, as on the figure's Λ axis. */
+.word.emit {
+    color: var(--emit);
+}
+
+/* A state no run reaches from the start — struck through, as everywhere. */
+.word.off {
+    text-decoration: line-through;
+    color: var(--faint);
+}
+
+/* Where the machine stands: the capsule filled in its own colour, the name in ground. */
+.word.here {
+    border-color: var(--c, var(--ink));
+    background: var(--c, var(--ink));
+    color: var(--surface);
+    font-weight: 700;
+}
+
+.none {
+    color: var(--faint);
+    font: 500 var(--name) / 1 var(--mono-font);
+}

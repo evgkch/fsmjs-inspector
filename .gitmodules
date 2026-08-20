@@ -1,0 +1,3 @@
+[submodule "src/shared/ui/tokens"]
+	path = src/shared/ui/tokens
+	url = https://github.com/evgkch/fsmjs-tokens.git

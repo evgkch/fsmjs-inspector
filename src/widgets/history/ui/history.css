@@ -1,40 +1,27 @@
 /* ── what the run did, on the figure's own rows ──────────────────────────── */
 
 /*
- * The panel carries the same frame as the figure's, and the same padding at the top, because the
- * two are one drawing with a gap in it: the rows have to arrive at the same height on both sides
- * of that gap. `--head` is not needed here — the mount hands the figure's own head offset to the
- * drawing, and the frames cancel because they are equal.
+ * The same frame and top padding as the figure's, so the shared rows sit at the same height on
+ * both sides of the gap. No side padding: the index is flush left, the slices scroll to the
+ * frame. The foot padding keeps the last row of names clear of the superellipse corner.
  */
-.history {
+:host {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     max-height: 100%;
-    padding: var(--step-3) 0 0;
+    padding: var(--step-4) 0 var(--step-3);
     border: 1px solid var(--line-firm);
     border-radius: var(--radius);
     background: var(--surface);
     overflow: hidden;
 }
 
-.history[hidden] {
-    display: none;
-}
-
-/*
- * The slices, and the scroll along them. Mandatory snapping, and the targets are the steps: there
- * is nothing to stop half way through a transition, so the scroll does not offer to.
- */
+/* The scroll along the slices; snapping is by step — there is nothing between two to stop at. */
 .cols {
     position: relative;
-    /*
-     * A layer of its own, so the tint of a step can go *under* the drawing. The bands come after
-     * the board in the markup — they have to, they are what is pressed — and a positioned box
-     * paints over the content of the box it is in. A translucent tint could live with that and let
-     * the curves through; an opaque one cannot, and opaque is what it has to be. Inside this
-     * context a negative layer sits above the panel and below the run.
-     */
+    /* Its own stacking context, so a step's opaque tint (negative z-index) sits above the panel
+       and below the run. */
     isolation: isolate;
     overflow-x: auto;
     overflow-y: hidden;
@@ -47,19 +34,13 @@ svg.names {
     display: block;
 }
 
-/*
- * The index, on the left of the strings and out of the scroll — the same names the figure writes
- * down its middle, in the same type and the same colours. A row of a run says nothing without the
- * name of the state it is.
- */
-/* The name of the panel, and the two ends of the run on the same line — a control belongs beside
-   the thing it acts on, and there is no other line here that is about the run as a whole. */
-.history .tag {
+/* The panel's name and the two run-end buttons on one line. */
+.tag {
     grid-column: 1 / -1;
     display: flex;
     align-items: baseline;
     gap: var(--step-3);
-    padding: 0 var(--step-3) var(--step-2);
+    padding: 0 var(--step-4) var(--step-2);
 }
 
 .ends {
@@ -71,12 +52,7 @@ svg.names {
     display: none;
 }
 
-/*
- * Two words, set as the tool sets everything it says about itself: quiet, small, and not shaped
- * like a button. What they do is a jump, which is not a thing that wants a target the size of a
- * key — and a debugger with two chrome buttons in the corner of a panel is a debugger wearing a
- * toolbar it does not need.
- */
+/* Two quiet words, not button-shaped. */
 .ends .end {
     padding: 0;
     border: 0;
@@ -92,7 +68,7 @@ svg.names {
     color: var(--accent);
 }
 
-.history text.name {
+text.name {
     font: 500 var(--name)/1 var(--mono-font);
     fill: var(--c, var(--muted));
 }
@@ -121,12 +97,8 @@ circle.at {
     fill: var(--c, var(--accent));
 }
 
-/*
- * The middle of a long run of one step: drawn, but not one of them. Dashed because it stands for
- * steps that are not on the board — the first and the last are, either side of it — and thinner,
- * because what it carries is a count rather than a moment. Nothing points at it and nothing
- * presses it: it is not one step, so there is nothing to go back to.
- */
+/* The elided middle of a long repetition: dashed and thinner — a count, not a moment. Takes no
+   pointer and no click. */
 .trail.elided {
     stroke-width: 1.5;
     stroke-dasharray: 3 4;
@@ -143,39 +115,29 @@ circle.at.ahead {
     opacity: var(--undone);
 }
 
-/*
- * What would happen if the rule under the pointer were taken: out of the slice the machine is
- * standing in, into the one it would arrive at.
- *
- * The same line, thinner: heavier than a string, which is the ground, and lighter than a step,
- * which happened. It was dashed and the dashes were the wrong idea twice over — at two pixels with
- * round caps they drew a chain of beads rather than a line, and even cut and spaced they said
- * "uncertain" about a curve whose whole content is exactly where it would go. What marks it as an
- * offer is the weight and the arrow on the end, and neither of those has to be read.
- */
+/* The preview of the rule under the pointer: heavier than a string, lighter than a taken step,
+   dashed and marching towards the slice it would reach. No arrowhead — a position in this panel
+   is a dot. */
 .maybe {
     fill: none;
     stroke: var(--c, var(--accent));
     stroke-width: 1.5;
     stroke-linecap: round;
+    stroke-dasharray: 3 2;
+    animation: march 0.5s linear infinite;
 }
 
-/* Where it would arrive. An arrow and not a dot: a dot is a slice, and a slice is something the
-   run passed through — half of one, drawn in dashes, is a claim that it half happened. */
-path.maybe.tip {
-    fill: var(--c, var(--accent));
-    stroke: none;
+/* Where the offered step would stand: the position as a ring, not yet a dot. */
+circle.maybe-at {
+    fill: var(--surface);
+    stroke: var(--c, var(--accent));
+    stroke-width: 1.5;
 }
 
 /*
- * One step: what is pointed at, what is clicked, what the scroll snaps to, and what the number
- * belongs to. Clicking one is the whole of undo and redo — a step you can see is a better thing to
- * press than an arrow that means "one from wherever you are".
- *
- * What is *pressed* is one column, the slice the step arrived in, because that is the slice going
- * back to it goes to. Two adjacent bands two columns wide would overlap on every column but the
- * last, and of two things stacked on a column only the upper one can be pressed. What is *drawn*
- * is both slices, and that is the box below.
+ * One step: the click target, the snap target, the holder of the number. Clicking one is undo
+ * and redo. Pressed area is one column — the slice the step arrived in; two-column press areas
+ * would overlap. Drawn area is both slices (the ::before below).
  */
 .cols .step {
     position: absolute;
@@ -193,17 +155,9 @@ path.maybe.tip {
 }
 
 /*
- * The step, drawn: a transition holds two slices, so the tint covers the one it left and the one it
- * reached, and the column that is pressed is its right half.
- *
- * Opaque — mixed into the panel, not laid over it. Any two of these share a column, since the slice
- * one step arrived in is the slice the next one left, and a translucent tint over a translucent
- * tint puts a third, darker band between two steps, standing for something that does not exist. A
- * mix with the surface stacks without adding up: what you see on the shared column is whichever
- * step is on top, and never a colour that belongs to neither.
- *
- * It stops above the number strip, so the numbers stay on the panel and stay legible, and so the
- * strip reads as one row of counts rather than as part of what is lit.
+ * The step's tint, covering both its slices. Opaque (mixed into the surface, not laid over it):
+ * adjacent steps share a column, and translucent tints would stack into a darker band there. It
+ * stops above the number strip.
  */
 .cols .step::before {
     content: "";
@@ -220,11 +174,7 @@ path.maybe.tip {
     background: color-mix(in oklab, var(--accent) var(--wash), var(--surface));
 }
 
-/*
- * Where the machine stands, when that is behind the end of the run — and the step that put it
- * there. Over the pointer's tint and not under it: this is where you are, and a pointer passing
- * along the neighbouring column should not eat half of it.
- */
+/* Where the machine stands, when that is behind the run's end. Above the hover tint. */
 .cols .step.now::before {
     z-index: -1;
     background: color-mix(
@@ -235,22 +185,9 @@ path.maybe.tip {
 }
 
 /*
- * What stands in the strip stands under the *transition*, not under a column: on the boundary the
- * two slices meet at, which is the point the curve turns at and the middle of the tint that lights
- * both of them. A band is the column the step arrived in, so that boundary is the band's left
- * edge, and the label is pulled back by half its own width to sit on it.
- *
- * Centred in the band instead, a number read as counting the slice on its right — which is a state
- * the machine was in, not a step it took.
- *
- * The number is the step. On the elided column, which is not one step, `×N` stands in its place —
- * one of the numbers of this strip, in the same type at the same size under its own column,
- * because it is read along the row with them and anything set apart from that row reads as a
- * different kind of thing. Heavier, though: it is the one label here that is not a step number,
- * and weight is how a row of numerals says "not one of us" without leaving the row.
- *
- * Neither takes clicks: both hang over the column to the left, and which step the pointer is on is
- * a question for the columns and not for the width of a numeral.
+ * The step number, on the boundary the two slices meet at (the band's left edge), pulled back by
+ * half its width — centred in the band it would read as counting the slice, not the step. The
+ * elided column shows `×N` in the same type. Neither takes clicks.
  */
 .cols .step .no {
     justify-self: start;

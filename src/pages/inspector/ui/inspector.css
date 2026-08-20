@@ -1,55 +1,41 @@
 /* One mount, and everything below is inside it. Two inspectors on a screen are two of these. */
-.fsmjs-inspector {
-    display: grid;
-    min-width: 0;
-    min-height: 0;
-    height: 100%;
-}
 
-/*
- * The figure, and what happened on it: beside, if the figure still fits whole; under, if it does
- * not. Which of the two is not a question about the window — it is whether this schema fits in
- * what is left once the history has its column — so the mount measures the board and puts the
- * class on. `--history-min` is the width it measures against, and it is here rather than there
- * because it is the width a step's sentence needs, which is a fact about this panel.
- *
- * Exploring, nothing fires and there is no history at all: the figure has the whole surface.
- */
-.work {
+@layer tokens, controls, page;
+
+@layer page {
+    .fsmjs-inspector {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+        height: 100%;
+    }
+
     /*
-     * The least history worth standing beside the figure: eight slices of it, which is four
-     * steps. Narrower than that and it says less than the room it costs, so it goes underneath
-     * and takes the width of the page instead.
-     *
-     * In pixels, and that is not a slip. The mount reads this to work out whether both fit, and a
-     * length it has to resolve itself is a length it will get wrong — `parseFloat("12rem")` is 12,
-     * and a test against 12 pixels says everything fits. One value, one unit, both readers.
-     */
-    --history-min: 192px;
-
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: var(--step-3);
-    min-height: 0;
-    height: 100%;
-    /* Both hug what is in them vertically: a figure with room to spare is a figure, not a field. */
-    align-items: start;
-}
-
-/*
- * Beside: the figure column is the width of the board — `--board`, which the mount sets from what
- * it drew — and the history takes what is left. The figure is the one of the two that has a width
- * of its own; nothing is gained by cutting the transcript short so that the page can end early.
- *
- * `--history-min` is the floor, and the same number the mount tested against before putting the
- * class on: what it decided was that this much would be left, so this much is what the column
- * cannot go under.
+ * The figure and the history: beside if the board fits whole, under if not — the mount measures
+ * and puts the class on. Exploring there is no history, and the figure has the whole surface.
  */
-.work.beside {
-    grid-template-columns: var(--board, minmax(0, 1fr)) minmax(
-            var(--history-min),
-            1fr
-        );
-    grid-template-rows: minmax(0, 1fr);
+    .work {
+        /* The least history worth standing beside the figure: eight slices. In pixels, because the
+       mount reads it with `parseFloat`. */
+        --history-min: 192px;
+
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: var(--step-4);
+        min-height: 0;
+        height: 100%;
+        /* Both hug what is in them vertically: a figure with room to spare is a figure, not a field. */
+        align-items: start;
+    }
+
+    /* Beside: the figure column is the board's width (`--board`, set by the mount), the history
+   takes the rest with `--history-min` as its floor — the number the mount tested against. */
+    .work.beside {
+        grid-template-columns: var(--board, minmax(0, 1fr)) minmax(
+                var(--history-min),
+                1fr
+            );
+        grid-template-rows: minmax(0, 1fr);
+    }
 }

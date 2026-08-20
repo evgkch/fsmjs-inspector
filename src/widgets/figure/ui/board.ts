@@ -9,32 +9,23 @@
  *            │  TO × EMIT  │  3 — the columns are shared down this line
  *            └─────────────┘
  *
- * Block 1 is the domain of δ: a row is a state, a column an event type, one cell is one (q, σ) —
- * the pair a `dispatch` is addressed by. Block 3 is the codomain, (r, λ) — and a rule that emits
- * nothing has no cell there, since there is no output to give it one, so the name of its column
- * is what names it. Block 2 is the same relation projected along Σ and Λ, so its cells are *sets*
- * of rules: several events may join one pair of states.
+ * Block 1 is the domain of δ: a cell is one (q, σ), the pair `dispatch` is addressed by. Block 3
+ * is the codomain (r, λ); a rule that emits nothing has no cell there and is named by its column.
+ * Block 2 is the same relation projected along Σ and Λ, so its cells are sets of rules.
  *
- * 1 and 3 are the two halves of a transition, and neither is more its beginning than the other,
- * so they behave the same way. Pointing at a cell of either runs its two bands out to the names
- * on both axes — the one 2 has an axis for carrying on across it — and lights what the other half
- * could be. Pressing fixes that half: the bands stay, everything the choice rules out goes dark,
- * and what is left lit is the other half. Block 2 is where the band out of one half meets the
- * band into the other. It is a display and never a control: pointing at a corner lights the
- * causes and the outcomes that meet there, and there is nothing to press, because a crossing is
- * not something to choose.
+ * Blocks 1 and 3 are the two halves of a transition and behave the same way: pointing at a cell
+ * runs its bands out to the names and lights the possible other halves; pressing fixes the half.
+ * Block 2 is where the two bands cross — a display, never a control.
  *
- * The board is built once for a schema and a position of the machine, and every class it wears
- * afterwards is worked out in one pass from one value — what `look` says. That is why pointing at
- * a cell and having pressed it cannot come out looking different: they arrive in the same list,
- * `shown`, and go down the same line of code.
+ * The board is built once per schema and machine position; every class it wears afterwards is
+ * computed in one pass from `look()`, so pointing and pressing cannot diverge.
  */
-import type { Edge } from "@evgkch/fsmjs";
 import { edgeLabel } from "@evgkch/fsmjs/formatters";
 import {
   CAUSE,
   CORNER,
   EFFECT,
+  SOURCE,
   holds,
   keyOf,
   kindOf,
@@ -44,6 +35,7 @@ import type { Key } from "../../../entities/cell/index.js";
 import type { Focus } from "../../../features/focus/index.js";
 import { svg } from "../../../shared/lib/dom.js";
 import { CELL } from "../../../shared/lib/grid.js";
+import type { Row } from "../../../shared/lang/rules.js";
 import type { Draw } from "../model/plan.js";
 
 export type Dressed = {
@@ -62,11 +54,12 @@ export function board(d: Draw, w: Wiring): Dressed {
   const { choice, pointer, look } = w.focus;
   const g = d.geo;
   const height = g.bottom;
+  const width = g.width;
   const root = svg("svg", {
     class: "board",
-    width: g.width,
+    width,
     height,
-    viewBox: `0 0 ${g.width} ${height}`,
+    viewBox: `0 0 ${width} ${height}`,
   });
 
   /**
@@ -77,13 +70,11 @@ export function board(d: Draw, w: Wiring): Dressed {
     node: SVGElement;
     family: "box" | "name";
     key: Key;
-    list: Edge[];
+    list: Row[];
     base: string;
     /**
-     * What `dress` last worked out about it: whether anything here is still on the table, and
-     * whether it is what the next press is being asked for. The classes say the same two things,
-     * but a class is a *drawing* of a fact — reading one back to decide whether to dispatch is
-     * asking the paint what the machine thinks.
+     * What `dress` last computed: whether anything here can still be taken, and whether it is
+     * what the next press asks for. Kept as data — the classes only draw these facts.
      */
     live: boolean;
     hot: boolean;
@@ -98,7 +89,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     return node;
   };
   /** The four coordinates of a rule, as the names along the axes write them. */
-  const coords = (r: Edge) => [
+  const coords = (r: Row) => [
     `from\0${r.from}`,
     `on\0${r.on}`,
     `to\0${r.to}`,
@@ -108,15 +99,16 @@ export function board(d: Draw, w: Wiring): Dressed {
   const midR = g.q(d.cols.length - 1) + CELL / 2;
 
   /**
-   * The two bands of a cell: the lines it is the intersection of, run out to the names on both
-   * axes so nothing has to be counted, and the one the middle block has an axis for carried on
-   * across it. That is what the middle block is — the band out of one end of a transition meets
-   * the band into the other there, and where they cross is the corner the rule goes through.
+   * The bands of a cell: the row and column it intersects, run out to the names on both axes.
+   * The band the middle block has an axis for carries on across it.
    */
   const bands = (key: Key): Record<string, number>[] => {
     const [kind, a, b] = key.split("\0");
+    // A source names its state's whole row: every rule leaving it lies on it.
+    if (kind === SOURCE)
+      return [{ x: 0, y: g.row(d.all.indexOf(a!)), width: midR, height: CELL }];
     if (kind === CAUSE) {
-      // The row is a state, which block 2 indexes too, so it goes the whole way across.
+      // The row is a state, indexed by block 2 too, so it goes the whole way across.
       const row = {
         x: 0,
         y: g.row(d.all.indexOf(a!)),
@@ -125,8 +117,7 @@ export function board(d: Draw, w: Wiring): Dressed {
       };
       const i = d.evs.indexOf(b!);
       if (i < 0) return [row];
-      // The column is an event type, and there is no axis of those anywhere else — so it runs
-      // down to the name that says which event, and stops.
+      // The column is an event type with no other axis: down to its name and stop.
       return [
         row,
         {
@@ -144,11 +135,10 @@ export function board(d: Draw, w: Wiring): Dressed {
         width: CELL,
         height,
       };
-      // `TO r` with nothing emitted is named on the name of the column: one band, and no row to
-      // cross it, because there is no output and so no row it could be on.
+      // `TO r` with nothing emitted has no output row: one band.
       const i = a ? d.outs.indexOf(a) : -1;
       if (i < 0) return [column];
-      // Out to the name of the output on one side, and to the edge of the block on the other.
+      // To the output's name on one side, the block's edge on the other.
       return [
         column,
         {
@@ -159,39 +149,65 @@ export function board(d: Draw, w: Wiring): Dressed {
         },
       ];
     }
-    // A corner of block 2 is a crossing, not a cell of either index: nothing runs out from it.
+    if (kind === CORNER) {
+      // A crossing names every rule out of `a` into `b`. Its bands are their coordinates, run
+      // out to the names: the row, the target's column, and each way's event column and output
+      // row — for one way, exactly the four bands of that rule's two halves.
+      const list = d.rows.filter((r) => r.from === a && r.to === b);
+      if (!list.length) return [];
+      const out: Record<string, number>[] = [
+        { x: 0, y: g.row(d.all.indexOf(a!)), width: midR, height: CELL },
+        {
+          x: g.q(d.cols.indexOf(b!)) - CELL / 2,
+          y: 0,
+          width: CELL,
+          height,
+        },
+      ];
+      for (const on of new Set(list.map((r) => r.on))) {
+        const i = d.evs.indexOf(on);
+        if (i >= 0)
+          out.push({
+            x: g.on(i) - CELL / 2,
+            y: 0,
+            width: CELL,
+            height: g.foot,
+          });
+      }
+      for (const λ of new Set(list.flatMap((r) => (r.emit ? [r.emit] : [])))) {
+        const i = d.outs.indexOf(λ);
+        if (i >= 0)
+          out.push({
+            x: g.spine,
+            y: g.λ(i) - CELL / 2,
+            width: midR - g.spine,
+            height: CELL,
+          });
+      }
+      return out;
+    }
     return [];
   };
 
   const wash = svg("g", { class: "wash" });
 
   /**
-   * Everything that depends on the state of the figure, in one pass over the board.
-   *
-   * Two predicates carry it. `play` is what is still on the table: the mode says whether the
-   * machine could get there at all, and every end already fixed says whether the choice allows
-   * it. `shows` is what is being pointed at or has been fixed — and it is one predicate, not
-   * two, which is the whole reason a click keeps exactly the light the pointer had. It is also
-   * not this file's: the editor asks the same question of its lines, which is how pointing at a
-   * cell lights the rule where it is written.
+   * Everything that depends on the state of the figure, in one pass. `play` says what can still
+   * be taken; `shows` says what is pointed at or fixed — one predicate, shared with the editor,
+   * so a cell and the line naming its rule light together.
    */
   const dress = () => {
     const { fixed, shown, open } = look();
 
-    // On the table: nothing is out of reach where nothing can be taken, and where something can,
-    // reach is what the machine can do from where it stands. Whether anything can be taken is the
-    // plan's answer and not the mode's — a figure watching a machine in another process is running
-    // and cannot be driven, and dimming every cell of it would say the run had stopped.
-    const play = (r: Edge) =>
+    // Reach is the plan's answer, not the mode's: a watched machine is running but cannot be
+    // driven, and dimming its cells would misreport the run.
+    const play = (r: Row) =>
       (!d.acting || d.fires(r)) && fixed.every((k) => holds(k, r));
-    const lit = (r: Edge) => shows(shown, r);
+    const lit = (r: Row) => shows(shown, r);
 
     for (const s of spots) {
-      // Three states, and the diagram is a hard enough object without a fourth. A cell is out
-      // of reach; or the figure is about it — pointed at, or held, which are the same look
-      // because they are the same thing seen twice; or it is neither and just there. Never two
-      // at once: a cell out of reach does not answer the pointer, and a half can only be held
-      // if it was in reach when it was pressed.
+      // Three states per cell, never two at once: out of reach; lit (pointed at or held, the
+      // same look); or plain.
       const alive = s.list.some(play);
       const hot =
         fixed.includes(s.key) || (open.includes(kindOf(s.key)) && alive);
@@ -205,19 +221,13 @@ export function board(d: Draw, w: Wiring): Dressed {
       s.node.setAttribute("tabindex", hot ? "0" : "-1");
     }
 
-    // A name says one coordinate, so it says less than a cell and says it about more rules:
-    // pointing at a corner of block 2 lights every ON the rules there go out on and every EMIT
-    // they arrive with, and every name of one.
+    // A name is one coordinate, so it lights for every lit rule that uses it.
     const shine = new Set<string>();
     for (const r of d.rows) if (lit(r)) for (const c of coords(r)) shine.add(c);
-    // A name is lit or it is not: which half was held is what the bands say, and saying it
-    // twice would be a second thing to read.
     for (const [coord, nodes] of tag)
       for (const node of nodes) node.classList.toggle("lit", shine.has(coord));
 
-    // Where the machine stands, said on the index and on the names of the state it stands on.
-    // Folded into `dress` because it is the one thing about a figure that moves when the machine
-    // does — nothing else on the board has to be rebuilt for a step.
+    // Where the machine stands — the one thing that moves on a step, so it lives in `dress`.
     const here = d.here;
     const at = d.all.indexOf(here);
     if (at < 0) markDot.setAttribute("display", "none");
@@ -234,34 +244,26 @@ export function board(d: Draw, w: Wiring): Dressed {
         node.classList.toggle("here", q === here);
     }
 
-    // A crossing has no bands, so aiming through one adds none: `bands` says so, and nothing
-    // here has to know which kind of key it is looking at.
+    // Two keys can band the same lane — a source and the corner both band the row. Drawn once,
+    // or the tint would double where they agree.
+    const lanes = new Map(
+      shown.flatMap(bands).map((box) => [JSON.stringify(box), box]),
+    );
     wash.replaceChildren(
-      ...shown
-        .flatMap(bands)
-        .map((box) => svg("rect", { ...box, class: "lit-lane" })),
+      ...[...lanes.values()].map((box) =>
+        svg("rect", { ...box, class: "lit-lane" }),
+      ),
     );
   };
 
-  /**
-   * A press, and that is the whole of it: hand the key over and let the guards say what it
-   * meant. Nothing here asks which half it was, how many are named now, or what to redraw — the
-   * diagram's own transition does the redrawing, and `took` is where a named transition is
-   * taken. A press is not a place where any of that is decided.
-   */
+  /** A press is one dispatch; the choice machine's guards decide what it meant. */
   const choose = (key: Key, alive: boolean) =>
     choice.dispatch("press", { key, alive });
 
-  /**
-   * Wire a cell up. Pointing at it and pressing it are both one dispatch: the machine is told
-   * what happened, and the board is dressed from what it says.
-   */
+  /** Wire a cell up: pointing and pressing are each one dispatch into the focus machines. */
   const wire = (s: Spot): SVGElement => {
     spots.push(s);
-    // Whether a cell is out of reach is a fact about the subject and the mode, so it is handed
-    // over with the press and with the pointing; what to do about it is one guard, in the machine
-    // that is being told. Running, the machine has to be able to get there; exploring, a variant
-    // the choice has already ruled out is out either way.
+    // Reach is handed over with the event; what to do about it is the machine's guard.
     const on = () =>
       pointer.dispatch("enter", { keys: [s.key], offer: true, alive: s.live });
     const off = () => pointer.dispatch("leave");
@@ -269,11 +271,8 @@ export function board(d: Draw, w: Wiring): Dressed {
     s.node.addEventListener("mouseleave", off);
     s.node.addEventListener("focus", on);
     s.node.addEventListener("blur", off);
-    // A crossing is shown and aimed through, never held — the machine's guard says so too, but
-    // there is no reason to offer a press that would be refused.
+    // A crossing is never held; no press is offered.
     if (kindOf(s.key) === CORNER) return s.node;
-    // What the figure offers is what `dress` lit, and it is lit because the same fact went into
-    // the same guards: pressing a cell nothing can be done with is a press with no rule for it.
     const take = () => choose(s.key, s.live);
     s.node.setAttribute("role", "button");
     s.node.addEventListener("click", take);
@@ -290,18 +289,15 @@ export function board(d: Draw, w: Wiring): Dressed {
   const floor = svg("rect", {
     x: 0,
     y: 0,
-    width: g.width,
+    width,
     height,
     class: "floor",
   });
   floor.addEventListener("click", w.forget);
-  // The bands go in before anything else is drawn: they are the background of the rows and the
-  // columns, and a background over the top of the cells is not one.
+  // The bands are background: appended before the cells.
   root.append(floor, wash);
 
-  // The lanes run through the whole figure: the columns of block 2 are the columns of block 3,
-  // and drawing them as one line is what says so. They stop for the band of names between the two
-  // blocks, so nothing is struck through.
+  // The columns of blocks 2 and 3 are one line each, interrupted only by the band of names.
   d.cols.forEach((n, i) => {
     const rail = (y1: number, y2: number) =>
       root.append(
@@ -319,9 +315,7 @@ export function board(d: Draw, w: Wiring): Dressed {
       rail(g.λ(0) - CELL / 2, g.λ(d.outs.length - 1) + CELL / 2);
   });
 
-  // Blocks 1 and 2 share their rows the way 2 and 3 share their columns, so a row is drawn as the
-  // same kind of line. Both stop at the band of names — the index they are shared by, and the one
-  // place a line would strike a word out.
+  // The rows of blocks 1 and 2, stopping at the band of names between them.
   d.all.forEach((n, j) => {
     const y = g.row(j) + CELL / 2;
     const beam = (x1: number, x2: number) =>
@@ -345,8 +339,7 @@ export function board(d: Draw, w: Wiring): Dressed {
             y: y + 4,
             class: "name out",
             "text-anchor": "middle",
-            // Λ is an axis of its own and reads as one colour. Quiet until it is pointed at,
-            // and then that colour — never the ink, which is the page and not a meaning.
+            // Λ is one axis, one colour.
             style: "--c: var(--emit)",
           },
           λ,
@@ -383,60 +376,27 @@ export function board(d: Draw, w: Wiring): Dressed {
   });
 
   /*
-   * The four indices, named — and named in the words the language names them in.
-   *
-   * These are not labels for a chart. FROM, ON, TO and EMIT are four of the seven words a rule is
-   * written in, and the figure's four coordinates are those four words: what a rule leaves, what
-   * it leaves on, where it arrives, what comes out. So they are set as the keywords they are —
-   * the same face, the same weight and the same quiet as `FROM` in the editor two panels over —
-   * and not as small capitals belonging to the page.
+   * The four indices, named with the language's own keywords — FROM, ON, TO, EMIT — set the same
+   * way the editor sets them.
    */
-  const cap = (x: number, y: number, word: string) =>
+  const cap = (x: number, y: number, word: string, anchor = "middle") =>
     root.append(
-      svg("text", { x, y, class: "cap", "text-anchor": "middle" }, word),
+      svg("text", { x, y, class: "cap", "text-anchor": anchor }, word),
     );
 
-  /**
-   * A keyword stands the way the index it names stands.
-   *
-   * `ON` and `FROM` name what is written across the page — a run of columns, a column of rows — so
-   * they are written across it too, on the one line above the grid. `TO` and `EMIT` name the
-   * bottom block, whose index is the band of words stood on end and whose columns are the rails
-   * running down through it, so they are stood on end with them, in the empty middle of that band:
-   * `TO` against the columns it names and `EMIT` at the head of the outputs it names, which are
-   * written down the middle column directly below it.
-   */
-  const stack = (x: number, word: string) =>
-    root.append(
-      svg(
-        "text",
-        {
-          x,
-          y: g.stem,
-          class: "cap",
-          "text-anchor": "start",
-          transform: `rotate(90, ${x}, ${g.stem})`,
-        },
-        word,
-      ),
-    );
-
+  // ON and FROM on the line above the grid; TO and EMIT down the right-hand edge, each against
+  // the middle of the run of names it names.
   if (d.evs.length) cap((6 + g.spine) / 2, 13, "ON");
   cap(g.names, 13, "FROM");
-  if (d.cols.length) stack(midL - 14, "TO");
-  if (d.outs.length) stack(g.spine + 6, "EMIT");
+  if (d.cols.length) cap(g.verge, (g.stem + g.foot) / 2 + 3, "TO", "start");
+  if (d.outs.length)
+    cap(g.verge, (g.λ(0) + g.λ(d.outs.length - 1)) / 2 + 3, "EMIT", "start");
 
   /**
-   * A name of a column, stood on end under the grid — and the two indices are turned opposite
-   * ways, because they are read in opposite directions.
-   *
-   * The states of TO run *down*: they are the head of a column that carries on downwards into
-   * TO × EMIT, and a label pointing one way while reading the other is read against itself. The
-   * events of ON run *up*, back towards the grid they belong to: there is nothing below them, and
-   * a word that ends at its own column is a word that points at it.
-   *
-   * Either way the anchor is the end of the text under the turn, so every name in the band begins
-   * on the same line under the grid however long the longest of them is.
+   * A column name stood on end under the grid. The states of TO read downward (they head the
+   * column that continues into TO × EMIT) and are centred in the band; the events of ON read
+   * upward and hang from the line under the grid. The baseline is shifted half a letter so the
+   * word sits on its column.
    */
   const stood = (
     x: number,
@@ -444,28 +404,30 @@ export function board(d: Draw, w: Wiring): Dressed {
     cls: string,
     turn: 90 | -90,
     hue?: string,
-  ) =>
-    svg(
+  ) => {
+    const down = turn === 90;
+    const axis = x + (down ? -4 : 4);
+    const y = down ? (g.stem + g.foot) / 2 : g.stem;
+    return svg(
       "text",
       {
-        x,
-        y: g.stem,
+        x: axis,
+        y,
         class: cls,
-        "text-anchor": turn === 90 ? "start" : "end",
-        transform: `rotate(${turn}, ${x}, ${g.stem})`,
+        "text-anchor": down ? "middle" : "end",
+        transform: `rotate(${turn}, ${axis}, ${y})`,
         ...(hue !== undefined && { style: hue }),
       },
       name,
     );
+  };
 
   d.evs.forEach((σ, i) => {
     root.append(mark(`on\0${σ}`, stood(g.on(i), σ, "name on", -90)));
   });
 
-  // `TO r` with nothing emitted is an outcome the grid above has no cell for — there is no output
-  // to give it one, and a row for it would be a symbol the language does not have. What the
-  // figure does have is the name of the column, which is where `TO r` is written and has been all
-  // along. So the name is that outcome's cell, and nothing is drawn behind it.
+  // `TO r` with nothing emitted has no cell in block 3; the name of the column is that
+  // outcome's cell.
   d.cols.forEach((to, i) => {
     const ends = d.rows.filter((r) => r.emit === undefined && r.to === to);
     const name = mark(
@@ -474,9 +436,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     );
     root.append(name);
     if (ends.length) {
-      // A word stood on end is a small thing to hit, so the band it stands in takes the pointer
-      // for it — painted as nothing at all, because what a name has behind it is the page, and
-      // the name lighting up is what says it can be clicked.
+      // A word on end is a small target; the invisible band it stands in takes the pointer.
       const grab = svg("rect", {
         x: g.q(i) - CELL / 2,
         y: g.stem,
@@ -511,14 +471,13 @@ export function board(d: Draw, w: Wiring): Dressed {
   // ── the rows: blocks 1 and 2, sharing them ──
 
   /**
-   * One cell of a lower block. It stays one square whatever it holds: the intersection the
-   * controls address is (from, on), and there a cell is one `dispatch` — the rules inside it are
-   * alternatives its guards decide between, not choices offered to the reader.
+   * One cell. One square whatever it holds: the rules inside are alternatives the guards decide
+   * between, not choices offered to the reader.
    */
   const square = (
     x: number,
     y: number,
-    list: Edge[],
+    list: Row[],
     tint: string,
     key: Key,
   ): SVGGElement => {
@@ -532,9 +491,7 @@ export function board(d: Draw, w: Wiring): Dressed {
         rx: 5,
       }),
     );
-    // What the dump lost, flagged where it was lost: `validate`, reading the schema as text,
-    // finds a rule here that an unguarded one ahead of it would always beat. Splitting the cell
-    // to show which would say the cell is a choice — a corner flag says only that it is there.
+    // A corner flag where `validate` calls a rule of this cell dead.
     if (list.some(d.dead))
       box.append(
         svg("path", {
@@ -585,9 +542,8 @@ export function board(d: Draw, w: Wiring): Dressed {
       ),
     );
 
-    // Block 1 is one end of a transition: a cell is one (state, event), which is what `dispatch`
-    // is addressed by. No lane colour here — the columns are events, and where a rule leads is
-    // what the lit column of block 2 says. One meaning per colour.
+    // Block 1: no lane colour — its columns are events, and where a rule leads is block 2's to
+    // say.
     d.evs.forEach((σ, i) => {
       const list = d.cell.get(`${from}\0${σ}`);
       if (list)
@@ -611,8 +567,7 @@ export function board(d: Draw, w: Wiring): Dressed {
         return;
       }
       if (!d.far.has(`${from}\0${to}`)) return;
-      // Reachable, but not in one step. The dot is the part of the relation that is not in the
-      // text at any one place: it is there only as the composition of what is.
+      // Reachable, but not in one step.
       const dot = svg("circle", {
         cx: g.q(i),
         cy: y + CELL / 2,
@@ -634,9 +589,7 @@ export function board(d: Draw, w: Wiring): Dressed {
     root.append(row);
   });
 
-  // Where the machine stands, on the index of states — the one place that fact belongs, and the
-  // one mark on the figure that is not a cell. One dot, moved rather than rebuilt, because only
-  // one state can be current; `dress` puts it on the row and hides it when no state is (exploring).
+  // Where the machine stands: one dot on the index of states, moved by `dress`.
   const markDot = svg("circle", { r: 3.5, class: "mark" });
   root.append(markDot);
 

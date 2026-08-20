@@ -1,30 +1,28 @@
 /**
- * @evgkch/fsmjs-inspector/ui — the tool itself, for a page that wants to draw it.
- *
- * This is not what an application writes. An application writes `inspect(fsm)`, which is one line,
- * costs it no stylesheet and no document, and is the package's main entry. This is the other half:
- * `mount` puts the figure in an element you give it, `overlay` floats it over your own page, and
- * the rest is what a page needs to point them at something.
- *
- * Everything here draws. Importing it means importing a stylesheet.
+ * @evgkch/fsmjs-inspector/ui — the drawing half. An application writes `inspect(fsm)` (the main
+ * entry); a page that wants the tool on it uses `mount`, `overlay`, or the widgets below.
+ * Importing this module imports a stylesheet.
  */
-import "./shared/ui/tokens.css";
+import "./shared/ui/tokens/tokens.css";
 
 export { mount } from "./pages/inspector/mount.js";
 export type {
   Handle,
   Options as ViewOptions,
+  Surface,
 } from "./pages/inspector/mount.js";
+
+export { ensemble } from "./pages/inspector/ensemble.js";
+export type { Cast, Ensemble, Member } from "./pages/inspector/ensemble.js";
 
 export { overlay } from "./app/overlay.js";
 export type { Overlaid, Options as OverlayOptions } from "./app/overlay.js";
 
 /**
- * The widgets, as elements. Importing any of them registers it, and importing this module
- * registers all three — so a page can drop one in and wire it to a subject, a focus and a mode
- * without lifting the whole inspector. Each is the panel itself: `<fsmjs-figure>` *is* the `.out`
- * box, `<fsmjs-history>` the `.history`, `<fsmjs-editor>` the `.editor`, and each takes a `wiring`
- * property (a JS object, never an attribute).
+ * The widgets, as custom elements; importing registers them. Each takes a `wiring` property (a
+ * JS object, never an attribute) and draws into a shadow root with its own stylesheet. The
+ * palette crosses in through inherited custom properties, so `tokens.css` is required;
+ * `style.css` covers the light DOM only — the mount's grid and the overlay.
  */
 export { FsmjsFigure } from "./widgets/figure/figure.js";
 export type { Wiring as FigureWiring } from "./widgets/figure/figure.js";
@@ -32,12 +30,18 @@ export { FsmjsHistory } from "./widgets/history/history.js";
 export type { Wiring as HistoryWiring } from "./widgets/history/history.js";
 export { FsmjsEditor } from "./widgets/editor/editor.js";
 export type { Wiring as EditorWiring } from "./widgets/editor/editor.js";
+export { FsmjsDiagram } from "./widgets/diagram/diagram.js";
+export type { Wiring as DiagramWiring } from "./widgets/diagram/diagram.js";
+export { FsmjsLegend } from "./widgets/legend/legend.js";
+export type {
+  Kind as LegendKind,
+  Wiring as LegendWiring,
+} from "./widgets/legend/legend.js";
+
+export { report } from "./features/report/index.js";
 
 export { newFocus } from "./features/focus/index.js";
 export type { Focus } from "./features/focus/index.js";
-
-export { newMode } from "./features/explore/index.js";
-export type { Mode } from "./features/explore/index.js";
 
 export {
   fromMachine,

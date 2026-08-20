@@ -1,16 +1,7 @@
 /**
- * Whether the pipe is up.
- *
- *   dialling ──up──▸ live ──down──▸ dialling
- *
- * Two states, two rules, and no rule for being told what is already true — so a socket that closes
- * twice, or answers twice, moves nothing and redraws nothing.
- *
- * It is a machine for the reason everything remembered here is one. The alternative was asking
- * `sock?.readyState === 1` at the moment somebody wanted to know, and that is not the same
- * question: `readyState` is about the socket that exists right now, and a page waiting for a
- * connection is asking about the wire, which outlives any one socket and is down in the second
- * between a close and the next dial.
+ * Whether the pipe is up: dialling ──up──▸ live ──down──▸ dialling. No rule for being told what
+ * is already true, so a socket that closes twice moves nothing. Kept apart from `readyState`,
+ * which is about the current socket — the wire outlives any one of them.
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";

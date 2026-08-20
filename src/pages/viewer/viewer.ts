@@ -1,41 +1,32 @@
 /**
- * The viewer: machines that are running somewhere else, drawn here.
- *
- * The standalone page reads a schema and lets you drive it; this one watches. What is different is
- * not the drawing — it is the same figure and the same run, mounted the same way — but what the
- * subject can do: a machine at the end of a pipe has no `drive` and no `rewind`, so nothing here
- * fires and nothing here is undone, and no part of the tool needed a flag to be told so.
- *
- * What the page has instead of a menu is a roster and four switches. One application publishes as
- * many machines as it has, they announce themselves, and the strip along the top is who is out
- * there. What is not on it is what would be a lie here: no schema to choose, since the schemas are
- * whatever is running, and no start to set, since the machine started before this page was open.
- * The source is shown and cannot be typed into, which is the same fact said in the editor.
+ * The viewer: machines running somewhere else, drawn here. The same figure and run as the
+ * standalone page, but the subject has no `drive` and no `rewind` (unless a `History` was handed
+ * over), so nothing fires and nothing is edited. Instead of a schema menu there is a roster:
+ * every published machine announces itself, and the strip along the top lists them.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
 import { toRules } from "@evgkch/fsmjs/formatters";
 import { flaws, fromWire, palette } from "../../entities/machine/index.js";
 import type { Subject } from "../../entities/machine/index.js";
-import { newMode } from "../../features/explore/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { newPanels, offOf } from "../../features/show-panels/index.js";
 import type { Panel } from "../../features/show-panels/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { newSocket } from "../../shared/api/link.js";
 import { el, make } from "../../shared/lib/dom.js";
+import { FsmjsDiagram } from "../../widgets/diagram/diagram.js";
+import { FsmjsLegend } from "../../widgets/legend/legend.js";
 import { FsmjsEditor } from "../../widgets/editor/editor.js";
+import { report } from "../../features/report/index.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { newWatching, watched } from "./model/watching.js";
+import "../../shared/ui/switches.css";
 import "./ui/viewer.css";
 
 /**
- * Where the relay is, unless the address says otherwise — `?ws=ws://host:port`.
- *
- * The same default the publisher dials, written in both places rather than shared: one of them
- * ships inside somebody else's application and the other is this page, and a constant they would
- * have to import from each other is a dependency between the two ends of a wire that is meant to
- * have none.
+ * Where the relay is, unless the address says otherwise — `?ws=ws://host:port`. The same default
+ * as the publisher's, written in both places: the two ends of the wire share no imports.
  */
 const RELAY = "ws://localhost:8999";
 
@@ -49,6 +40,7 @@ export function viewer(): void {
   const note = el<HTMLParagraphElement>("note");
   const host = el<HTMLElement>("watch");
   const work = el<HTMLElement>("work");
+  const alphabet = el<HTMLDivElement>("alphabet");
   const wait = el<HTMLElement>("wait");
   const said = el<HTMLParagraphElement>("said");
   const line = el<HTMLPreElement>("line");
@@ -58,22 +50,14 @@ export function viewer(): void {
   const there = fromWire(link);
   const at = newWatching();
 
-  /**
-   * One `Focus` between the source and the figure, exactly as the standalone page gives them one:
-   * pointing at a cell lights the line the rule is written on, and pointing at a line lights the
-   * cell. That is the whole reason to show the source at all — a schema you cannot edit is still
-   * the other half of the figure, and reading a debugger means reading both.
-   */
+  // One `Focus` between source and figure, as on the standalone page: pointing at either lights
+  // both.
   const focus = newFocus();
-  // The mode is the page's, not the mount's, because the log asks it too: exploring there is no
-  // run, and a panel of times with nothing in it is a panel saying nothing.
-  const mode = newMode();
   const source = el<HTMLElement>("text");
   const editor = new FsmjsEditor();
   editor.wiring = {
     focus,
-    // The machine is compiled into somebody else's application. Nothing typed here could reach it,
-    // so nothing here accepts typing.
+    // The machine is compiled into another application; typing could not reach it.
     readonly: true,
     onEdit: () => {},
     fires: () => false,
@@ -82,34 +66,44 @@ export function viewer(): void {
   };
   source.append(editor);
 
-  // The reader turns the schema back into the language and says where every rule is written. It is
-  // the same reader the standalone page uses on hand-typed text: a graph off the wire is written
-  // out with `toRules` and read back, so the source on screen is the language and not a dump.
+  // A graph off the wire is written out with `toRules` and read back by the same reader the
+  // standalone page uses, so the source on screen is the language, with line positions.
   page.rx.on("built", ({ graph, start, rules }) =>
     editor.show(rules, palette(graph, start), flaws(graph, start)),
   );
 
-  /**
-   * Which panels are up, and the page wears the answer: the stylesheet hides what is down, so
-   * nothing here reaches into a widget to switch it off and no widget learns it can be hidden.
-   */
+  // Which panels are up; the stylesheet hides what is down, so no widget is reached into.
   const panels = newPanels();
   const board = el<HTMLElement>("panels");
-  // The names the panels wear, so a switch and the thing it switches are called the same word.
-  for (const panel of ["code", "figure", "history"] as Panel[]) {
+  for (const panel of [
+    "states",
+    "in",
+    "out",
+    "code",
+    "diagram",
+    "figure",
+    "history",
+  ] as Panel[]) {
     const label = make("label", "panel");
     const box = make("input", "");
     box.type = "checkbox";
     box.checked = true;
-    box.addEventListener("change", () =>
-      panels.dispatch("put", { panel, up: box.checked }),
-    );
-    label.append(box, make("span", "check"), make("span", "what", panel));
+    // The source is always on; its box is shown and takes no clicks.
+    if (panel === "code") {
+      box.disabled = true;
+      label.title = "the source is always on";
+    } else
+      box.addEventListener("change", () =>
+        panels.dispatch("put", { panel, up: box.checked }),
+      );
+    label.append(box, make("span", "", panel));
     board.append(label);
   }
   const dress = () => void (main.dataset["off"] = offOf(panels));
   panels.rx.on(TRANSITION, dress);
   dress();
+
+  const chart = el<HTMLElement>("chart");
 
   /** What is on screen, and which subject it is of. Not a decision — a handle on a drawing. */
   let panel: { subject: Subject; handle: Handle } | null = null;
@@ -121,24 +115,14 @@ export function viewer(): void {
     const who = watched(at);
     const one = list.find((w) => w.who === who) ?? null;
 
-    /*
-     * Three things can be true, and they are not the same thing said louder.
-     *
-     * Nothing has connected: the inspector is listening and the wire is not up — either nothing is
-     * running or it is dialling somewhere else, and the address is the only useful thing to say.
-     * Connected and empty: the wire is fine, so what is missing is the line in the application,
-     * and that line is what to show. Watching: the interface, and none of this.
-     *
-     * It was one sentence for the first two, which named the address at the moment the address was
-     * the one thing that was demonstrably right.
-     */
+    // Three cases: not connected — say the address; connected and empty — show the line to add
+    // to the application; watching — the interface.
     wait.hidden = list.length > 0;
     bar.hidden = list.length === 0;
     work.hidden = list.length === 0;
+    alphabet.hidden = list.length === 0;
     what.hidden = one === null;
-    // A roster is for choosing, and with one machine there is nothing to choose: the name below
-    // says what you are looking at, and a single tab beside it would be a control that does
-    // nothing.
+    // With one machine there is nothing to choose; the name below already says what it is.
     strip.hidden = list.length < 2;
     if (!list.length) {
       const up = link.live();
@@ -149,8 +133,8 @@ export function viewer(): void {
       line.hidden = !up;
     }
 
-    // Rebuilt only when it is a different list. Every machine says hello whenever a pipe comes up,
-    // and a strip rebuilt on each of those takes the keyboard focus off whatever was on it.
+    // Rebuilt only for a different list: hellos repeat on every reconnect, and a rebuild takes
+    // the keyboard focus.
     const now = list.map((w) => `${w.who}\0${w.name}`).join("\n");
     if (now !== written) {
       written = now;
@@ -167,44 +151,43 @@ export function viewer(): void {
     for (const [i, tab] of [...strip.children].entries())
       tab.classList.toggle("now", list[i]?.who === who);
 
-    // The panel is torn down only when it is about to be about something else: a step arriving is
-    // a redraw inside the mount, not a new mount, and mounting again on every step would throw
-    // away the figure and whatever the pointer was over sixty times a minute.
+    // Torn down only for a different subject: a step is a redraw inside the mount, not a remount.
     if (panel && panel.subject !== one?.subject) {
       panel.handle.destroy();
+      chart.replaceChildren();
       panel = null;
     }
     if (one && !panel) {
-      panel = {
-        subject: one.subject,
-        handle: mount(host, one.subject, { focus, mode }),
-      };
-      // The source, as the language writes it. Read after it is set, because what the editor draws
-      // on the words — the colours, the marks in the gutter, what `validate` found — comes back
-      // out of the reader and not out of the graph.
+      const handle = mount(host, one.subject, { focus });
+      report(one.subject, one.who);
+      // The diagram is not one of the mount's own pair; enrolled, it is wired and redrawn with them.
+      const dia = new FsmjsDiagram();
+      chart.replaceChildren(dia);
+      handle.enroll(dia);
+      alphabet.replaceChildren(
+        ...(["states", "in", "out"] as const).map((kind) => {
+          const one = new FsmjsLegend();
+          one.setAttribute("kind", kind);
+          handle.enroll(one);
+          return one;
+        }),
+      );
+      panel = { subject: one.subject, handle };
+      // Set, then read: the colours and gutter marks come out of the reader.
       const text = toRules(one.subject.graph as object);
       editor.set(text);
       read(text, one.subject.at);
-      // The marker in the gutter is about where the machine stands, so it follows the machine.
       one.subject.watch(() => editor.mark());
     }
 
-    // The machine being read, said the way a page says what it is about — its name, and the line
-    // its author wrote about what it is for. Not in the roster: those are what you press, and this
-    // is what you are looking at.
+    // The watched machine's name and description, under the roster.
     title.textContent = one?.name ?? "";
     note.textContent = one?.note ?? "";
     note.hidden = !one?.note;
   };
 
-  /**
-   * The roster changed, so what this page is watching may no longer be there — and if it was
-   * watching nothing, there may now be something.
-   *
-   * Both are said to the machine as what happened, and it decides: `gone` about a machine other
-   * than the one on screen is no rule of it, which is how a worker restarting somewhere does not
-   * take you off the checkout you are reading.
-   */
+  // The roster changed: the watched machine may be gone, or there may now be one to watch. The
+  // watching machine decides — `gone` about another machine is no rule of it.
   const settle = () => {
     const list = there.list();
     const who = watched(at);

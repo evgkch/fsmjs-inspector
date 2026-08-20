@@ -1,40 +1,55 @@
 /**
- * The rule language, read back.
- *
- * `toRules` writes a schema as one sentence per rule — `FROM ON WHEN TO WITH EMIT BY`, in the
- * order the rule runs — and the library says of it that the grammar is regular and
- * whitespace-insensitive, but ships no parser. A tool whose subject is a machine should let you
- * write in the language the machine is written in, so here is the parser.
+ * The parser for the rule language `toRules` writes — one sentence per rule:
  *
  *     FROM locked ON coin WHEN underCap TO locked WITH addCoin
  *     FROM locked ON coin               TO open   WITH reset   EMIT opened
  *     FROM open   ON pass               TO locked
  *
- * `FROM`, `ON` and `TO` are the graph and are required. `WHEN`, `WITH` and `BY` carry what can be
- * said about a function — its name, or `?` for one that has none — and a schema read from either
- * form keeps them as names, because that is all a dump ever had. Order inside a cell is the order
- * the lines come in, which is the order the guards are asked in, so a round trip through this and
- * `toRules` is the same schema and not merely an equivalent one.
+ * `FROM`, `ON` and `TO` are required; `WHEN`, `WITH` and `BY` carry an operation's name, or `?`
+ * for a nameless one. Order inside a cell is the order the lines come in — the order the guards
+ * are asked in — so a round trip through this and `toRules` is the same schema, not merely an
+ * equivalent one. A state with an empty cell (`"done": {}`) writes no line and comes back named
+ * by whatever arrives at it; only a state nothing reaches and nothing leaves would be lost.
  *
- * One thing the language cannot say, and it is the right thing not to say: a state with an empty
- * cell of its own — `"done": {}` in JSON — writes no line, because there is no rule to write. It
- * comes back all the same, named by whatever arrives at it, which is how a state with nothing
- * leaving it is named anywhere else. Only a state that nothing reaches *and* nothing leaves would
- * be lost, and a schema is not saying anything by carrying one.
- *
- * What the reader keeps besides the graph is where every rule was written. A debugger's whole
- * business is joining what a machine is doing to the text that says so, and that join is one
- * number per rule — the line. Working it out afterwards would mean parsing the text twice and
- * hoping the two readings agree.
+ * The reader also keeps the line each rule was written on — the join every highlight and gutter
+ * mark runs on.
  */
+import { nameOf } from "@evgkch/fsmjs";
 import type { Edge } from "@evgkch/fsmjs";
 
 /**
- * The words, in the order a rule runs. `toRules` writes them in exactly this order.
+ * One rule as a flat row of names — what this tool holds where the library holds an `Edge`.
  *
- * Exported because the highlighter needs the same list, and a language whose vocabulary is written
- * down twice is two languages that happen to agree today.
+ * The library types an edge's labels as `PropertyKey`, because a machine's alphabets may be
+ * numbers or symbols. Everything this tool reads has been through `JSON.stringify`, over the
+ * wire, or out of this parser, and all three write strings. `Row` records that as a type; the
+ * conversion happens where a library value comes in, not at every use.
  */
+export type Row = {
+  readonly from: string;
+  readonly on: string;
+  readonly to: string;
+  readonly emit?: string;
+  readonly when?: string;
+  readonly with?: string;
+  readonly by?: string;
+};
+
+/**
+ * A library edge, converted. `nameOf` yields what a dump writes for an operation — its name, or
+ * `?` for an anonymous function; a `null` hole from a plain `stringify` yields no entry.
+ */
+export const rowOf = (e: Edge): Row => ({
+  from: String(e.from),
+  on: String(e.on),
+  to: String(e.to),
+  ...(e.emit !== undefined && { emit: String(e.emit) }),
+  ...(e.when != null && { when: nameOf(e.when, "when") }),
+  ...(e.with != null && { with: nameOf(e.with, "with") }),
+  ...(e.by != null && { by: nameOf(e.by, "by") }),
+});
+
+/** The words, in the order a rule runs. Exported for the highlighter. */
 export const WORDS = [
   "FROM",
   "ON",
@@ -47,9 +62,8 @@ export const WORDS = [
 export type Word = (typeof WORDS)[number];
 
 /**
- * Where a line stops being a rule: a `#` or a `//`, at the start of the line or after a space, and
- * everything after it. Exported for the same reason as `WORDS` — the highlighter has to agree with
- * the reader about what is *not* read, or it will light up the words inside a comment.
+ * A comment: `#` or `//` at the start of a line or after a space, to the end of the line.
+ * Exported so the highlighter and the reader agree on what is not read.
  */
 export const COMMENT = /(^|\s)(#|\/\/).*/;
 
@@ -78,18 +92,14 @@ export const looksLikeRules = (text: string): boolean =>
   !text.trimStart().startsWith("{");
 
 /**
- * Where a rule was read: the line it was written on, and which place in its cell it took.
- *
- * A parser that keeps only the graph throws away the one fact a debugger most needs — *where* a
- * rule is written. The place in the cell is the other half of naming it: a cell is a list of
- * alternatives, and the guards count them in the order the lines came, so the index here is the
- * index the machine's own choice runs on.
+ * Where a rule was read: its line, and its place in its cell — the index the machine's own
+ * choice runs on.
  */
 export type Written = {
   /** Line, counted from 1, the way the parser's complaints count them. */
   at: number;
   slot: number;
-  edge: Edge;
+  edge: Row;
 };
 
 /** A schema, and the text it was read from, joined line by line. */
@@ -99,11 +109,23 @@ export type Reading = {
 };
 
 /**
- * One schema, from one sentence per rule. Throws `RuleSyntaxError` on the first line that is not
- * one — a tool that quietly drops a line you typed is worse than one that will not read it.
+ * One rule as a *schema* holds it: `with` rides in the `to` pair, `by` in the `emit` pair — the
+ * library reads `to` and `emit` and nothing else, so a flat `with` field would silently vanish
+ * from every downstream reader.
  */
+type Held = {
+  to: string | [string, string];
+  emit?: string | [string, string];
+  when?: string;
+};
+
+/** A label and the operation named beside it, or the label alone where none was. */
+const bound = (label: string, op: string | undefined): Held["to"] =>
+  op === undefined ? label : [label, op];
+
+/** One schema from one sentence per rule. Throws `RuleSyntaxError` at the first bad line. */
 export function parseRules(text: string): Reading {
-  const graph: Record<string, Record<string, Record<string, string>[]>> = {};
+  const graph: Record<string, Record<string, Held[]>> = {};
   const rules: Written[] = [];
 
   text.split("\n").forEach((raw, i) => {
@@ -140,11 +162,19 @@ export function parseRules(text: string): Reading {
       if (rule[need] === undefined)
         throw new RuleSyntaxError(at, `no ${need.toUpperCase()}`);
 
-    const { from, on, ...rest } = rule;
+    const { from, on } = rule;
     const cells = (graph[from!] ??= {});
     const cell = (cells[on!] ??= []);
-    rules.push({ at, slot: cell.length, edge: { ...rule, from, on } as Edge });
-    cell.push(rest);
+    // The row stays flat — a `Row` is one column per fact, and that is what every reader below
+    // this line already asks for. Only the schema binds the operations to their labels.
+    rules.push({ at, slot: cell.length, edge: { ...rule, from, on } as Row });
+    cell.push({
+      to: bound(rule["to"]!, rule["with"]),
+      ...(rule["emit"] !== undefined && {
+        emit: bound(rule["emit"], rule["by"]),
+      }),
+      ...(rule["when"] !== undefined && { when: rule["when"] }),
+    });
   });
 
   return { graph, rules };

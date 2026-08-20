@@ -2,60 +2,32 @@
   "blank": {
     "parsed": [
       {
-        "to": "ready",
-        "emit": "built",
-        "when": "readable",
-        "with": "adopt",
-        "by": "made"
+        "to": ["ready", "adopt"],
+        "emit": ["built", "made"],
+        "when": "readable"
       },
-      {
-        "to": "broken",
-        "emit": "stopped",
-        "with": "first",
-        "by": "told"
-      }
+      { "to": ["broken", "first"], "emit": ["stopped", "told"] }
     ]
   },
   "ready": {
     "parsed": [
       {
-        "to": "ready",
-        "emit": "built",
-        "when": "readable",
-        "with": "adopt",
-        "by": "made"
+        "to": ["ready", "adopt"],
+        "emit": ["built", "made"],
+        "when": "readable"
       },
-      {
-        "to": "broken",
-        "emit": "stopped",
-        "with": "keep",
-        "by": "told"
-      }
+      { "to": ["broken", "keep"], "emit": ["stopped", "told"] }
     ],
-    "begin": [
-      {
-        "to": "ready",
-        "emit": "built",
-        "with": "begun",
-        "by": "made"
-      }
-    ]
+    "begin": [{ "to": ["ready", "begun"], "emit": ["built", "made"] }]
   },
   "broken": {
     "parsed": [
       {
-        "to": "ready",
-        "emit": "built",
-        "when": "readable",
-        "with": "adopt",
-        "by": "made"
+        "to": ["ready", "adopt"],
+        "emit": ["built", "made"],
+        "when": "readable"
       },
-      {
-        "to": "broken",
-        "emit": "stopped",
-        "with": "still",
-        "by": "told"
-      }
+      { "to": ["broken", "still"], "emit": ["stopped", "told"] }
     ]
   }
 }

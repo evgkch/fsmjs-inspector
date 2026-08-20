@@ -1,0 +1,48 @@
+/*
+ * The rules a widget's shadow root needs from `tokens.css`: custom properties inherit through
+ * the boundary, selectors do not, so the few element rules live here, injected beside each
+ * widget's own stylesheet.
+ */
+
+/* Border-box, as the page. `*` does not reach the host, so the host is named beside it. */
+:host,
+* {
+    box-sizing: border-box;
+}
+
+/* `hidden` still hides: every widget sets a `display` on its host, which beats the UA's
+   `[hidden]` rule. */
+:host([hidden]) {
+    display: none;
+}
+
+/* A panel's name, as `tokens.css` sets it for the light DOM. */
+.tag {
+    margin: 0;
+    font: 500 var(--micro)/1 var(--main-font);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+/* The same superellipse corner as `tokens.css` gives the light DOM. */
+@supports (corner-shape: superellipse(1.25)) {
+    :host,
+    * {
+        corner-shape: superellipse(1.25);
+    }
+}
+
+/* The marching dashes of an offered rule; shared, so every widget's offer moves the same way. */
+@keyframes march {
+    to {
+        stroke-dashoffset: -5;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}

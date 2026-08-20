@@ -1,40 +1,23 @@
 /**
- * @evgkch/fsmjs-inspector — the whole of what an application writes, and it is one word.
+ * @evgkch/fsmjs-inspector — the main entry, what an application writes:
  *
  *   const cart = inspect(new StateMachine(schema, start), { name: "cart" });
  *
- * `inspect` gives the machine back. It is the identity function with a listener attached, so it
- * goes around an existing instance without moving a line of code and comes off by deleting six
- * characters — which is what a debugger's entry point has to be if it is going to be put in and
- * taken out of somebody's application all day.
- *
- * Nothing here draws. There is no document, no stylesheet and no figure in this file: the
- * inspector is a separate application, started separately, and what this does is tell it what is
- * happening. That is why it is the main entry — the thing being debugged may have no DOM at all,
- * and a server, a worker or a test run should not be importing a page to say what a machine did.
- *
- * What it sends is in `entities/machine/model/wire`, and it is names — the schema as
- * `JSON.stringify` writes it, and the four types of every transition. Contexts and payloads stay
- * in the process they belong to.
- *
- * Several machines in one application go over one socket. That is not an optimisation: the roster
- * on the other side is keyed by who said what, and one pipe is what makes "everyone, say what you
- * are" a single question with several answers.
+ * `inspect` returns the machine it was given, with one listener attached. Nothing here draws —
+ * the debugged process may have no DOM. What goes over the wire (`entities/machine/model/wire`)
+ * is names only: the schema as `JSON.stringify` writes it, and the four types of every
+ * transition. All machines of one process share one socket per address.
  */
 import { TRANSITION } from "@evgkch/fsmjs";
-import type { AnyMachine, Edge } from "@evgkch/fsmjs";
+import type { AnyMachine } from "@evgkch/fsmjs";
 import type { Graph } from "./entities/machine/model/graph.js";
 import { isWire } from "./entities/machine/model/wire.js";
-import type { Went } from "./entities/machine/model/wire.js";
+import type { Kept, Went } from "./entities/machine/model/wire.js";
 import { newSocket } from "./shared/api/link.js";
 import type { Link } from "./shared/api/link.js";
+import type { Row } from "./shared/lang/rules.js";
 
-/**
- * Where the relay listens when nobody says otherwise.
- *
- * A port and not a guess: the viewer that comes with this package dials the same one, so cloning
- * the repository, running it, and putting one line in an application is the whole of the setup.
- */
+/** Where the relay listens by default — the same address the packaged viewer dials. */
 export const RELAY = "ws://localhost:8999";
 
 /**
@@ -50,44 +33,27 @@ export type Past = {
 };
 
 export type Options = {
-  /** What to call it. An application has more than one machine and they are not alike. */
+  /** What to call it on the inspector's page. */
   name?: string;
-  /**
-   * A line about what it is for, written where you know the answer.
-   *
-   * The inspector shows the schema, and a schema says what a machine does and never what it is
-   * for. `"the selection rectangle, from empty through drawing to ready"` is a sentence nobody can
-   * work out from four states, and it is the difference between a roster of names and a roster.
-   */
+  /** A line about what the machine is for — the schema does not say. */
   description?: string;
   /**
-   * A recorder you already have, and handing it over is the whole of turning rewinding on.
-   *
-   *   const past = history(cart);
-   *   inspect(cart, { name: "cart", history: past });
-   *
-   * A flag would have meant the inspector calling `history(fsm)` itself, and then the line that
-   * turns the debugger off would also be the line that removes a recorder somebody's undo may have
-   * been using. Passing the instance is the fact and the permission at once: what the inspector
-   * can do is exactly what you built and handed it, deleting the call leaves everything you built
-   * exactly where it was, and an application that already records for its own undo does not end up
-   * recording twice.
-   *
-   * What it buys is a run that can be walked from the inspector's own window — which does move
-   * this machine, in this process, because that is what rewinding a machine is.
+   * A recorder from `history(fsm)` (`@evgkch/fsmjs/debug`); passing one turns rewinding on.
+   * Rewinding from the inspector's window moves this machine, in this process, through it.
    */
   history?: Past;
+  /**
+   * Send payloads and contexts with the steps, not names alone — what JSON can write of them.
+   * Off by default: the wire is names only, an application's data does not leave it unasked.
+   */
+  carry?: boolean;
   /** Where the inspector is listening, when it is not on this host. */
   url?: string;
   /** A pipe of your own — anything with the three functions on it. Then `url` is not used. */
   link?: Link;
 };
 
-/**
- * One socket per address, shared by every machine in this process and closed when the last of them
- * stops. Ten machines are ten publishers and one connection, and the relay sees one client saying
- * ten things about itself.
- */
+/** One socket per address, refcounted: closed when the last machine using it stops. */
 const pipes = new Map<string, { link: Link; users: number }>();
 
 const dial = (url: string): Link => {
@@ -111,11 +77,8 @@ const idOf = () =>
   `${Date.now().toString(36)}-${(++count).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
 /**
- * Say what this machine is doing, and hand it back.
- *
- * The machine is returned so this can be written around an instance that already exists, in the
- * line that already declares it, and removed later without unpicking anything. It is not wrapped,
- * not proxied and not copied: what comes out is what went in, with one listener on its channel.
+ * Publish what this machine does, and return it — not wrapped, not proxied: the same object with
+ * one listener on its channel.
  */
 export function inspect<T extends AnyMachine>(fsm: T, opts: Options = {}): T {
   const who = idOf();
@@ -126,8 +89,7 @@ export function inspect<T extends AnyMachine>(fsm: T, opts: Options = {}): T {
   const own = !opts.link;
   const link = opts.link ?? dial(url);
 
-  // The graph, taken the way the tool's own lede says it can be: a machine is a projection of
-  // itself, and this is that projection.
+  // The machine's own dump is its graph.
   const graph = JSON.parse(JSON.stringify(fsm)) as Graph;
   const steps: Went[] = [];
   const past = opts.history;
@@ -139,50 +101,73 @@ export function inspect<T extends AnyMachine>(fsm: T, opts: Options = {}): T {
       name,
       note,
       graph,
-      at: fsm.state.type,
+      at: String(fsm.state.type),
       // With nothing recording, the machine is always at the end of what happened.
       step: past ? past.index : steps.length,
       steps,
       can: { history: !!past },
     });
 
+  // Sent only under `carry: true`, and only what JSON can write — a context an application
+  // wants sent differently gets a `toJSON`.
+  const kept = (told: unknown): Kept | undefined => {
+    if (!opts.carry) return undefined;
+    // The listener's own value; only the optional data fields are read off it.
+    const t = told as {
+      input: { payload?: unknown };
+      target: { context?: unknown };
+      output?: { payload?: unknown };
+    };
+    const json = (v: unknown) => {
+      if (v === undefined) return undefined;
+      try {
+        return JSON.parse(JSON.stringify(v)) as unknown;
+      } catch {
+        return undefined;
+      }
+    };
+    const keep: Kept = {};
+    const payload = json(t.input.payload);
+    const context = json(t.target.context);
+    const emitted = json(t.output?.payload);
+    if (payload !== undefined) keep.payload = payload;
+    if (context !== undefined) keep.context = context;
+    if (emitted !== undefined) keep.emitted = emitted;
+    return Object.keys(keep).length ? keep : undefined;
+  };
+
   const off: (() => void)[] = [
     fsm.rx.on(TRANSITION, (t) => {
-      const edge: Edge = {
-        from: t.source.type,
-        on: t.input.type,
-        to: t.target.type,
-        ...(t.output && { emit: t.output.type }),
+      // Converted at the wire: whatever the machine's label types, the wire carries strings.
+      const edge: Row = {
+        from: String(t.source.type),
+        on: String(t.input.type),
+        to: String(t.target.type),
+        ...(t.output && { emit: String(t.output.type) }),
       };
       // Stamped here, where it happened. The page drawing this is somewhere else and its clock
       // would say when it heard, which is a fact about the network and not about the run.
-      const went: Went = { edge, t: Date.now() };
+      const keep = kept(t);
+      const went: Went = { edge, t: Date.now(), ...(keep && { keep }) };
       // A step taken after walking back drops the future it was walked back from — the recorder
       // says where we are, and what came after that is a run that did not happen.
       if (past) steps.length = past.index - 1;
       steps.push(went);
       // The step, and where the machine now stands — which is not always the step's target: a
       // machine can be restored from outside, and the wire says what is, not what follows.
-      link.send({ say: "step", who, went, at: fsm.state.type });
+      link.send({ say: "step", who, went, at: String(fsm.state.type) });
     }),
-    // Somebody has opened a page and does not know who is out there. Everything, restated: the
-    // run so far is short, and a snapshot is what makes a lost message not a hole.
+    // A page asked who is out there: restate everything.
     link.rx.on("hear", (msg) => {
       if (!isWire(msg)) return;
       if (msg.say === "hail") return void hello();
-      // The one thing the inspector asks of an application, and it asks it of the recorder the
-      // application handed over. No recorder, no rewinding — the message is not refused with an
-      // answer, it simply does nothing, because there is nothing here that could do it.
-      // Nothing is said back from here: the recorder announces that it moved, and the answer
-      // goes out on that. Which means a walk back started by the application itself is reported
-      // exactly as one started from the inspector, because they are the same event.
+      // A jump goes to the recorder; without one nothing happens. No reply here — the recorder's
+      // own `moved` triggers the restated `hello`, for jumps from any side.
       if (msg.say === "jump" && msg.who === who) past?.jump(msg.step);
     }),
-    // And every time the pipe comes up, including after it went away, so an application started
-    // before the viewer does not wait to be asked.
+    // On every (re)connect, so an application started before the viewer does not wait to be asked.
     link.rx.on("open", hello),
-    // `restore` publishes no transition — walking a run back is not a thing the machine did — so
-    // where it now stands is restated when the recorder says it moved it.
+    // `restore` publishes no transition, so the new position is restated on `moved`.
     ...(past ? [past.rx.on("moved", hello)] : []),
   ];
   hello();
@@ -193,9 +178,7 @@ export function inspect<T extends AnyMachine>(fsm: T, opts: Options = {}): T {
     if (own) drop(url);
   };
   leaving.add(leave);
-  // A page that goes away says goodbye on the way out. There is no handle to do it with, and that
-  // is the point: `inspect` returns the machine, so the one line stays one line. What is left is
-  // `close()`, for a process that has to end — see below.
+  // A closing page sends `bye` itself; a Node process uses `close()` below.
   if (typeof addEventListener === "function")
     addEventListener("pagehide", leave, { once: true });
 
@@ -203,11 +186,8 @@ export function inspect<T extends AnyMachine>(fsm: T, opts: Options = {}): T {
 }
 
 /**
- * Let go of everything and let the process end.
- *
- * A browser tab needs this no more than it needs to close its own sockets, and it is not what the
- * one line is for. A script does: an open socket holds Node's event loop open, so a test run or a
- * task that watched a machine would sit there after its work was done, waiting on a debugger.
+ * Send `bye` for every machine and close the sockets. Needed in Node: an open socket holds the
+ * event loop, and the process would not exit. A browser tab does not need it.
  */
 export function close(): void {
   for (const leave of [...leaving]) leave();

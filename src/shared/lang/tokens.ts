@@ -1,15 +1,8 @@
 /**
- * The rule language, split into words worth colouring — and no further.
- *
- * This does not parse. `rules.ts` decides whether a line is a rule; this only says what each word
- * *is*, and a line it cannot make sense of is left plain rather than marked wrong: the message
- * about that comes from the reader, once, and in words. Keeping the two apart is what lets the
- * editor colour a half-typed line at every keystroke while the machine behind it is rebuilt at
- * most once in a while.
- *
- * Whitespace is a token like any other. The editor draws this underneath a textarea whose own
- * glyphs are transparent, so a character dropped here is a caret that no longer sits on the word
- * it is over.
+ * The rule language, split into words worth colouring — no parsing: `rules.ts` decides what is a
+ * rule, this only says what each word is, so a half-typed line colours on every keystroke.
+ * Whitespace is a token too: the editor draws this under a transparent textarea, and a dropped
+ * character would put the caret off its word.
  */
 import { COMMENT, WORDS } from "./rules.js";
 import type { Word } from "./rules.js";
@@ -23,11 +16,7 @@ export type Ink = "key" | "q" | "s" | "l" | "op" | "c" | "";
 
 export type Tok = { text: string; ink: Ink };
 
-/**
- * What the word before it says a value is. Exported because completion asks the same question the
- * colouring does — after `ON` comes the name of an event, and both the ink and the word offered
- * follow from that one fact.
- */
+/** What the word before a value says it is. Exported: completion asks the same question. */
 export const KIND: Record<Word, Ink> = {
   FROM: "q",
   TO: "q",
@@ -45,13 +34,11 @@ export function tokenize(line: string): Tok[] {
     if (text) out.push({ text, ink });
   };
 
-  // A comment is where the reader stops, so it is where the colour stops: past it there are no
-  // words, only what you wrote to yourself.
+  // The colour stops where the reader stops: at the comment.
   const cut = COMMENT.exec(line);
   const head = cut ? line.slice(0, cut.index) : line;
 
-  // Split on whitespace but keep it: what is between the words is as much of the line as the
-  // words are, and the caret is counting.
+  // Split on whitespace but keep it — the caret counts every character.
   let word: Word | undefined;
   for (const piece of head.split(/(\s+)/)) {
     if (!piece || /^\s+$/.test(piece)) {

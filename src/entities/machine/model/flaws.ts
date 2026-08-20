@@ -1,16 +1,7 @@
 /**
- * What is wrong with a schema, and what is merely true about it.
- *
- * `analyze` and `validate` answer this, and the answers used to be shown as a list of four rows
- * beside the text — states, reachable, unreachable, terminal. Three of those four are a defect or a
- * fact *about a name*, and the fourth, the list of every state, is the text itself written out a
- * second time. A list of names beside a text full of those names is a lookup table for a thing you
- * are already looking at.
- *
- * So it is computed here, once, and drawn where the names are: the word is struck through in the
- * source and in the figure, the line is marked in the gutter, and nothing is listed anywhere. The
- * figure and the editor ask the same questions of the same object, which is why they cannot
- * disagree about which state is stranded.
+ * What `analyze` and `validate` make of a schema, computed once and drawn on the names it is
+ * about — struck through in the source and the figure, marked in the gutter, listed nowhere.
+ * One object, so the two surfaces cannot disagree.
  */
 import { edges } from "@evgkch/fsmjs";
 import { analyze, validate } from "@evgkch/fsmjs/analysis";
@@ -42,12 +33,11 @@ export function flaws(graph: Graph, start: string): Flaws {
   const flagged = new Set(
     validate(graph, start)
       .filter((i) => i.kind === "dead-rule")
-      .map((i) => `${i.node}\0${i.event}`),
+      .map((i) => `${i.node}\0${String(i.event)}`),
   );
 
-  // The first rule of a cell is the one that wins, so the ones behind it are the ones flagged.
-  // Which is `at`, and `at` is part of a rule's name here — no object identity is needed, and none
-  // would work: the parser's rules and `edges`' rules are different objects saying the same thing.
+  // Matched by cell and position (`at`), not object identity: the parser's rules and `edges`'
+  // rules are different objects.
   const shadowed = (id: RuleId): boolean => {
     const { from, on, at } = partsOf(id);
     return at > 0 && flagged.has(`${from}\0${on}`);

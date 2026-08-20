@@ -4,7 +4,7 @@
  * The other entry starts the standalone page; this one starts the viewer. Two pages and one tool:
  * everything below this line is shared, and what differs is what the subject can do.
  */
-import "../shared/ui/tokens.css";
+import "../shared/ui/tokens/tokens.css";
 import { viewer } from "../pages/viewer/index.js";
 
 console.log(

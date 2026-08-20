@@ -6,38 +6,15 @@
  *     │        └── blur ──┐   dblclick(a name) ───────┘ │   input(inside) ▸ rewritten
  *     └── input / moved(nothing) ──┴── keydown(Esc), mousedown(one click) ─────┘
  *
- * The events are the events the DOM has, and they arrive with the facts and nothing else: which
- * key, how many clicks, what the text now reads, where the caret is. *What they mean* is in here.
- * That is the whole point of writing this as a machine rather than as handlers — a handler that
- * tests the key, or the state, or the selection, and then picks which event to send has taken the
- * schema apart and spread it over the listeners, where the next reader has to reassemble it to
- * find out what a double-click does.
+ * Events are the DOM's, arriving with the facts only — key, clicks, text, caret; what they mean
+ * is decided here by guards, not in handlers. Completion and renaming are exclusive modes of
+ * writing, so they share one machine (unlike the simultaneous pointer and choice in `focus`).
+ * There is deliberately no `moved` out of `renaming`: with no such transition, no completion can
+ * be offered while a name is being retyped.
  *
- * So: `keydown` is one event, and whether this one was Escape and whether Escape means anything
- * where the writing is are two guards, both here. `input` is one event, and whether the keystroke
- * landed inside a name being retyped is a guard. `dblclick` is one event, and the word under it —
- * trimmed, checked against the language — is a guard and a `with`.
- *
- * One machine and not two, and the reason is the arrow that is missing. There is no `moved` out of
- * `renaming`: while a name is being retyped in every line it stands in, nothing is offered to
- * finish the word under the caret — being shown a *different* name in the middle of writing one is
- * the last thing that mode wants. Written as two machines, that fact has to be said by hand, in
- * whichever of the two remembers to ask the other; and a rule of one machine living inside another
- * is a rule that gets edited once and holds in one direction. Here it is not a rule at all. It is
- * an absence: the state has no such transition, so the offer cannot appear, and nothing had to
- * decide that.
- *
- * The two are one thing anyway. Both are the tool knowing the language and the schema well enough
- * not to make you type either twice, and both are *modes of writing* — which is to say they are
- * exclusive, unlike the pointer and the choice next door in `focus`, which are simultaneous and
- * are therefore two machines. Exclusive things share a machine; simultaneous things do not.
- *
- * What `renaming` carries is what makes it exact. `base` is the text as it stood when the mode was
- * armed and `word` the name as it stood in it: every keystroke rewrites the whole text from those
- * two and the letters typed so far, so no keystroke depends on the one before it. Backspacing to
- * nothing and typing something else is the same computation as the first letter, and the offsets —
- * `at`, and how many occurrences stand before it — are read once, from a text that never moves
- * under them.
+ * `renaming` carries `base` (the text as armed) and `word`: every keystroke rewrites the whole
+ * text from those and the letters typed so far, so no keystroke depends on the previous one and
+ * the offsets are read once from a text that does not move.
  */
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
@@ -46,12 +23,7 @@ import type { Ahead, Vocab } from "../../../shared/lang/complete.js";
 import { hits, swap } from "../../../shared/lang/names.js";
 import { WORDS } from "../../../shared/lang/rules.js";
 
-/**
- * What the DOM knows when something happens in a textarea, and the whole of what is handed in.
- *
- * One shape for every event, because it is one thing — the state of the text and of the pointing
- * device at the moment something happened. An event that has no key comes with no key.
- */
+/** The state of the text and pointing device at the moment of an event — one shape for all. */
 export type Facts = {
   /** The key, when it was a keystroke. */
   key: string;
@@ -103,24 +75,19 @@ export type Typing = Merge<
   | IEvent<"drop">
 >;
 
-/**
- * What the machine asks for in return: three edits, each one worked out from what it holds. The
- * editor performs them and knows nothing about why — the same shape as `took` in `focus`, where
- * naming both halves of a transition is the machine's business and taking it is the page's.
- */
+/** Three edits the machine asks for; the editor performs them without knowing why. */
 export type Says = Merge<
   | IEvent<"armed", { from: number; to: number }>
   | IEvent<"filled", { from: number; to: number; text: string }>
   | IEvent<"rewritten", { text: string; caret: number }>
 >;
 
-/** Written once and named by every state that reads the caret, which is every state but one. */
+/** Named by every state that reads the caret — every state but `renaming`. */
 const looking = [
   { to: "plain" as const, when: nothing },
   { when: something, to: ["ahead", seen] as const },
 ];
 
-/** Naming a word is naming a word, wherever the reader was when they did it. */
 const naming = [{ when: isName, to: ["picked", picking] as const }];
 
 const writing: Schema<Written, Typing, Says> = {
@@ -134,8 +101,7 @@ const writing: Schema<Written, Typing, Says> = {
     moved: looking,
     dblclick: naming,
     blur: [{ to: "plain" }],
-    // TAB, and the state does not change: what the machine knows about the word is still true —
-    // it is the text that changes, and the `moved` that follows the edit reads it again.
+    // TAB changes the text, not the state; the `moved` after the edit reads it again.
     keydown: [
       { when: tabbed, to: "ahead", emit: ["filled", filling] },
       { to: "plain", when: escaped },
@@ -143,8 +109,7 @@ const writing: Schema<Written, Typing, Says> = {
     drop: [{ to: "plain" }],
   },
   picked: {
-    // Typing on rather than pressing the button is an answer too: the word is let go, and what
-    // the caret is over is read the way it is read everywhere else.
+    // Typing instead of pressing the button drops the word.
     input: looking,
     moved: looking,
     dblclick: naming,
@@ -160,8 +125,7 @@ const writing: Schema<Written, Typing, Says> = {
         to: ["renaming", typing],
         emit: ["rewritten", rewriting],
       },
-      // Anywhere else, and the reader has moved on. It is the same event either way: a keystroke
-      // is a keystroke, and which of two things it meant is a question with an answer in here.
+      // A keystroke anywhere else ends the mode.
       { to: "plain" },
     ],
     dblclick: naming,
@@ -181,22 +145,14 @@ export function newWriting(): Writing {
   });
 }
 
-// ── the operations, below the schema ─────────────────────────────────────────
-//
-// Declarations, and after the rules rather than before them, because that is the order the thing
-// was designed in: the states, then what may happen in each, then whatever those rules turned out
-// to need. A file written the other way round asks its reader to hold a dozen small functions in
-// mind before showing them what any of them is for.
+// ── the operations, declared after the schema that names them ────────────────
 
 // ── what the caret is over ───────────────────────────────────────────────────
 
 /**
- * What would finish the word under the caret, or nothing.
- *
- * Only where the caret is at the end of a line and holding no selection, and that is a rule about
- * the two layers the editor draws rather than about the language: the ghost is a node in the
- * coloured layer, and a node in the middle of a line pushes the rest of that line sideways in one
- * layer and not in the other, which puts the caret off the word it is on.
+ * What would finish the word under the caret, or nothing. Only at the end of a line with no
+ * selection: the ghost node mid-line would shift one text layer and not the other, and the caret
+ * would drift off its word.
  */
 function offered(p: Facts): Offer | null {
   if (p.caret !== p.end) return null;

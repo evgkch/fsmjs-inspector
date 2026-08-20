@@ -1,12 +1,6 @@
 /**
- * Which rule, of all the rules in a schema — written once, here.
- *
- * A rule has no name of its own. What it has is a cell and a place in that cell: the pair
- * `dispatch` is addressed by, and how far down the alternatives the guards would have got. Three
- * different parts of the tool need to say *that rule* — the parser, which knows what line it read
- * it on; the guard the text subject puts back, which has to recognise the one that was named; and
- * the figure, which has an `Edge` and needs to ask whether it fires. They agreed on a spelling by
- * writing it out three times, which is the same as not agreeing.
+ * The one spelling of "that rule": its cell (from, on) and its place in it. The parser, the text
+ * subject's guards and the figure all name rules through this.
  */
 
 /** A rule, as everything that has to name one names it. */

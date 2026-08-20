@@ -1,17 +1,17 @@
 {
-  "idle": { "pick": [{ "to": "sending", "with": "begin", "emit": "send" }] },
+  "idle": { "pick": [{ "to": ["sending", "begin"], "emit": "send" }] },
   "sending": {
-    "chunk": [{ "to": "sending", "with": "advance" }],
-    "fail": [{ "to": "failed", "with": "record" }],
-    "done": [{ "to": "uploaded", "with": "finish", "emit": "cheer" }],
+    "chunk": [{ "to": ["sending", "advance"] }],
+    "fail": [{ "to": ["failed", "record"] }],
+    "done": [{ "to": ["uploaded", "finish"], "emit": "cheer" }],
     "cancel": [{ "to": "idle", "emit": "abort" }]
   },
   "failed": {
     "retry": [
-      { "to": "sending", "when": "triesLeft", "with": "again", "emit": "send" },
-      { "to": "failed", "with": "giveUp" }
+      { "to": ["sending", "again"], "emit": "send", "when": "triesLeft" },
+      { "to": ["failed", "giveUp"] }
     ],
     "cancel": [{ "to": "idle" }]
   },
-  "uploaded": { "pick": [{ "to": "sending", "with": "begin", "emit": "send" }] }
+  "uploaded": { "pick": [{ "to": ["sending", "begin"], "emit": "send" }] }
 }

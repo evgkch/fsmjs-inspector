@@ -1,442 +1,367 @@
 /* The standalone page: a bar of controls, and two panes under it. */
 
-/*
- * The page, and the four distances in it — every one of them the module halved or doubled.
- *
- *   12  inside a pair — the figure and the run, which are one drawing with a gap in it
- *   18  between the parts of the work
- *   24  between the header and the work, because those are two things and not four
- *   36  the margin of the page, which has to be plainly larger than any gap inside it or the
- *       whole block reads as having burst its banks
- *
- * 12 : 18 : 24 : 36 is 2:3:4:6 — a fourth, a fifth, an octave. What matters is not the interval
- * but that no two of them are near enough to be mistaken: a grouping four pixels deep is a
- * grouping a reader cannot see, and the page had two of those.
- */
-body {
-    margin: 0;
-    padding: var(--step-6);
-    background: var(--bg);
-    color: var(--ink);
-    font: 400 15px/1.6 var(--main-font);
-}
+@layer tokens, controls, page;
 
-/*
- * As wide as the work wants and no wider. At 104rem the source became a 1600px band with a
- * 60-character line adrift in it; the extra width went to nothing on every panel but the run.
- */
-main {
-    max-width: 96rem;
-    margin: 0 auto;
-    display: grid;
-    gap: var(--step-5);
-}
-
-/* ── controls ────────────────────────────────────────────────────────────── */
-
-/*
- * The header is inset by the same amount as every panel's own name, so the first word of the page
- * and the first word of the panel under it stand on one line down the left edge — and the last
- * control ends where the last panel's inside edge does. Text aligns with text; the boxes the
- * controls are drawn as are not what a reader lines them up by.
- */
-.bar {
-    display: flex;
-    flex-wrap: wrap;
+@layer page {
     /*
-     * Four distances, and each one says how far apart two things are:
-     *
-     *    6  a name and its value — one thing said in two words
-     *   12  peers, of which there are three: new, open, dump
-     *   18  things of different kinds standing together: a start, a reset, a mode
-     *   24  the ends of a group
-     *
-     * It was one gap for all of it, so `dump` stood as close to the name of the schema as it did
-     * to `open`, and the header read as seven loose words rather than two subjects.
-     */
-    gap: var(--step-3) var(--step-5);
-    align-items: center;
-    /* One row of the same module everything else on the page is drawn on: the header is a line of
-       the page, not a band across the top of it — and the arithmetic that stops the page from
-       ever scrolling has one more number it does not have to guess. */
-    min-height: var(--cell);
-    padding: 0 var(--step-3);
-}
-
-/* The same small type every other name on the page is set in. Two sizes of quiet capitals is
-   two levels of quiet, and there is only one thing being said: what this is. */
-.bar label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--step-2);
-    font: 500 var(--micro)/1 var(--main-font);
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--faint);
-}
-
-/*
- * The header has two ends and they are two subjects. On the left the document — which schema, and
- * the three things you can do to one: start another, open one, write this one out. On the right the
- * run — where it begins, forgetting it, and the mode it is read in. `START` moved across to join
- * them: choosing another state to run from and pressing reset are the same act with one word
- * altered, and a control belongs beside the thing it is one of.
- *
- * They are pinned as a pair and not one at a time: the flag is there in both modes and the reset
- * is not, and a control that moves sideways when its neighbour leaves is a control you have to
- * find again every time you switch.
+ * Three distances: 18 between panels, 24 between header and work, 36 for the page margin — far
+ * enough apart not to be mistaken for one another, and one gap between panels everywhere.
  */
-.bar .run {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--step-4);
-    margin-left: auto;
-}
-
-/* The three things you can do to a document, and they are three of one kind — so they stand at
-   the distance peers stand at, and further than that from the name of the document itself. */
-.bar .acts {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--step-3);
-}
-
-/*
- * The header is written, not built.
- *
- * Four bordered pills across the top were four objects competing with the three panels under them,
- * and all four wore the same frame — so nothing in the frame said which of them choose what you are
- * looking at and which of them do something to it. A control drawn as a box is a claim that it is a
- * thing; these are words, and the value of one is the only ink in the line.
- *
- * The name is quiet and the value is not, which is the whole hierarchy: you read `SCHEMA` once and
- * afterwards you read only what it says. What stays a control is the one thing that has to look
- * like one — a switch, which shows which of two modes you are in without being read.
- */
-select,
-.bar button {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--ink);
-    font: 500 var(--name)/1 var(--mono-font);
-    letter-spacing: 0;
-    text-transform: none;
-    cursor: pointer;
-}
-
-/*
- * As wide as what it says, and not as wide as the longest thing it could say.
- *
- * A select is laid out to fit its widest option, and with the platform's own arrow taken off that
- * width became a stretch of nothing between the value and the caret — so the caret hung in the
- * middle of the header, at a distance set by the longest state name in a list nobody has open. The
- * gap moved when the schema changed. A name and the mark that says it can be changed are one
- * object, and there is no version of that object with sixty pixels of air inside it.
- */
-select {
-    appearance: none;
-    field-sizing: content;
-}
-
-/* The name of a document, set as a name — the mono is for the language, and a schema's title is
-   not a word of it. The state below is, and stays in it. */
-#sample {
-    font-family: var(--main-font);
-}
-
-/* And it is a state, so it is written in the state's colour, as it is everywhere else. */
-#start {
-    color: var(--c, var(--ink));
-}
-
-/*
- * The caret belongs to the field, not to the platform — and it is drawn, not typed. Set as a
- * glyph it was whatever the text face had in that slot, and the face this page is set in has no
- * ▾ at all: what stood after every name on the header was a hyphen the fallback font lent it.
- */
-.bar label:has(select)::after {
-    content: "";
-    width: 0;
-    height: 0;
-    margin-left: calc(-1 * var(--step-1));
-    border: var(--step-1) solid transparent;
-    border-bottom: 0;
-    border-top-color: var(--faint);
-    pointer-events: none;
-}
-
-select:focus-visible,
-.bar button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: var(--step-1);
-    border-radius: 2px;
-}
-
-/*
- * The list itself, which until now was the one part of this tool drawn by somebody else.
- *
- * Everything on the page is one surface, one line weight, one small type and one tint for "this is
- * the one" — and then you pressed a name and got a square white box in the system's font with a
- * solid blue bar across the row you were on. `appearance: base-select` hands the popup over, so it
- * is drawn the way every other list of names here is drawn: the panel's own frame and radius, the
- * language's own type, and the same wash that marks what is being pointed at everywhere else.
- *
- * The caret stays the one we draw. The platform's ▾ arrives with the base appearance and is turned
- * off, because a control that is a word plus a mark should have exactly one mark, from one rule.
- */
-@supports (appearance: base-select) {
-    /*
-     * The base appearance comes with a floor on the field's height — a row of the module, for a
-     * finger — and its content is laid against the top of whatever that leaves. So the word sat
-     * six pixels above the name written beside it, and the two stopped being one phrase.
-     *
-     * A field here is a word in a line of words, and it is as tall as the word. Nothing is pressed
-     * with a finger on this page, and the label around it is the target anyway: the whole row is
-     * the module tall because the bar says so, not because the field is padded out to it.
-     */
-    select {
-        appearance: base-select;
-        align-items: center;
-        min-block-size: auto;
+    body {
+        margin: 0;
+        padding: var(--step-6);
+        background: var(--bg);
+        color: var(--ink);
+        font: 400 15px/1.6 var(--main-font);
     }
 
-    select::picker-icon {
-        display: none;
+    /* As wide as the work wants and no wider: past this the extra width serves nothing but the run. */
+    main {
+        max-width: 96rem;
+        margin: 0 auto;
+        display: grid;
+        gap: var(--step-5);
     }
 
-    /*
-     * The list stands off its field by the distance a name stands from its value, and is as wide
-     * as the longest name in it: the field is as wide as the word it is showing, and a list cut to
-     * that width would clip every name longer than the one already chosen.
-     *
-     * A schema may name more states than the window has room for, so it scrolls, and it scrolls
-     * inside itself like every other list on this page.
-     */
-    ::picker(select) {
-        margin-block: var(--step-2);
-        padding: var(--step-1);
-        border: 1px solid var(--line-firm);
-        border-radius: var(--radius-sm);
-        background: var(--surface);
-        min-inline-size: max-content;
-        max-block-size: 50vh;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-    }
+    /* ── controls ────────────────────────────────────────────────────────────── */
 
-    /*
-     * A row of the list, said as a row of a list: padded, and with a corner, because it is a thing
-     * you point at. Written through the picker rather than at `option` on its own — the rows exist
-     * in the list and the field shows a word, and a rule about one should not be one sentence away
-     * from becoming a rule about the other.
-     */
-    ::picker(select) option {
+    /* Inset by the same amount as every panel's name, so text aligns with text down the left edge. */
+    .bar {
         display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        /* 6 name-to-value, 12 peers, 18 different kinds, 24 group ends. */
+        gap: var(--step-3) var(--step-5);
+        /* One row of the module, so the no-scroll arithmetic below has a known height. */
+        min-height: var(--control);
+        /* The same inset as every panel's name. */
+        padding: 0 var(--step-4);
+    }
+
+    /* The same small type as every other name on the page. */
+    .bar label {
+        display: inline-flex;
         align-items: center;
         gap: var(--step-2);
-        padding: var(--step-1) var(--step-2);
-        border-radius: var(--step-2);
-        /* A state carries its lane here as it does in the figure's index and in the text: one
-           fact, one colour, wherever the name is written. A document has no lane and falls back
-           to the ink it is written in. */
-        color: var(--c, var(--ink));
-        font: 500 var(--name)/1 var(--mono-font);
+        font: 500 var(--micro)/1 var(--main-font);
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--faint);
     }
 
-    /* Whatever the closed field is set in, its list is set in — one control, one voice. */
-    #sample::picker(select) option {
+    /*
+ * The right-hand group: start and reset, pinned to the end of the line.
+ */
+    .bar .run {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--step-3) var(--step-4);
+    }
+
+    /*
+ * The document actions, at peer distance. `margin-right: auto` here (not `margin-left` on the
+ * other group) so a wrapped run group starts at the margin instead of hanging off the right.
+ */
+    .bar .acts {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--step-3);
+        margin-right: auto;
+    }
+
+    /* The page's own switches: the frame is theirs, the group gap sets them off. */
+    .bar .panels {
+        margin-left: 0;
+    }
+
+    /*
+     * One rule for field and button: same height, line, corner and transition, so the header is
+     * one row of one object. Hierarchy is carried in ink below, not in the frame. The transition
+     * names three properties — `all` would animate the content-sized field's width.
+     */
+    select,
+    .bar button {
+        height: var(--control);
+        padding: 0 var(--step-3);
+        border: 1px solid var(--line-firm);
+        /* Larger than the box: the stadium every word-in-a-box on the page wears. */
+        border-radius: var(--control);
+        background: var(--surface);
+        color: var(--ink);
+        font: 500 var(--name) / 1 var(--mono-font);
+        letter-spacing: 0;
+        text-transform: none;
+        cursor: pointer;
+        transition:
+            border-color var(--quick) var(--ease),
+            background-color var(--quick) var(--ease),
+            color var(--quick) var(--ease);
+    }
+
+    /* Room for the caret, which is drawn inside the field's own box a step in from its edge. */
+    select {
+        padding-right: var(--step-5);
+    }
+
+    /* Sized to the shown value, not the widest option — otherwise the caret hangs mid-header. */
+    select {
+        appearance: none;
+        field-sizing: content;
+    }
+
+    /* A document's title is not a word of the language, so not mono. */
+    #sample {
         font-family: var(--main-font);
     }
 
-    /* No tick. Nothing else on this page is a picture of itself, and the one being pointed at and
-       the one already chosen are said the way they are said everywhere else: a wash, and a firmer
-       wash. */
-    ::picker(select) option::checkmark {
+    /* A state, written in the state's colour as everywhere else. */
+    #start {
+        color: var(--c, var(--ink));
+    }
+
+    /* The caret is drawn, not typed: the page's face has no ▾ glyph and the fallback showed a hyphen. */
+    .bar label:has(select) {
+        position: relative;
+    }
+
+    .bar label:has(select)::after {
+        content: "";
+        position: absolute;
+        right: var(--step-2);
+        top: 50%;
+        translate: 0 -50%;
+        width: 0;
+        height: 0;
+        border: var(--step-1) solid transparent;
+        border-bottom: 0;
+        border-top-color: var(--faint);
+        pointer-events: none;
+    }
+
+    /* One hover for every control. */
+    select:hover,
+    .bar button:hover {
+        border-color: var(--muted);
+        background: color-mix(
+            in oklab,
+            var(--accent) var(--wash),
+            var(--surface)
+        );
+    }
+
+    select:focus-visible,
+    .bar button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: var(--step-1);
+    }
+
+    /*
+ * `appearance: base-select` hands the popup over, so the list is drawn like every other list
+ * here — the panel's frame, the language's type, the same washes. The platform's ▾ is turned
+ * off; the caret stays the drawn one.
+ */
+    @supports (appearance: base-select) {
+        /* The base appearance's height floor and top alignment would put the word off its line;
+       the bar already provides the row height. */
+        select {
+            appearance: base-select;
+            align-items: center;
+            min-block-size: auto;
+        }
+
+        select::picker-icon {
+            display: none;
+        }
+
+        /* As wide as its longest name (the field is only as wide as the shown word), scrolling
+       inside itself. */
+        ::picker(select) {
+            margin-block: var(--step-2);
+            padding: var(--step-1);
+            border: 1px solid var(--line-firm);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            min-inline-size: max-content;
+            max-block-size: 50vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        /* A row of the list; written through the picker so the rule cannot leak onto the field. */
+        ::picker(select) option {
+            display: flex;
+            align-items: center;
+            gap: var(--step-2);
+            padding: var(--step-2) var(--step-3);
+            border-radius: var(--step-2);
+            /* A state carries its lane colour; a document has none and falls back to ink. */
+            color: var(--c, var(--ink));
+            font: 500 var(--name)/1 var(--mono-font);
+        }
+
+        /* The list in the same face as its field. */
+        #sample::picker(select) option {
+            font-family: var(--main-font);
+        }
+
+        /* No tick: pointed-at and chosen are a wash and a firmer wash, as everywhere else. */
+        ::picker(select) option::checkmark {
+            display: none;
+        }
+
+        ::picker(select) option:hover,
+        ::picker(select) option:focus {
+            background: color-mix(
+                in oklab,
+                var(--accent) var(--wash),
+                transparent
+            );
+            outline: none;
+        }
+
+        ::picker(select) option:checked {
+            background: color-mix(
+                in oklab,
+                var(--accent) var(--wash-firm),
+                transparent
+            );
+        }
+    }
+
+    /* Actions are quiet until pointed at; the difference from fields is in the ink only. */
+    .bar button {
+        color: var(--muted);
+        background: transparent;
+    }
+
+    .bar button:hover {
+        color: var(--accent);
+    }
+
+    .bar .reset[hidden] {
         display: none;
     }
 
-    ::picker(select) option:hover,
-    ::picker(select) option:focus {
-        background: color-mix(in oklab, var(--accent) var(--wash), transparent);
-        outline: none;
-    }
+    /* ── panes ───────────────────────────────────────────────────────────────── */
 
-    ::picker(select) option:checked {
-        background: color-mix(
-            in oklab,
-            var(--accent) var(--wash-firm),
-            transparent
-        );
-    }
-}
-
-/*
- * What you *do* is not a choice about what you are reading, so it is not set like one: quiet until
- * you go to it. No glyphs — nothing else on this page is a picture of itself.
+    /*
+ * Two floors under the alphabet: the schema — the text beside its diagram — and the run:
+ *
+ *     ┌──────────────────┬────────────┐
+ *     │ 1  the text      │ 2  diagram │
+ *     ├──────────────────┴────────────┤
+ *     │ 3  the figure and the history │
+ *     └───────────────────────────────┘
+ *
+ * Whether the history stands beside the figure is the inspector's measured decision. Every part
+ * scrolls inside itself; the page never scrolls sideways.
  */
-.bar button {
-    color: var(--muted);
-}
-
-.bar button:hover {
-    color: var(--accent);
-}
-
-.bar .reset[hidden] {
-    display: none;
-}
-
-/*
- * One flag, because there is one difference and it is a restriction: off, the machine stands
- * somewhere and only what it can do is in reach; on, no state is current and nothing fires.
- *
- * A switch and not a tick. A tick is for a thing you are choosing to include; this is a mode, and
- * the tool is in one of two of them at every moment — which is what a switch is for, and it shows
- * which one you are in without being read.
- */
-.bar label.flag {
-    gap: var(--step-2);
-    color: var(--muted);
-    cursor: pointer;
-}
-
-.bar label.flag:has(:checked) {
-    color: var(--accent);
-}
-
-/* The input is what the keyboard and the screen reader work with; the track is what is seen. */
-.flag input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
-/*
- * Small, and behind its name.
- *
- * Every other pair in this header is a name and then what it says, and this one was the value and
- * then the name — the only thing in the line read right to left. And at 30 by 18 it was the
- * largest object in a header of ten-pixel words, which put the weight of the whole line on the one
- * control that is pressed least. Two by one on the module: 24 by 12, a knob of 6 inset by 3, and a
- * travel of 12 — every number the module halved or doubled, like every other number on the page.
- */
-.flag .track {
-    position: relative;
-    width: var(--step-5);
-    height: var(--step-3);
-    border-radius: 999px;
-    /* The two round things on the page. Everything else is a box with soft corners. */
-    corner-shape: round;
-    background: var(--line-firm);
-    transition: background-color var(--quick) var(--ease);
-}
-
-.flag .track::after {
-    content: "";
-    position: absolute;
-    top: var(--step-1);
-    left: var(--step-1);
-    width: var(--step-2);
-    height: var(--step-2);
-    border-radius: 50%;
-    corner-shape: round;
-    background: var(--surface);
-    transition: translate var(--quick) var(--ease);
-}
-
-.flag input:checked + .track {
-    background: var(--accent);
-}
-
-.flag input:checked + .track::after {
-    translate: var(--step-3) 0;
-}
-
-.flag input:focus-visible + .track {
-    outline: 2px solid var(--accent);
-    outline-offset: var(--step-1);
-}
-
-/* ── panes ───────────────────────────────────────────────────────────────── */
-
-/*
- * The source across the top, the machine under it:
- *
- *     ┌───────────────────────────────┐
- *     │ 1  the schema, as text        │   what you write
- *     ├──────────────────┬────────────┤
- *     │ 2  the figure    │ 3  history │   what it is, and what it did
- *     └──────────────────┴────────────┘
- *
- * The source is one thing and the machine is two, so the source takes a row and the other two
- * share one. Whether 3 stands beside 2 or under it is not settled here: it depends on how wide
- * *this* schema draws, and the inspector measures that and decides. The figure is what the tool
- * is for and is never the thing that gets cut.
- *
- * Row 1 is the code and nothing else — full width, so the question that started all of this
- * cannot come back. `toRules` pads to a table, which costs some thirty characters of whitespace,
- * and on a column of any width the half of a rule that falls off is the right-hand one: TO, WITH,
- * EMIT, BY. A row cannot fall off. What `analyze` says about the schema is a caption under it.
- *
- * The whole page is one rectangle of one height, and every part of it scrolls inside itself, so
- * the page itself never scrolls and nothing has to be hunted for below the fold.
- */
-.panes {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--step-4);
-}
-
-/*
- * The two rows are shares of the height and not sums of what is in them. Sized to their contents,
- * the source row grew with the number of lines — the gutter is the one layer of the editor still
- * in the flow, so a sixty-rule schema made a sixty-row gutter and pushed the figure off the page.
- * A share of the page cannot do that, and the editor scrolls inside it as it was built to.
- */
-@media (min-width: 62rem) {
     .panes {
-        /*
-         * What you write against what it is. The machine takes what it needs and the text takes
-         * the rest, which is not the same as splitting the page: a five-state schema draws a
-         * figure a third of the window tall, and cut to a share the other two thirds were a hole
-         * in the page with the source scrolling in a slot above it.
-         *
-         * `fit-content` is the whole of it. The work is as tall as the work is — and never more
-         * than the golden share of the page, at which point the figure scrolls inside itself and
-         * the source keeps a readable page of lines instead of being squeezed to its floor.
-         */
-        grid-template-rows: minmax(14rem, 1fr) fit-content(61.8%);
-        /* The page never scrolls: the work is what is left of the window once the margins, the
-           header and the gap under it are taken — 36 + 24 + 24 + 36, which is 120. */
-        height: clamp(38rem, calc(100vh - 120px), 64rem);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--step-4);
     }
-}
 
-/* A pane is one panel and the share of the page it stands in — nothing is stacked inside one
-   any more, so there is nothing to space. */
-.pane {
-    display: grid;
-    min-width: 0;
-    min-height: 0;
-}
-
-/* The editor takes the whole row: what `analyze` says about the schema is drawn on the schema. */
-#text {
-    grid-template-rows: minmax(0, 1fr);
-}
-
-/*
- * In two rows the editor's height is its share of the page, and a floor of its own would be a
- * second opinion about it: on a short window the share is smaller than the floor, the editor
- * overflows its row, and it is the caption underneath that gets sat on. The row already has a
- * floor — `.panes` says so — and this one scrolls.
+    /*
+ * The rows are shares of the height, not sums of contents: a content-sized row would grow with
+ * the schema, resizing the pane being typed in. Shares cannot; each pane scrolls inside its row.
  */
-@media (min-width: 62rem) {
-    #text .editor {
+    @media (min-width: 62rem) {
+        .panes {
+            grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+            grid-template-rows: minmax(14rem, 38.2vh) minmax(18rem, 1fr);
+            /* At least the window minus margins, header, alphabet and gaps (36 + 30 + 24 + 18 +
+           24 + 36 = 168); a tall diagram grows the page instead of scrolling inside its band. */
+            min-height: clamp(36rem, calc(100vh - 168px), 64rem);
+        }
+
+        /* The run floor runs the whole width; the schema floor is its two panes. */
+        #inspector {
+            grid-column: 1 / -1;
+        }
+
+        /* One pane of the schema floor down: the other takes the floor. */
+        main[data-off~="code"] #chart,
+        main[data-off~="diagram"] #text {
+            grid-column: 1 / -1;
+        }
+
+        /* A floor that is empty leaves the grid, or its track would keep a gap. */
+        main[data-off~="code"][data-off~="diagram"] .panes {
+            grid-template-rows: minmax(18rem, 1fr);
+        }
+
+        main[data-off~="figure"][data-off~="history"] .panes {
+            grid-template-rows: minmax(14rem, 1fr);
+        }
+    }
+
+    /* A panel that is down is not drawn; each selector names the widget's outermost node. */
+    main[data-off~="code"] #text,
+    main[data-off~="diagram"] #chart,
+    main[data-off~="figure"] .out,
+    main[data-off~="history"] .history,
+    main[data-off~="states"] fsmjs-legend[kind="states"],
+    main[data-off~="in"] fsmjs-legend[kind="in"],
+    main[data-off~="out"] fsmjs-legend[kind="out"] {
+        display: none;
+    }
+
+    /* One drawing down: the other takes the whole row of the mount. */
+    main[data-off~="figure"] .work,
+    main[data-off~="history"] .work {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Both drawings down: their pane goes too. */
+    main[data-off~="figure"][data-off~="history"] #inspector {
+        display: none;
+    }
+
+    /* Nothing left up on a floor: no empty frame. */
+    main[data-off~="code"][data-off~="diagram"][data-off~="figure"][data-off~="history"]
+        .panes {
+        display: none;
+    }
+
+    main[data-off~="states"][data-off~="in"][data-off~="out"] .alphabet {
+        display: none;
+    }
+
+    /* ── the alphabet ───────────────────────────────────────────────────────── */
+
+    /* A frameless line over the drawings, inset like every panel's name. */
+    .alphabet {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--step-2) var(--step-5);
+        padding: 0 var(--step-4);
+    }
+
+    /* The diagram band is content-sized while there is room; short of room it scrolls inside. */
+    #chart {
         min-height: 0;
+    }
+
+    /* A pane is one panel in its share of the page. */
+    .pane {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    /* The editor takes the whole row. */
+    #text {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    /* No floor of its own: the row already has one, and a second would make the editor overflow it
+   on short windows. */
+    @media (min-width: 62rem) {
+        #text .editor {
+            min-height: 0;
+        }
     }
 }

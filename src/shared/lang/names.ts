@@ -1,14 +1,8 @@
 /**
- * A name of the language, and everywhere it is written.
- *
- * A state is one word appearing in a dozen lines, and there is no other way to say it is the same
- * state: the text has no declarations and no scope, so the name *is* the identity. Which makes
- * renaming one a whole-text operation and a search-and-replace a bad way to do it — `open` is a
- * state, a substring of `opened`, and a word inside a comment nobody meant to touch.
- *
- * So this counts words the way the reader counts them: what is cut off by a `#` is not a word, and
- * a word is what stands between spaces, whole. Replacing every one of them with another name is a
- * schema that says exactly what the old one said.
+ * A name and everywhere it is written. The text has no declarations, so the name is the
+ * identity, and renaming is a whole-text operation — but not a substring replace: `open` is a
+ * substring of `opened`, and comments are not words. Words are counted the way the reader
+ * counts them.
  */
 import { COMMENT } from "./rules.js";
 

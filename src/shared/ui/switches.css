@@ -1,0 +1,83 @@
+/*
+ * Segmented switches, shared by the workbench and the viewer: a group of on/off words in one box
+ * of the header's control height — beside the fields and the button the row reads as a line of
+ * equal objects. The inputs are what the keyboard and the screen reader work with; the segments
+ * around them are what is seen. Checkboxes make a set — the panels; radios make a choice — the
+ * mode.
+ */
+
+@layer tokens, controls, page;
+
+@layer controls {
+    .switches {
+        display: inline-flex;
+        align-items: stretch;
+        flex-wrap: wrap;
+        min-height: var(--control);
+        border: 1px solid var(--line-firm);
+        /* Larger than the box: the stadium every word-in-a-box on the page wears. */
+        border-radius: var(--control);
+        background: var(--surface);
+        /* A segment's wash ends at the shared corner. */
+        overflow: hidden;
+    }
+
+    .switches label {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 var(--step-3);
+        color: var(--faint);
+        font: 500 var(--name) / 1 var(--mono-font);
+        /* The page's label rule spreads and uppercases its names; a control's word is plain. */
+        letter-spacing: 0;
+        text-transform: none;
+        cursor: pointer;
+        transition:
+            background-color var(--quick) var(--ease),
+            color var(--quick) var(--ease);
+    }
+
+    .switches label + label {
+        border-left: 1px solid var(--line-firm);
+    }
+
+    .switches input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .switches label:hover:not(:has(input:disabled)) {
+        color: var(--ink);
+        background: color-mix(
+            in oklab,
+            var(--accent) var(--wash),
+            var(--surface)
+        );
+    }
+
+    /* On: washed and inked, as a field holding a value. */
+    .switches label:has(input:checked) {
+        color: var(--ink);
+        background: color-mix(
+            in oklab,
+            var(--accent) var(--wash-firm),
+            var(--surface)
+        );
+    }
+
+    /* The keyboard reaches the input; the segment shows the focus, inside the shared frame. */
+    .switches label:has(input:focus-visible) {
+        outline: 2px solid var(--accent);
+        outline-offset: calc(-1 * var(--step-1));
+    }
+
+    /* A switch that cannot be turned: shown as it stands, quiet, takes no click. */
+    .switches label:has(input:disabled) {
+        cursor: default;
+        opacity: var(--quiet);
+    }
+}
