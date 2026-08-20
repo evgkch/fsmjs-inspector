@@ -356,7 +356,7 @@ host.append(diagram);
 desk.enroll(diagram); // wiring, drawing and a switch
 ```
 
-The switch's name is the tag without `fsmjs-`; several widgets of one tag are named by the second argument. `desk.ensemble` is the binder (`fire`, `rewind`, `forget`, `draw`); `desk.panels` is the panels machine, for a page with a layout of its own.
+The switch's name is the tag without `fsmjs-`; several widgets of one tag are named by the second argument. `desk.seat(name, { locked?, title? })` is a switch without the wiring, for a panel the page shows and hides itself; its state reads off `desk.panels` — the panels machine. `desk.ensemble` is the binder (`fire`, `rewind`, `forget`, `draw`). The menu of both inspector pages is this very desk.
 
 `<fsmjs-editor>` cannot yet be assembled from outside in full: its `show` takes parsed rules and check results, and the parser and their types are not exported from `./ui`. The editor's proper place is the inspector's page.
 

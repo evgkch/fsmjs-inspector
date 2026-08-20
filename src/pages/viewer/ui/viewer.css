@@ -36,6 +36,11 @@
         padding: 0 var(--step-4);
     }
 
+    /* The menu, pinned to the end of the line. */
+    .bar .panels {
+        margin-left: auto;
+    }
+
     .bar .tag {
         color: var(--faint);
         font: 500 var(--micro)/1 var(--mono-font);

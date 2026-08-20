@@ -23,8 +23,8 @@ export type Wiring = {
   focus?: Focus;
 };
 
-/** One switch: the widget it shows, and the box that says so. */
-type Seat = { member: Member & HTMLElement; box: HTMLInputElement };
+/** One switch: the box, and — when the desk itself shows and hides it — the widget. */
+type Seat = { box: HTMLInputElement; member?: Member & HTMLElement };
 
 export class FsmjsDesk extends HTMLElement {
   #root: ShadowRoot;
@@ -33,7 +33,6 @@ export class FsmjsDesk extends HTMLElement {
   #band: Ensemble | null = null;
   #panels: Panels | null = null;
   #seats = new Map<string, Seat>();
-  #off: (() => boolean) | null = null;
 
   constructor() {
     super();
@@ -41,17 +40,16 @@ export class FsmjsDesk extends HTMLElement {
     this.#root = shadow(this, deskCss);
     this.#row = make("div", "switches");
     this.#root.append(this.#row);
+    // The menu stands without a subject: a page that runs its own layout only takes seats.
+    this.#panels = newPanels([]);
+    // The machine and the element live and die together; nothing to unsubscribe.
+    this.#panels.rx.on(TRANSITION, () => this.#apply());
   }
 
   set wiring(w: Wiring) {
-    // Rewired: the old ensemble and menu belonged to the old subject.
+    // Rewired: the old ensemble belonged to the old subject.
     this.#band?.destroy();
-    this.#off?.();
-    this.#seats.clear();
-    this.#row.replaceChildren();
     this.#band = ensemble(w.subject, {}, { focus: w.focus });
-    this.#panels = newPanels([]);
-    this.#off = this.#panels.rx.on(TRANSITION, () => this.#apply());
   }
 
   /** The binder behind the menu: `fire`, `rewind`, `forget`, `draw` for the page's own use. */
@@ -65,24 +63,37 @@ export class FsmjsDesk extends HTMLElement {
   }
 
   /**
-   * Wire the widget, draw it, and give it a switch. The name defaults to the tag without the
-   * `fsmjs-` prefix; several widgets of one tag — three legends — are named by the caller.
+   * A switch alone, for a panel the page shows and hides itself — its state is read off
+   * `panels`. A locked seat is shown as it stands and takes no click.
+   */
+  seat(name: string, opts: { locked?: boolean; title?: string } = {}): void {
+    const label = make("label", "");
+    if (opts.title !== undefined) label.title = opts.title;
+    const box = make("input", "");
+    box.type = "checkbox";
+    box.checked = true;
+    if (opts.locked) box.disabled = true;
+    else
+      box.addEventListener("change", () =>
+        this.#panels?.dispatch("put", { panel: name, up: box.checked }),
+      );
+    label.append(box, make("span", "", name));
+    this.#row.append(label);
+    this.#seats.set(name, { box });
+  }
+
+  /**
+   * Wire the widget, draw it, and give it a switch that shows and hides it. The name defaults
+   * to the tag without the `fsmjs-` prefix; several widgets of one tag — three legends — are
+   * named by the caller.
    */
   enroll(member: Member & HTMLElement, name?: string): void {
     const band = this.#band;
     if (!band) return;
     const word = name ?? member.tagName.toLowerCase().replace(/^fsmjs-/, "");
     band.enroll(member);
-    const label = make("label", "");
-    const box = make("input", "");
-    box.type = "checkbox";
-    box.checked = !member.hidden;
-    box.addEventListener("change", () =>
-      this.#panels?.dispatch("put", { panel: word, up: box.checked }),
-    );
-    label.append(box, make("span", "", word));
-    this.#row.append(label);
-    this.#seats.set(word, { member, box });
+    this.seat(word);
+    this.#seats.get(word)!.member = member;
   }
 
   /** What the panels machine says, worn: absent from the context is up. */
@@ -90,8 +101,8 @@ export class FsmjsDesk extends HTMLElement {
     const up = this.#panels?.state.context ?? {};
     for (const [word, seat] of this.#seats) {
       const on = up[word] !== false;
-      seat.member.hidden = !on;
       seat.box.checked = on;
+      if (seat.member) seat.member.hidden = !on;
     }
   }
 }

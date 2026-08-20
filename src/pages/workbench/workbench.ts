@@ -16,20 +16,20 @@ import {
 import type { Graph, Lane, Text } from "../../entities/machine/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import { page, read, shown } from "../../features/read-schema/index.js";
-import { newPanels, offOf } from "../../features/show-panels/index.js";
+import { offOf } from "../../features/show-panels/index.js";
 import type { Panel } from "../../features/show-panels/index.js";
 import { canFire } from "../../features/take-rule/index.js";
-import { el, make } from "../../shared/lib/dom.js";
+import { el } from "../../shared/lib/dom.js";
 import { looksLikeRules } from "../../shared/lang/rules.js";
 import type { Written } from "../../shared/lang/rules.js";
 import { FsmjsDiagram } from "../../widgets/diagram/diagram.js";
+import { FsmjsDesk } from "../../widgets/desk/desk.js";
 import { FsmjsLegend } from "../../widgets/legend/legend.js";
 import { FsmjsEditor } from "../../widgets/editor/editor.js";
 import { report } from "../../features/report/index.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { SAMPLES } from "./model/samples.js";
-import "../../shared/ui/switches.css";
 import "./ui/workbench.css";
 
 export function workbench(): void {
@@ -51,15 +51,9 @@ export function workbench(): void {
   let handle: Handle | null = null;
 
   // Which panels are up; the stylesheet hides what is down. All four switch here.
-  const panels = newPanels([
-    "states",
-    "in",
-    "out",
-    "code",
-    "diagram",
-    "figure",
-    "history",
-  ]);
+  // The desk is the menu; the page reads which panels are up off its machine.
+  const desk = new FsmjsDesk();
+  const panels = desk.panels;
   const board = el("panels");
   for (const panel of [
     "states",
@@ -69,17 +63,9 @@ export function workbench(): void {
     "diagram",
     "figure",
     "history",
-  ] as Panel[]) {
-    const label = make("label", "panel");
-    const box = make("input", "");
-    box.type = "checkbox";
-    box.checked = true;
-    box.addEventListener("change", () =>
-      panels.dispatch("put", { panel, up: box.checked }),
-    );
-    label.append(box, make("span", "", panel));
-    board.append(label);
-  }
+  ] as Panel[])
+    desk.seat(panel);
+  board.append(desk);
   const cover = () => void (main.dataset["off"] = offOf(panels));
   panels.rx.on(TRANSITION, cover);
   cover();

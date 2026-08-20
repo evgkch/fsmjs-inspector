@@ -9,19 +9,19 @@ import { toRules } from "@evgkch/fsmjs/formatters";
 import { flaws, fromWire, palette } from "../../entities/machine/index.js";
 import type { Subject } from "../../entities/machine/index.js";
 import { newFocus } from "../../features/focus/index.js";
-import { newPanels, offOf } from "../../features/show-panels/index.js";
+import { offOf } from "../../features/show-panels/index.js";
 import type { Panel } from "../../features/show-panels/index.js";
 import { page, read } from "../../features/read-schema/index.js";
 import { newSocket } from "../../shared/api/link.js";
 import { el, make } from "../../shared/lib/dom.js";
 import { FsmjsDiagram } from "../../widgets/diagram/diagram.js";
+import { FsmjsDesk } from "../../widgets/desk/desk.js";
 import { FsmjsLegend } from "../../widgets/legend/legend.js";
 import { FsmjsEditor } from "../../widgets/editor/editor.js";
 import { report } from "../../features/report/index.js";
 import { mount } from "../inspector/mount.js";
 import type { Handle } from "../inspector/mount.js";
 import { newWatching, watched } from "./model/watching.js";
-import "../../shared/ui/switches.css";
 import "./ui/viewer.css";
 
 /**
@@ -72,16 +72,10 @@ export function viewer(): void {
     editor.show(rules, palette(graph, start), flaws(graph, start)),
   );
 
-  // Which panels are up; the stylesheet hides what is down, so no widget is reached into.
-  const panels = newPanels([
-    "states",
-    "in",
-    "out",
-    "code",
-    "diagram",
-    "figure",
-    "history",
-  ]);
+  // The desk is the menu; the page reads which panels are up off its machine, and the
+  // stylesheet hides what is down.
+  const desk = new FsmjsDesk();
+  const panels = desk.panels;
   const board = el<HTMLElement>("panels");
   for (const panel of [
     "states",
@@ -91,22 +85,15 @@ export function viewer(): void {
     "diagram",
     "figure",
     "history",
-  ] as Panel[]) {
-    const label = make("label", "panel");
-    const box = make("input", "");
-    box.type = "checkbox";
-    box.checked = true;
-    // The source is always on; its box is shown and takes no clicks.
-    if (panel === "code") {
-      box.disabled = true;
-      label.title = "the source is always on";
-    } else
-      box.addEventListener("change", () =>
-        panels.dispatch("put", { panel, up: box.checked }),
-      );
-    label.append(box, make("span", "", panel));
-    board.append(label);
-  }
+  ] as Panel[])
+    // The source is always on; its switch is shown and takes no clicks.
+    desk.seat(
+      panel,
+      panel === "code"
+        ? { locked: true, title: "the source is always on" }
+        : {},
+    );
+  board.append(desk);
   const dress = () => void (main.dataset["off"] = offOf(panels));
   panels.rx.on(TRANSITION, dress);
   dress();

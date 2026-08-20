@@ -58,6 +58,13 @@ label:has(input:checked) {
     );
 }
 
+/* A switch that cannot be turned: shown as it stands, quiet, takes no click. */
+label:has(input:disabled) {
+    cursor: default;
+    opacity: var(--quiet);
+    pointer-events: none;
+}
+
 /* The keyboard reaches the input; the segment shows the focus, inside the shared frame. */
 label:has(input:focus-visible) {
     outline: 2px solid var(--accent);
