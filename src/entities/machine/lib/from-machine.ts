@@ -66,12 +66,26 @@ export function fromMachine(fsm: Any, opts: Options = {}): Subject {
       return past ? past.index : steps.length;
     },
     drive: {
+      // The ask carries no payload, and a guard written for one may throw on the bare question.
+      // The position has already answered; a guard that cannot answer does not dim the drawing —
+      // the throw reads as "may". Taking still sends the bare event, and the same guard decides.
       can: (rule) => {
         const { from, on } = partsOf(rule);
-        return fsm.state.type === from && fsm.can(on as never);
+        if (fsm.state.type !== from) return false;
+        try {
+          return fsm.can(on as never);
+        } catch {
+          return true;
+        }
       },
       // Sends the event only; which rule of the cell takes it is the machine's guards' decision.
-      take: (rule) => void fsm.dispatch(partsOf(rule).on as never),
+      take: (rule) => {
+        try {
+          fsm.dispatch(partsOf(rule).on as never);
+        } catch {
+          // A guard threw on the bare event: nothing was taken.
+        }
+      },
     },
     // The recorder reports every move via `moved`, including moves made by the application.
     ...(past && { rewind: (step: number) => void past.jump(step) }),

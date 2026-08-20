@@ -151,6 +151,13 @@ svg.chart {
     animation: march 0.5s linear infinite;
 }
 
+/* The step just taken: its arrow runs the dashes once — one arrow fired, however many are open. */
+.arc.took .line {
+    stroke-width: 2.5;
+    stroke-dasharray: 3 2;
+    animation: march 0.6s linear 3;
+}
+
 /* A transition the machine can take from where it stands: a click takes it. */
 .arc.can {
     cursor: pointer;

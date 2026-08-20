@@ -60,7 +60,7 @@ export type Arc = {
   x0: number;
   x1: number;
   hue: string;
-  /** `on`, or `on / emit`. */
+  /** `on`, with the guard and the emit where they exist: `down · onHandle / draw`. */
   label: string;
   /** Every rule of the arrow is dead in the dump, as `validate` reads it. */
   dead: boolean;
@@ -174,7 +174,14 @@ export function lay(graph: Graph, start: string): Lay {
   const arcs: Arc[] = laid.map((l) => {
     const { rows: group, side, level, cx0, cx1 } = l;
     const row = group[0]!;
-    const label = row.emit === undefined ? row.on : `${row.on} / ${row.emit}`;
+    // One distinct guard name rides on the label: three `down` arrows out of one state read
+    // apart by their guards. Variants with several guards say only the event; the tooltip lists
+    // them all.
+    const whens = [
+      ...new Set(group.flatMap((r) => (r.when === undefined ? [] : [r.when]))),
+    ];
+    const guard = whens.length === 1 ? ` · ${whens[0]}` : "";
+    const label = `${row.on}${guard}${row.emit === undefined ? "" : ` / ${row.emit}`}`;
     return {
       rows: group,
       ids: group.map((r) => idOf(rows, r)),

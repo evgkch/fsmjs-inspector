@@ -18,7 +18,7 @@ import {
   shows,
 } from "../../entities/cell/index.js";
 import type { Key } from "../../entities/cell/index.js";
-import type { RuleId, Subject } from "../../entities/machine/index.js";
+import type { Change, RuleId, Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { canFire, take } from "../../features/take-rule/index.js";
 import { make, svg } from "../../shared/lib/dom.js";
@@ -74,6 +74,9 @@ export class FsmjsDiagram extends HTMLElement {
   /** Running: where this step can end. Null when everything is in reach. */
   #reach: Set<string> | null = null;
 
+  /** Puts the taken arrow's dashes out, a moment after the step. */
+  #cool: ReturnType<typeof setTimeout> | undefined;
+
   constructor() {
     super();
     this.className = "diagram";
@@ -83,7 +86,7 @@ export class FsmjsDiagram extends HTMLElement {
   connectedCallback(): void {
     // Subscribe here, not in `wiring`: a diagram taken out and put back hears the subject again.
     if (this.#off || !this.#w) return;
-    this.#off = this.#w.subject.watch(() => this.#moved());
+    this.#off = this.#w.subject.watch((what) => this.#moved(what));
   }
 
   disconnectedCallback(): void {
@@ -96,7 +99,8 @@ export class FsmjsDiagram extends HTMLElement {
     this.#off?.();
     this.#off = null;
     this.#w = w;
-    if (this.isConnected) this.#off = w.subject.watch(() => this.#moved());
+    if (this.isConnected)
+      this.#off = w.subject.watch((what) => this.#moved(what));
   }
 
   get wiring(): Wiring {
@@ -259,11 +263,36 @@ export class FsmjsDiagram extends HTMLElement {
   }
 
   /** The machine moved: only the mark moves, so re-dressing is enough. */
-  #moved(): void {
+  #moved(what?: Change): void {
     const w = this.#w;
     if (!w || !this.#l) return;
     this.#here = w.subject.at || this.#start;
     this.#redress();
+    if (what?.say === "step") this.#flash();
+    else for (const { g } of this.#arcs) g.classList.remove("took");
+  }
+
+  /** The step just taken runs its dashes on its own arrow — one arrow, however many are open. */
+  #flash(): void {
+    const w = this.#w;
+    const s = w?.subject.steps[w.subject.steps.length - 1];
+    if (!s) return;
+    const from = String(s.source.type);
+    const on = String(s.input.type);
+    const to = String(s.target.type);
+    const emit = s.output === undefined ? undefined : String(s.output.type);
+    for (const { g, rows } of this.#arcs) {
+      const hit = rows.some(
+        (r) => r.from === from && r.on === on && r.to === to && r.emit === emit,
+      );
+      g.classList.remove("took");
+      if (!hit) continue;
+      // Removed and put back across a reflow, so a repeated step restarts the run.
+      void g.getBoundingClientRect();
+      g.classList.add("took");
+      clearTimeout(this.#cool);
+      this.#cool = setTimeout(() => g.classList.remove("took"), 700);
+    }
   }
 
   /** Take the rule and let the selection go: it named a position the machine has left. */

@@ -247,6 +247,11 @@ try {
   click(arcAB);
   await tick();
   eq("machine at", subject.at, "B");
+  eq(
+    "the taken arrow runs its dashes",
+    arcs().filter((a) => a.classList.contains("took")).length,
+    1,
+  );
   eq("history bands", q(hist, ".step"), 1);
   eq("diagram held chips (forgotten)", heldChips(), 0);
   eq("diagram far arcs (forgotten)", farChips() + farArcs(), 0);
@@ -427,6 +432,46 @@ try {
   diaBox.dispatchEvent(new win.window.Event("change", { bubbles: true }));
   await tick();
   eq("and shows it again", dia2.hidden, false);
+
+  console.log(
+    "— M15: a guard that reads its payload cannot crash a bare ask —",
+  );
+  const { StateMachine: SM } = await import(
+    `${new URL("..", import.meta.url).pathname.replace(/\/$/, "")}/node_modules/@evgkch/fsmjs/dist/core/index.js`
+  );
+  const { fromMachine } = await server.ssrLoadModule(
+    "/src/entities/machine/lib/from-machine.ts",
+  );
+  const touchy = new SM(
+    {
+      off: { push: [{ when: (c, p) => p.hard.some(Boolean), to: "on" }] },
+      on: {},
+    },
+    { type: "off", context: undefined },
+  );
+  const live = fromMachine(touchy);
+  const desk2 = new FsmjsDesk();
+  document.body.appendChild(desk2);
+  desk2.wiring = { subject: live };
+  const dia3 = new FsmjsDiagram();
+  document.body.appendChild(dia3);
+  let crashed = false;
+  try {
+    desk2.enroll(dia3);
+    await tick();
+  } catch {
+    crashed = true;
+  }
+  eq("the diagram draws over the touchy guard", crashed, false);
+  eq(
+    "an unanswerable guard does not dim the arc",
+    dia3.shadowRoot.querySelectorAll("g.arc.dim").length,
+    0,
+  );
+  const arcT = dia3.shadowRoot.querySelector("g.arc");
+  arcT.dispatchEvent(new win.window.PointerEvent("click", { bubbles: true }));
+  await tick();
+  eq("clicking it moves nothing — the guard still decides", live.at, "off");
 
   console.log(failed ? `\n${failed} FAILED` : "\nALL PASS");
   process.exitCode = failed ? 1 : 0;
