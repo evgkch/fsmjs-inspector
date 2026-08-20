@@ -10,8 +10,9 @@
  * their stretch; meeting at a shared cell alone does not push an arrow up.
  *
  * The ends stand in the halves of their cells: on top a departure in the left half, an arrival
- * in the right one; under the row mirrored. A self-loop swaps the two: its exit sits in the
- * arrivals' half and its entry in the departures' one, at their edges. Within a half the shallower
+ * in the right one; under the row mirrored. A self-loop is no exception — it leaves in the
+ * departures' half and arrives in the arrivals' one, so its line runs against the grain of the
+ * other arrows on its side. Within a half the shallower
  * arrow stands nearer the edge and the deeper nearer the centre, at a pitch of (half-width −
  * padding) / (ends in that half) — so a vertical never lands on another and never crosses the
  * horizontal of a shallower arrow sharing the cell. What does cross a loop is bridged by the
@@ -142,9 +143,8 @@ export function lay(graph: Graph, start: string): Lay {
     return { rows: group, side, level, self, c0, c1, cx0, cx1 };
   });
 
-  // The ends, by cell, side and half. The self-loop is the exception: its exit takes a slot in
-  // the arrivals' half and its entry in the departures' one — the reverse of every other end of
-  // its cell — so on top it runs leftward like the arcs above it.
+  // The ends, by cell, side and half — the self-loop included: its exit stands with the other
+  // departures and its entry with the arrivals, so its line runs the other way.
   const halves = new Map<string, { l: Laid; end: "out" | "in" }[]>();
   const claim = (q: string, l: Laid, end: "out" | "in", right: boolean) => {
     const key = `${q}\0${l.side}\0${right ? "R" : "L"}`;
@@ -152,8 +152,8 @@ export function lay(graph: Graph, start: string): Lay {
   };
   for (const l of laid) {
     const row = l.rows[0]!;
-    claim(row.from, l, "out", l.self ? l.side === "top" : l.side !== "top");
-    claim(row.to, l, "in", l.self ? l.side !== "top" : l.side === "top");
+    claim(row.from, l, "out", l.side !== "top");
+    claim(row.to, l, "in", l.side === "top");
   }
 
   // Within a half: the shallower arrow nearer the edge, the deeper nearer the centre.

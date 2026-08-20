@@ -77,6 +77,9 @@ export class FsmjsDiagram extends HTMLElement {
   /** Puts the taken arrow's dashes out, a moment after the step. */
   #cool: ReturnType<typeof setTimeout> | undefined;
 
+  /** The arrow whose dashes are running, so a repeated step extends the run, not restarts it. */
+  #ran: SVGGElement | null = null;
+
   constructor() {
     super();
     this.className = "diagram";
@@ -269,10 +272,18 @@ export class FsmjsDiagram extends HTMLElement {
     this.#here = w.subject.at || this.#start;
     this.#redress();
     if (what?.say === "step") this.#flash();
-    else for (const { g } of this.#arcs) g.classList.remove("took");
+    else {
+      for (const { g } of this.#arcs) g.classList.remove("took");
+      this.#ran = null;
+    }
   }
 
-  /** The step just taken runs its dashes on its own arrow — one arrow, however many are open. */
+  /**
+   * The step just taken runs its dashes on its own arrow — one arrow, however many are open. A
+   * repeated step on the same arrow — a drag is one transition at pointer rate — extends the
+   * run; it neither restarts the animation nor forces a layout, which is what kept the dashes
+   * frozen and the page busy.
+   */
   #flash(): void {
     const w = this.#w;
     const s = w?.subject.steps[w.subject.steps.length - 1];
@@ -281,18 +292,24 @@ export class FsmjsDiagram extends HTMLElement {
     const on = String(s.input.type);
     const to = String(s.target.type);
     const emit = s.output === undefined ? undefined : String(s.output.type);
-    for (const { g, rows } of this.#arcs) {
-      const hit = rows.some(
-        (r) => r.from === from && r.on === on && r.to === to && r.emit === emit,
-      );
-      g.classList.remove("took");
-      if (!hit) continue;
-      // Removed and put back across a reflow, so a repeated step restarts the run.
-      void g.getBoundingClientRect();
-      g.classList.add("took");
-      clearTimeout(this.#cool);
-      this.#cool = setTimeout(() => g.classList.remove("took"), 700);
+    const hit =
+      this.#arcs.find(({ rows }) =>
+        rows.some(
+          (r) =>
+            r.from === from && r.on === on && r.to === to && r.emit === emit,
+        ),
+      )?.g ?? null;
+    if (hit !== this.#ran) {
+      this.#ran?.classList.remove("took");
+      hit?.classList.add("took");
+      this.#ran = hit;
     }
+    clearTimeout(this.#cool);
+    if (hit)
+      this.#cool = setTimeout(() => {
+        hit.classList.remove("took");
+        this.#ran = null;
+      }, 700);
   }
 
   /** Take the rule and let the selection go: it named a position the machine has left. */

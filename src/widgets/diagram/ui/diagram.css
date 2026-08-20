@@ -138,9 +138,9 @@ svg.chart {
     opacity: var(--dim);
 }
 
-/* The label of an arrow that is dimmed or outside the selection. */
+/* The label of an arrow that is dimmed or outside the selection: quiet ink, not transparency. */
 .caps text.mute {
-    opacity: var(--undone);
+    fill: var(--faint);
 }
 
 /* The rule the reader is on — here, in the text or in the figure: dashed and marching, as the
@@ -151,11 +151,12 @@ svg.chart {
     animation: march 0.5s linear infinite;
 }
 
-/* The step just taken: its arrow runs the dashes once — one arrow fired, however many are open. */
+/* The step just taken: its arrow runs the dashes while steps keep coming — one arrow fired,
+   however many are open. */
 .arc.took .line {
     stroke-width: 2.5;
     stroke-dasharray: 3 2;
-    animation: march 0.6s linear 3;
+    animation: march 0.6s linear infinite;
 }
 
 /* A transition the machine can take from where it stands: a click takes it. */
@@ -163,10 +164,23 @@ svg.chart {
     cursor: pointer;
 }
 
-/* Out of reach from where the machine stands — dimmed and deaf to the pointer, as on the
-   figure. */
-.arc.dim {
-    opacity: var(--dim);
+/* Out of reach from where the machine stands — grey ink, deaf to the pointer. Ink, not
+   transparency: a thin coloured line at low opacity disappears on a light ground. */
+.arc.dim .line {
+    stroke: var(--line-firm);
+}
+
+.arc.dim polygon {
+    fill: var(--line-firm);
+}
+
+/* A recall — a past step pointed at in the history — gives the arrow its colour back. */
+.arc.dim.lit .line {
+    stroke: var(--c, var(--accent));
+}
+
+.arc.dim.lit polygon {
+    fill: var(--c, var(--accent));
 }
 
 /* A cell is pointed at or pressed, and this arrow does not leave it. */
