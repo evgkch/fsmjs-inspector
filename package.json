@@ -1,6 +1,6 @@
 {
   "name": "@evgkch/fsmjs-inspector",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "description": "Look at a state machine: three projections of its transition relation, drawn from the graph and driven by two clicks. Reads a dumped schema, or attaches to a machine that is running",
   "license": "MIT",

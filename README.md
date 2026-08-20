@@ -358,7 +358,53 @@ desk.enroll(diagram); // wiring, drawing and a switch
 
 The switch's name is the tag without `fsmjs-`; several widgets of one tag are named by the second argument. `desk.seat(name, { locked?, title? })` is a switch without the wiring, for a panel the page shows and hides itself; its state reads off `desk.panels` — the panels machine. `desk.ensemble` is the binder (`fire`, `rewind`, `forget`, `draw`). The menu of both inspector pages is this very desk.
 
-`<fsmjs-editor>` cannot yet be assembled from outside in full: its `show` takes parsed rules and check results, and the parser and their types are not exported from `./ui`. The editor's proper place is the inspector's page.
+`<fsmjs-editor>` is assembled from `readSchema`, which gives `show` what it takes: the rules with the line each was written on, one colour per state, and what the checks found.
+
+```ts
+function readSchema(text: string, keep?: string): Read;
+
+type Read =
+  | { ok: true; graph: Graph; start: string; rules: readonly Written[] }
+  | { ok: false; say: string; line: number | null };
+```
+
+```ts
+import {
+  FsmjsEditor,
+  flaws,
+  newFocus,
+  palette,
+  readSchema,
+} from "@evgkch/fsmjs-inspector/ui";
+import "@evgkch/fsmjs-inspector/tokens.css";
+
+const editor = new FsmjsEditor();
+// No machine behind the text: nothing can be taken, and nothing stands anywhere.
+editor.wiring = {
+  focus: newFocus(),
+  onEdit: () => paint(),
+  fires: () => false,
+  here: () => "",
+  fire: () => {},
+};
+host.append(editor);
+
+let start = "";
+
+function paint(): void {
+  const read = readSchema(editor.text(), start);
+  // The complaint and its line, on the editor's own foot strip.
+  if (!read.ok) return editor.blame(read.say, read.line);
+  start = read.start;
+  editor.blame(null, null);
+  editor.show(read.rules, palette(read.graph, start), flaws(read.graph, start));
+}
+
+editor.set("FROM locked ON coin TO open\nFROM open ON pass TO locked\n");
+paint();
+```
+
+`readSchema` reads both forms — the rule language and a JSON dump — and throws nothing. `ok` is the reading: `true` brings `graph`, `start` and `rules`, `false` brings the message `say` and the `line` it is about; a dump has no lines to point at, so there `line` is `null`. The second argument is the state a run goes on from: it is kept while the graph still has that state, and the graph's first state is taken otherwise. `onEdit` fires on every keystroke — the inspector's own page waits 300 ms before reading the text. `fires` returns whether a rule can be taken from the current state, `here` is the name of that state, `fire` takes the rule: with a `subject` and a `focus` shared with the figure, a gutter mark takes the rule on its line. The types come from the same entry: `Read`, `Shown`, `Written`, `Row`, `Lane` and `Flaws`.
 
 ---
 

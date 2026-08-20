@@ -358,7 +358,53 @@ desk.enroll(diagram); // проводка, отрисовка и переклю�
 
 Имя переключателя — тег без `fsmjs-`; нескольким виджетам одного тега имя задаётся вторым аргументом. `desk.seat(имя, { locked?, title? })` — переключатель без проводки, для панели, которую страница показывает и прячет сама; его состояние читается с `desk.panels` — машины панелей. `desk.ensemble` — связка (`fire`, `rewind`, `forget`, `draw`). Меню обеих страниц инспектора — этот же пульт.
 
-`<fsmjs-editor>` целиком снаружи пока не собрать: его `show` принимает разобранные правила и факты проверки, а парсер и их типы из `./ui` не экспортированы. Штатное место редактора — страница инспектора.
+`<fsmjs-editor>` собирается из `readSchema`: она возвращает то, что принимает `show`, — правила с номером строки, цвет каждого состояния и результат проверок.
+
+```ts
+function readSchema(text: string, keep?: string): Read;
+
+type Read =
+  | { ok: true; graph: Graph; start: string; rules: readonly Written[] }
+  | { ok: false; say: string; line: number | null };
+```
+
+```ts
+import {
+  FsmjsEditor,
+  flaws,
+  newFocus,
+  palette,
+  readSchema,
+} from "@evgkch/fsmjs-inspector/ui";
+import "@evgkch/fsmjs-inspector/tokens.css";
+
+const editor = new FsmjsEditor();
+// За текстом нет машины: выполнять нечего, текущего состояния нет.
+editor.wiring = {
+  focus: newFocus(),
+  onEdit: () => paint(),
+  fires: () => false,
+  here: () => "",
+  fire: () => {},
+};
+host.append(editor);
+
+let start = "";
+
+function paint(): void {
+  const read = readSchema(editor.text(), start);
+  // Сообщение и его строка — на нижней полосе редактора.
+  if (!read.ok) return editor.blame(read.say, read.line);
+  start = read.start;
+  editor.blame(null, null);
+  editor.show(read.rules, palette(read.graph, start), flaws(read.graph, start));
+}
+
+editor.set("FROM locked ON coin TO open\nFROM open ON pass TO locked\n");
+paint();
+```
+
+`readSchema` читает оба вида текста — язык правил и JSON-дамп — и не бросает исключений. `ok` — признак разбора: при `true` возвращаются `graph`, `start` и `rules`, при `false` — сообщение `say` и строка `line`, к которой оно относится; у дампа строк нет, и там `line` равно `null`. Второй аргумент — состояние, с которого продолжается прогон: оно сохраняется, пока такое состояние есть в графе, иначе берётся первое состояние графа. `onEdit` вызывается на каждое нажатие клавиши — страница инспектора ждёт 300 мс и только потом читает текст. `fires` возвращает, доступно ли правило из текущего состояния, `here` — имя этого состояния, `fire` выполняет правило: если передать `subject` и общий с фигурой `focus`, клик по метке в гуттере выполняет правило своей строки. Типы экспортируются оттуда же: `Read`, `Shown`, `Written`, `Row`, `Lane` и `Flaws`.
 
 ---
 

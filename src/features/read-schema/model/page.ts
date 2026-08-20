@@ -4,13 +4,12 @@
  * is why a half-typed brace does not blank the figure. `broken` entered from `blank` has nothing
  * to carry, and the type says so.
  */
-import { StateMachine, nodes } from "@evgkch/fsmjs";
+import { StateMachine } from "@evgkch/fsmjs";
 import type { FsmState, IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
 import type { Graph } from "../../../entities/machine/index.js";
 import type { Written } from "../../../shared/lang/rules.js";
-
-/** What the figure draws: the graph, its start, and where every rule was written. */
-export type Shown = { graph: Graph; start: string; rules: readonly Written[] };
+import { startOf } from "./reading.js";
+import type { Shown } from "./reading.js";
 
 export type Q = Merge<
   | IState<"blank">
@@ -90,8 +89,7 @@ function readable(_: unknown, p: { graph: Graph | null }): boolean {
 
 /** Keep running from the same state when the edited graph still has it, else from the first. */
 function from(graph: Graph, keep: string, rules: readonly Written[]): Shown {
-  const all = nodes(graph);
-  return { graph, start: all.includes(keep) ? keep : (all[0] ?? ""), rules };
+  return { graph, start: startOf(graph, keep), rules };
 }
 
 // By the time `with` runs the guard has decided, so the cast states a fact.

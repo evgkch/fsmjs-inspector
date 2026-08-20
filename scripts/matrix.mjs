@@ -157,7 +157,11 @@ try {
   eq("the standing mark is drawn", q(fig, "circle.mark"), 1);
   eq("hot cells offer the next press", q(fig, ".box.hot") > 0, true);
   eq("dim cells exist while running", q(fig, ".box.dim") > 0, true);
-  eq("the here class sits on the state's names", q(fig, "text.name.here") > 0, true);
+  eq(
+    "the here class sits on the state's names",
+    q(fig, "text.name.here") > 0,
+    true,
+  );
 
   console.log("— M2: chip B hovered while A held → the corner —");
   enter(chip("B"));
@@ -482,6 +486,64 @@ try {
   arcT.dispatchEvent(new win.window.PointerEvent("click", { bubbles: true }));
   await tick();
   eq("clicking it moves nothing — the guard still decides", live.at, "off");
+
+  console.log("— M16: an editor assembled out of /src/ui.ts alone —");
+  // Nothing below this line reaches into the sources: the package's own entry has to carry the
+  // reading, the palette and the flaws, or the editor cannot be wired from outside it.
+  const ui = await server.ssrLoadModule("/src/ui.ts");
+  const lone = new ui.FsmjsEditor();
+  lone.wiring = {
+    focus: ui.newFocus(),
+    onEdit: () => {},
+    fires: () => false,
+    here: () => "",
+    fire: () => {},
+  };
+  document.body.appendChild(lone);
+  const own = [
+    "# a state nothing reaches, so the flaws have something to say",
+    "FROM a ON go TO b",
+    "FROM b ON back TO a",
+    "FROM lost ON never TO a",
+  ].join("\n");
+  lone.set(own);
+  const heard = ui.readSchema(own, "");
+  eq("the text reads", heard.ok, true);
+  eq("the start it picks", heard.start, "a");
+  eq("rules read", heard.rules.length, 3);
+  lone.show(
+    heard.rules,
+    ui.palette(heard.graph, heard.start),
+    ui.flaws(heard.graph, heard.start),
+  );
+  await tick();
+  eq("gutter rows (one per line)", q(lone, ".gutter .row"), 4);
+  eq("rows that carry a rule", q(lone, ".gutter .row.rule"), 3);
+  eq("the unreached state is struck through", q(lone, ".ink .q.off"), 1);
+  eq("and its rule can never fire", q(lone, ".gutter .row.dead"), 1);
+  // Pointing is arithmetic over the module the widget publishes on itself, as it is inside.
+  const step = parseFloat(lone.style.getPropertyValue("--cell"));
+  const point = (line) =>
+    lone.shadowRoot.querySelector(".sheet").dispatchEvent(
+      new win.window.MouseEvent("mousemove", {
+        clientY: (line - 1) * step + 2,
+      }),
+    );
+  point(2);
+  await tick();
+  eq("pointing at a line lights it alone", q(lone, ".ink .line.lit"), 1);
+  eq("and its gutter row with it", q(lone, ".gutter .row.lit"), 1);
+
+  console.log(
+    "— M16b: the same reading answers for a text that will not parse —",
+  );
+  const torn = ui.readSchema("FROM a ON go", "");
+  eq("a sentence with no TO does not read", torn.ok, false);
+  eq("the complaint names its line", torn.line, 1);
+  lone.blame(torn.say, torn.line);
+  await tick();
+  eq("the blamed row is marked", q(lone, ".gutter .row.blame"), 1);
+  eq("the complaint holds the strip", q(lone, ".say.wrong"), 1);
 
   console.log(failed ? `\n${failed} FAILED` : "\nALL PASS");
   process.exitCode = failed ? 1 : 0;

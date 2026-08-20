@@ -1,8 +1,10 @@
 /**
  * The binder: independent widgets collected into one object, on one subject and focus.
  *
- * A composite slice: it names its sibling widgets' classes — the `@x` kind of cross-import,
- * types off their public modules and nothing deeper.
+ * The binder names no sibling widget. Every slot of the cast is described here by what the binder
+ * does to it — a surface to draw, a wiring to write, and for the history the graph before the
+ * draw — so the real widgets fit by their shape and a page may bring its own. The one `@x`
+ * cross-import left in this slice is `mount`'s: a composite builds the widgets it lays out.
  *
  * Each widget hears the subject itself and draws itself; the binder adds the mapping between
  * them. A rule named on any surface is taken here, once; a rewind asked on any surface moves the
@@ -11,15 +13,11 @@
  * other directly.
  */
 import { edges } from "@evgkch/fsmjs";
-import type { Subject } from "../../entities/machine/index.js";
-import type { RuleId } from "../../entities/machine/index.js";
+import type { Graph, RuleId, Subject } from "../../entities/machine/index.js";
 import { newFocus } from "../../features/focus/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between, canFire, take } from "../../features/take-rule/index.js";
 import { rowOf } from "../../shared/lang/rules.js";
-import type { FsmjsDiagram } from "../diagram/diagram.js";
-import type { FsmjsFigure } from "../figure/figure.js";
-import type { FsmjsHistory } from "../history/history.js";
 
 /** Anything that draws the subject and answers the focus. */
 export type Surface = {
@@ -39,11 +37,30 @@ export type Member = Surface & {
   };
 };
 
-/** The widgets a page brings; any of them may be absent. */
+/** The figure's slot: a surface told the subject, the focus, and how to let the selection go. */
+export type CastFigure = Surface & {
+  wiring: { subject: Subject; focus: Focus; forget: () => void };
+};
+
+/** The history's slot: it moves the recorder, and it is told the graph and the start before every
+ * draw — its rows are counted from the same place as everyone's. */
+export type CastHistory = Surface & {
+  wiring: { subject: Subject; focus: Focus; rewind: (step: number) => void };
+  show(graph: Graph, at: string): void;
+};
+
+/** The diagram's slot: a rule named on it is taken here. The slot only has to accept the taking —
+ * a diagram standing alone takes the rule itself. */
+export type CastDiagram = Surface & {
+  wiring: { subject: Subject; focus: Focus; fire?: (id: RuleId) => void };
+};
+
+/** The widgets a page brings; any of them may be absent. Slots are shapes, not classes: the
+ * widgets of this library fit them, and so may a page's own. */
 export type Cast = {
-  figure?: FsmjsFigure;
-  history?: FsmjsHistory;
-  diagram?: FsmjsDiagram;
+  figure?: CastFigure;
+  history?: CastHistory;
+  diagram?: CastDiagram;
 };
 
 export type Ensemble = {

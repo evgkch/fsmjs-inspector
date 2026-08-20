@@ -42,13 +42,25 @@ export type { Wiring as DeskWiring } from "./widgets/desk/desk.js";
 
 export { report } from "./features/report/index.js";
 
+/**
+ * Rule text, read as a schema — everything `<fsmjs-editor>`'s `show` and `blame` are given. A page
+ * that assembles the editor itself calls `readSchema` on every edit and keeps what it wants of the
+ * outcome. Taken from the module rather than from the feature's index, which also publishes the
+ * inspector's page machine: the reading holds no state, and neither does a page that borrows it.
+ */
+export { readSchema, startOf } from "./features/read-schema/model/reading.js";
+export type { Read, Shown } from "./features/read-schema/model/reading.js";
+export type { Row, Written } from "./shared/lang/rules.js";
+
 export { newFocus } from "./features/focus/index.js";
 export type { Focus } from "./features/focus/index.js";
 
 export {
+  flaws,
   fromMachine,
   fromText,
   idOf,
+  palette,
   partsOf,
   ruleId,
 } from "./entities/machine/index.js";
@@ -56,7 +68,9 @@ export type {
   Ctx,
   Drive,
   Ev,
+  Flaws,
   Graph,
+  Lane,
   RuleId,
   Step,
   Subject,
