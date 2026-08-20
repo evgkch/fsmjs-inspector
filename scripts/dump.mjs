@@ -32,7 +32,7 @@ const { newDrag } = await vite.ssrLoadModule(
   "/src/features/drag-panel/model/drag.ts",
 );
 const { newSight } = await vite.ssrLoadModule(
-  "/src/pages/inspector/model/showing.ts",
+  "/src/widgets/inspector/model/showing.ts",
 );
 const { newPanels } = await vite.ssrLoadModule(
   "/src/features/show-panels/model/panels.ts",

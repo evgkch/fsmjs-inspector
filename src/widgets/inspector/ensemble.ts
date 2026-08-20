@@ -1,6 +1,9 @@
 /**
  * The binder: independent widgets collected into one object, on one subject and focus.
  *
+ * A composite slice: it names its sibling widgets' classes — the `@x` kind of cross-import,
+ * types off their public modules and nothing deeper.
+ *
  * Each widget hears the subject itself and draws itself; the binder adds the mapping between
  * them. A rule named on any surface is taken here, once; a rewind asked on any surface moves the
  * one recorder; a change of the graph redraws every member; a move of the focus
@@ -14,9 +17,9 @@ import { newFocus } from "../../features/focus/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { between, canFire, take } from "../../features/take-rule/index.js";
 import { rowOf } from "../../shared/lang/rules.js";
-import type { FsmjsDiagram } from "../../widgets/diagram/diagram.js";
-import type { FsmjsFigure } from "../../widgets/figure/figure.js";
-import type { FsmjsHistory } from "../../widgets/history/history.js";
+import type { FsmjsDiagram } from "../diagram/diagram.js";
+import type { FsmjsFigure } from "../figure/figure.js";
+import type { FsmjsHistory } from "../history/history.js";
 
 /** Anything that draws the subject and answers the focus. */
 export type Surface = {

@@ -27,8 +27,8 @@ import { FsmjsDesk } from "../../widgets/desk/desk.js";
 import { FsmjsLegend } from "../../widgets/legend/legend.js";
 import { FsmjsEditor } from "../../widgets/editor/editor.js";
 import { report } from "../../features/report/index.js";
-import { mount } from "../inspector/mount.js";
-import type { Handle } from "../inspector/mount.js";
+import { mount } from "../../widgets/inspector/mount.js";
+import type { Handle } from "../../widgets/inspector/mount.js";
 import { SAMPLES } from "./model/samples.js";
 import "./ui/workbench.css";
 

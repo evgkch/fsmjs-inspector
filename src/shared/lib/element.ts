@@ -6,9 +6,12 @@
  */
 import { LitElement, unsafeCSS } from "lit";
 import type { CSSResult } from "lit";
-import type { Off } from "@evgkch/fsmjs";
-import type { Change, Subject } from "../../entities/machine/index.js";
 import base from "../ui/shadow.css?raw";
+
+/** What the base needs of a subject: to be heard, and a way to stop listening. */
+export type Heard<T> = {
+  readonly watch: (on: (what: T) => void) => () => unknown;
+};
 
 /** The two layers of every widget's shadow: the widget's sheet wins, `!important` wins back. */
 export function sheets(own: string): CSSResult[] {
@@ -19,14 +22,15 @@ export function sheets(own: string): CSSResult[] {
 }
 
 export abstract class FsmjsElement<
-  W extends { subject: Subject },
+  T,
+  W extends { subject: Heard<T> },
 > extends LitElement {
   #w?: W;
 
   /** Where the rows are counted from — set by `draw`, fixed between draws. */
   protected start = "";
 
-  #off: Off | null = null;
+  #off: (() => unknown) | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -60,7 +64,7 @@ export abstract class FsmjsElement<
   }
 
   /** The machine moved. The default re-renders; a widget with a step animation overrides. */
-  protected moved(_what: Change): void {
+  protected moved(_what: T): void {
     this.requestUpdate();
   }
 

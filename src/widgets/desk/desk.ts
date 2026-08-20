@@ -14,8 +14,8 @@ import type { Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { newPanels } from "../../features/show-panels/index.js";
 import type { Panels } from "../../features/show-panels/index.js";
-import { ensemble } from "../../pages/inspector/ensemble.js";
-import type { Ensemble, Member } from "../../pages/inspector/ensemble.js";
+import { ensemble } from "../inspector/ensemble.js";
+import type { Ensemble, Member } from "../inspector/ensemble.js";
 import { sheets } from "../../shared/lib/element.js";
 import deskCss from "./ui/desk.css?raw";
 

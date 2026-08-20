@@ -9,7 +9,7 @@ import { classMap } from "lit/directives/class-map.js";
 import type { TemplateResult } from "lit";
 import { edges } from "@evgkch/fsmjs";
 import { flaws, hue, lanes } from "../../entities/machine/index.js";
-import type { Subject } from "../../entities/machine/index.js";
+import type { Change, Subject } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
 import { rowOf } from "../../shared/lang/rules.js";
 import { FsmjsElement, sheets } from "../../shared/lib/element.js";
@@ -22,7 +22,7 @@ export type Wiring = {
   focus: Focus;
 };
 
-export class FsmjsLegend extends FsmjsElement<Wiring> {
+export class FsmjsLegend extends FsmjsElement<Change, Wiring> {
   static override styles = sheets(legendCss);
 
   constructor() {

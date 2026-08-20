@@ -10,8 +10,8 @@ import { newDrag } from "../features/drag-panel/index.js";
 import { fromMachine } from "../entities/machine/index.js";
 import type { WatchOptions } from "../entities/machine/index.js";
 import { report } from "../features/report/index.js";
-import { mount } from "../pages/inspector/mount.js";
-import type { Options as LookOptions } from "../pages/inspector/mount.js";
+import { mount } from "../widgets/inspector/mount.js";
+import type { Options as LookOptions } from "../widgets/inspector/mount.js";
 import "./ui/overlay.css";
 
 export type Options = LookOptions &

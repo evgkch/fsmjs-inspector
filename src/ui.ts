@@ -5,15 +5,15 @@
  */
 import "./shared/ui/tokens/tokens.css";
 
-export { mount } from "./pages/inspector/mount.js";
+export { mount } from "./widgets/inspector/mount.js";
 export type {
   Handle,
   Options as ViewOptions,
   Surface,
-} from "./pages/inspector/mount.js";
+} from "./widgets/inspector/mount.js";
 
-export { ensemble } from "./pages/inspector/ensemble.js";
-export type { Cast, Ensemble, Member } from "./pages/inspector/ensemble.js";
+export { ensemble } from "./widgets/inspector/ensemble.js";
+export type { Cast, Ensemble, Member } from "./widgets/inspector/ensemble.js";
 
 export { overlay } from "./app/overlay.js";
 export type { Overlaid, Options as OverlayOptions } from "./app/overlay.js";

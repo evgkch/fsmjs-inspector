@@ -15,8 +15,8 @@ import type { Focus } from "../../features/focus/index.js";
 import { make } from "../../shared/lib/dom.js";
 import { ensemble } from "./ensemble.js";
 import type { Member } from "./ensemble.js";
-import { FsmjsFigure } from "../../widgets/figure/figure.js";
-import { FsmjsHistory } from "../../widgets/history/history.js";
+import { FsmjsFigure } from "../figure/figure.js";
+import { FsmjsHistory } from "../history/history.js";
 import "./ui/inspector.css";
 
 /** How a figure is being looked at, as opposed to what it is looking at. */

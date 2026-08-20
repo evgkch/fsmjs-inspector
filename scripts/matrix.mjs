@@ -49,7 +49,9 @@ try {
     "/src/entities/machine/lib/from-text.ts",
   );
   const machine = await server.ssrLoadModule("/src/entities/machine/index.ts");
-  const { mount } = await server.ssrLoadModule("/src/pages/inspector/mount.ts");
+  const { mount } = await server.ssrLoadModule(
+    "/src/widgets/inspector/mount.ts",
+  );
   const { FsmjsDiagram } = await server.ssrLoadModule(
     "/src/widgets/diagram/diagram.ts",
   );
