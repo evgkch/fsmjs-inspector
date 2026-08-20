@@ -376,6 +376,58 @@ try {
     subject.at,
   );
 
+  console.log("— M14: the desk wires, switches and synchronizes —");
+  const { FsmjsDesk } = await server.ssrLoadModule("/src/widgets/desk/desk.ts");
+  const { FsmjsHistory } = await server.ssrLoadModule(
+    "/src/widgets/history/history.ts",
+  );
+  const desk = new FsmjsDesk();
+  document.body.appendChild(desk);
+  desk.wiring = { subject, focus };
+  const dia2 = new FsmjsDiagram();
+  document.body.appendChild(dia2);
+  desk.enroll(dia2);
+  const hist2 = new FsmjsHistory();
+  document.body.appendChild(hist2);
+  desk.enroll(hist2);
+  await tick();
+  eq(
+    "two switches on the desk",
+    desk.shadowRoot.querySelectorAll("label").length,
+    2,
+  );
+  eq(
+    "the enrolled diagram drew",
+    dia2.shadowRoot.querySelectorAll("g.arc").length,
+    7,
+  );
+  eq(
+    "the enrolled history shows the run",
+    hist2.shadowRoot.querySelectorAll(".step").length > 0,
+    true,
+  );
+  const chip2 = [...dia2.shadowRoot.querySelectorAll("g.chip")].find(
+    (c) => c.textContent.trim() === subject.at,
+  );
+  chip2.dispatchEvent(new win.window.PointerEvent("click", { bubbles: true }));
+  await tick();
+  eq(
+    "a press on the desk's diagram lights the mount's figure",
+    wash() > 0,
+    true,
+  );
+  forget();
+  await tick();
+  const diaBox = desk.shadowRoot.querySelector("input");
+  diaBox.checked = false;
+  diaBox.dispatchEvent(new win.window.Event("change", { bubbles: true }));
+  await tick();
+  eq("the switch hides its widget", dia2.hidden, true);
+  diaBox.checked = true;
+  diaBox.dispatchEvent(new win.window.Event("change", { bubbles: true }));
+  await tick();
+  eq("and shows it again", dia2.hidden, false);
+
   console.log(failed ? `\n${failed} FAILED` : "\nALL PASS");
   process.exitCode = failed ? 1 : 0;
 } catch (e) {

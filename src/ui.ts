@@ -37,6 +37,8 @@ export type {
   Kind as LegendKind,
   Wiring as LegendWiring,
 } from "./widgets/legend/legend.js";
+export { FsmjsDesk } from "./widgets/desk/desk.js";
+export type { Wiring as DeskWiring } from "./widgets/desk/desk.js";
 
 export { report } from "./features/report/index.js";
 

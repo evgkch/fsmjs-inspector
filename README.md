@@ -19,7 +19,7 @@ A finite-state-machine inspector for [`@evgkch/fsmjs`](https://github.com/evgkch
 | [`@evgkch/fsmjs-inspector`](#evgkchfsmjs-inspector)      | `inspect`, `close`, `RELAY`, what crosses the wire |
 | [The relay](#the-relay)                                  | `scripts/relay.mjs`, the port                      |
 | [`@evgkch/fsmjs-inspector/ui`](#evgkchfsmjs-inspectorui) | `overlay`, `mount`, `ensemble`, subjects, focus    |
-| [Widgets](#widgets)                                      | Five custom elements and their `wiring`            |
+| [Widgets](#widgets)                                      | Six custom elements and their `wiring`             |
 | [Schemas](#schemas)                                      | Ready-made files, the rule language                |
 | [Limitations](#limitations)                              | What to keep in mind                               |
 
@@ -300,6 +300,7 @@ import {
 | `<fsmjs-editor>`  | `FsmjsEditor`  | The rule text with highlighting, a gutter and completion |
 | `<fsmjs-diagram>` | `FsmjsDiagram` | The classic diagram: states in a row, transitions as arcs |
 | `<fsmjs-legend>`  | `FsmjsLegend`  | A frameless row of capsules: `kind` — `states`, `in` or `out` |
+| `<fsmjs-desk>`    | `FsmjsDesk`    | The desk: a menu of switches, and the others synchronized   |
 
 A widget is configured through the `wiring` property — a JavaScript object, not an attribute. It draws into a shadow root with a stylesheet of its own; the page's styles do not reach inside. The palette does: the tokens are custom properties and inherit through the shadow, so `tokens.css` is required, and overriding a token changes the widget.
 
@@ -339,6 +340,23 @@ run.draw();
 `<fsmjs-diagram>` wires the same way: `wiring = { subject, focus, fire? }`, then `draw(start)` — or `handle.enroll(diagram)`. `fire` takes a rule and drops the selection; `ensemble` passes its own, and without one the widget does both itself. States are cells in a row, transitions are arcs: leftward over the row, rightward under it, an arc in its target's colour. Rules that differ only in guard are one arrow; a rule with a different `emit` is its own line, labelled `on / emit`. Pointing at an arc lights its rule in the figure and in the text; clicking an arc takes the rule, if the machine can, and drops the selection. The `on / emit` label answers for its arc — to pointing and to clicking alike. Clicking a state is a press in the shared choice: only its transitions stay on the table, the figure bands its row, the history draws the step's dashed candidates; `Escape` drops it, along with everything else. Pressing the outgoing state and then the incoming one takes the transition between them — a second way of taking, equal to the arc click; the same state twice is the self-loop. Pointing at the incoming state while the outgoing one is pressed bands the candidates in the figure: the source's row, the target's column, their events' columns and their outputs' rows.
 
 `<fsmjs-legend>` is a frameless row of capsules with no controls: the `kind` attribute picks `states` (names in their lane colours, the current one filled in its own colour, unreachable ones struck through), `in` or `out`. The inspector's pages keep three such rows above the panels, each under its own switch.
+
+`<fsmjs-desk>` is the desk: one widget that runs the others. Inside is an [`ensemble`](#ensemble) of its own; in the shadow — the menu, one switch per enrolled widget. The widgets stay in the page's markup; a switch turns its widget's `hidden` on and off.
+
+```ts
+import { FsmjsDesk, FsmjsDiagram, fromMachine } from "@evgkch/fsmjs-inspector/ui";
+import "@evgkch/fsmjs-inspector/tokens.css";
+
+const desk = new FsmjsDesk();
+desk.wiring = { subject: fromMachine(fsm) };
+bar.append(desk);
+
+const diagram = new FsmjsDiagram();
+host.append(diagram);
+desk.enroll(diagram); // wiring, drawing and a switch
+```
+
+The switch's name is the tag without `fsmjs-`; several widgets of one tag are named by the second argument. `desk.ensemble` is the binder (`fire`, `rewind`, `forget`, `draw`); `desk.panels` is the panels machine, for a page with a layout of its own.
 
 `<fsmjs-editor>` cannot yet be assembled from outside in full: its `show` takes parsed rules and check results, and the parser and their types are not exported from `./ui`. The editor's proper place is the inspector's page.
 

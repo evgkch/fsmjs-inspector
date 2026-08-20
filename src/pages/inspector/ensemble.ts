@@ -143,8 +143,19 @@ export function ensemble(
     forget,
     enroll: (s) => {
       if ("wiring" in s) s.wiring = { subject, focus, forget, fire, rewind };
-      crew.add(s);
-      s.draw(start);
+      // A member with `show` is told the graph and the start before every draw — the history.
+      const member: Surface =
+        "show" in s && typeof s.show === "function"
+          ? {
+              draw: (at) => {
+                (s.show as (g: unknown, at: string) => void)(subject.graph, at);
+                s.draw(at);
+              },
+              dress: () => s.dress(),
+            }
+          : s;
+      crew.add(member);
+      member.draw(start);
     },
     destroy: () => {
       for (const it of off) it();

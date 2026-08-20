@@ -73,7 +73,15 @@ export function viewer(): void {
   );
 
   // Which panels are up; the stylesheet hides what is down, so no widget is reached into.
-  const panels = newPanels();
+  const panels = newPanels([
+    "states",
+    "in",
+    "out",
+    "code",
+    "diagram",
+    "figure",
+    "history",
+  ]);
   const board = el<HTMLElement>("panels");
   for (const panel of [
     "states",

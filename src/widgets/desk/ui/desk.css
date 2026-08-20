@@ -1,0 +1,65 @@
+/* ── the desk: a segmented row of switches, one per enrolled widget ───────── */
+
+:host {
+    display: inline-block;
+}
+
+/* The header's box: one frame, the switches as its segments. */
+.switches {
+    display: inline-flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    min-height: var(--control);
+    border: 1px solid var(--line-firm);
+    /* Larger than the box: the stadium every word-in-a-box wears. */
+    border-radius: var(--control);
+    background: var(--surface);
+    /* A segment's wash ends at the shared corner. */
+    overflow: hidden;
+}
+
+label {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--step-3);
+    color: var(--faint);
+    font: 500 var(--name) / 1 var(--mono-font);
+    cursor: pointer;
+    transition:
+        background-color var(--quick) var(--ease),
+        color var(--quick) var(--ease);
+}
+
+label + label {
+    border-left: 1px solid var(--line-firm);
+}
+
+input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+label:hover {
+    color: var(--ink);
+    background: color-mix(in oklab, var(--accent) var(--wash), var(--surface));
+}
+
+/* On: washed and inked, as a field holding a value. */
+label:has(input:checked) {
+    color: var(--ink);
+    background: color-mix(
+        in oklab,
+        var(--accent) var(--wash-firm),
+        var(--surface)
+    );
+}
+
+/* The keyboard reaches the input; the segment shows the focus, inside the shared frame. */
+label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: calc(-1 * var(--step-1));
+}

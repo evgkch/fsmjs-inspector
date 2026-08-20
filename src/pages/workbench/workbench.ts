@@ -51,7 +51,15 @@ export function workbench(): void {
   let handle: Handle | null = null;
 
   // Which panels are up; the stylesheet hides what is down. All four switch here.
-  const panels = newPanels();
+  const panels = newPanels([
+    "states",
+    "in",
+    "out",
+    "code",
+    "diagram",
+    "figure",
+    "history",
+  ]);
   const board = el("panels");
   for (const panel of [
     "states",

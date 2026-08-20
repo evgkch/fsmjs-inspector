@@ -6,9 +6,8 @@
 import { StateMachine } from "@evgkch/fsmjs";
 import type { IEvent, IState, Merge, Schema } from "@evgkch/fsmjs";
 
-/** The seven, by the names their panels wear. */
-export type Panel =
-  "states" | "in" | "out" | "code" | "diagram" | "figure" | "history";
+/** A panel is named by the page that shows it; the machine takes any list of names. */
+export type Panel = string;
 
 export type Up = Record<Panel, boolean>;
 
@@ -22,19 +21,11 @@ const showing: Schema<Shown, Asked, Record<string, never>> = {
 
 export type Panels = StateMachine<Shown, Asked, Record<string, never>>;
 
-/** All seven: a reader who has not said otherwise sees the whole tool. */
-export function newPanels(): Panels {
+/** All named panels up: a reader who has not said otherwise sees the whole tool. */
+export function newPanels(all: readonly Panel[]): Panels {
   return new StateMachine<Shown, Asked, Record<string, never>>(showing, {
     type: "showing",
-    context: {
-      states: true,
-      in: true,
-      out: true,
-      code: true,
-      diagram: true,
-      figure: true,
-      history: true,
-    },
+    context: Object.fromEntries(all.map((p) => [p, true])),
   });
 }
 

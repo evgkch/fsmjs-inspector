@@ -78,7 +78,7 @@ for (const [file, machine] of [
 }
 
 // Not dumped — the pages' own machines — but held to the same check.
-check("show-panels", newPanels());
+check("show-panels", newPanels(["code", "diagram", "figure", "history"]));
 check("watching", newWatching());
 
 await vite.close();
