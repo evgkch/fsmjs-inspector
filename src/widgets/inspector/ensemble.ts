@@ -104,7 +104,7 @@ export function ensemble(
     crew.add({
       draw: (at) => {
         history.show(subject.graph, at);
-        history.draw();
+        history.draw(at);
       },
       dress: () => history.dress(),
     });

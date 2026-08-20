@@ -7,12 +7,14 @@
  * curve here. Pointing at a column therefore also lights the figure and the line of text, which
  * do distinguish them.
  *
- * Custom element `<fsmjs-history>`: the element is the `.history` panel, drawn into a shadow
- * root; the palette reaches in through inherited custom properties, and the page hides the panel
- * by its light-DOM class.
+ * Custom element `<fsmjs-history>`, on Lit: the board is one template over the run and the
+ * focus. A step appends a column because the differ keeps every column whose geometry did not
+ * change; a rewind moves only the classes; a hover redraws only the preview layer's nodes.
  */
+import { html, svg, nothing } from "lit";
+import type { TemplateResult } from "lit";
+import { classMap } from "lit/directives/class-map.js";
 import { edges } from "@evgkch/fsmjs";
-import type { Off } from "@evgkch/fsmjs";
 import { halvesOf, holds } from "../../entities/cell/index.js";
 import { folds, hue, lanes } from "../../entities/machine/index.js";
 import type {
@@ -23,11 +25,10 @@ import type {
   Subject,
 } from "../../entities/machine/index.js";
 import type { Focus } from "../../features/focus/index.js";
-import { make, svg } from "../../shared/lib/dom.js";
 import { CELL, EM, HEAD } from "../../shared/lib/grid.js";
 import { rowOf } from "../../shared/lang/rules.js";
 import type { Row } from "../../shared/lang/rules.js";
-import { shadow } from "../../shared/lib/shadow.js";
+import { FsmjsElement, sheets } from "../../shared/lib/element.js";
 import historyCss from "./ui/history.css?raw";
 
 /**
@@ -96,20 +97,6 @@ const asEdge = (t: Step): Row => ({
   emit: t.output?.type,
 });
 
-/**
- * Equality of columns, field by field. Tells an appending step (everything drawn still stands)
- * from one that rewrites the tail (a fold grew, or a walked-back run dropped its future).
- */
-const sameCol = (a: Col, b: Col): boolean =>
-  a.edge.from === b.edge.from &&
-  a.edge.on === b.edge.on &&
-  a.edge.to === b.edge.to &&
-  a.edge.emit === b.edge.emit &&
-  a.count === b.count &&
-  a.step === b.step &&
-  a.first === b.first &&
-  a.last === b.last;
-
 export type Wiring = {
   subject: Subject;
   focus: Focus;
@@ -117,109 +104,19 @@ export type Wiring = {
   rewind: (step: number) => void;
 };
 
-export class FsmjsHistory extends HTMLElement {
-  #w?: Wiring;
-
-  #cols: HTMLDivElement;
-  #tag: HTMLDivElement;
-  #ends: HTMLDivElement;
-
-  /** Rebuilt with every draw, because the names are as wide as the names are. */
-  #index: SVGSVGElement | null = null;
-  /** The layer that changes when the pointer moves, and nothing else does. */
-  #maybe: SVGGElement | null = null;
+export class FsmjsHistory extends FsmjsElement<Change, Wiring> {
+  static override styles = sheets(historyCss);
 
   #graph: Graph = {};
   #row = new Map<string, number>();
 
-  /**
-   * What a `#build` put on the board, kept so a step can be *appended* and a rewind can be
-   * *re-marked* without re-laying the whole run. The columns in order, and the nodes that drew
-   * them — one curve, one slice and one band per column — so the classes that say "ahead" and
-   * "now" can be moved over them.
-   */
-  #list: Col[] = [];
-  #trails: SVGPathElement[] = [];
-  #slices: SVGCircleElement[] = [];
-  #bands: HTMLElement[] = [];
-
-  /** The board and its growing layers, so a new column can be dropped into the right one. */
-  #board: SVGSVGElement | null = null;
-  #strings: SVGGElement | null = null;
-  #run: SVGGElement | null = null;
-  #dotsG: SVGGElement | null = null;
-
-  /** Stops hearing the subject while this is put down. */
-  #off: Off | null = null;
-
-  /** The shadow root the run is drawn into. */
-  #root: ShadowRoot;
+  /** What the last scroll answered to, so a hover's re-render does not move the view. */
+  #saw = "";
 
   constructor() {
     super();
     this.className = "history";
-    this.#root = shadow(this, historyCss);
     this.style.setProperty("--foot", `${FOOT}px`);
-
-    this.#cols = make("div", "cols");
-    this.#tag = make("div", "tag", "history");
-    // The keyboard shortcuts, named where the panel is named.
-    this.#tag.title = "← and → walk the run · Home and End for its ends";
-
-    // Shortcuts to both ends of the run. With a rewindable subject they rewind the machine;
-    // a machine watched from another process is not moved, so they scroll instead.
-    this.#ends = make("div", "ends");
-    const goto = (
-      name: string,
-      hint: string,
-      step: () => number,
-      edge: number,
-    ) => {
-      const key = make("button", "end", name);
-      key.title = hint;
-      key.addEventListener("click", () => {
-        if (this.#w!.subject.rewind) this.#w!.rewind(step());
-        else
-          this.#cols.scrollTo({ left: edge < 0 ? 0 : this.#cols.scrollWidth });
-      });
-      this.#ends.append(key);
-      return key;
-    };
-    goto("start", "the slice the run began at", () => 0, -1);
-    goto(
-      "end",
-      "where the run has got to",
-      () => this.#w!.subject.steps.length,
-      1,
-    );
-
-    this.#tag.append(this.#ends);
-    this.#root.append(this.#tag, this.#cols);
-  }
-
-  set wiring(w: Wiring) {
-    // Rewired: stop hearing the old subject; already in the page, hear the new one now.
-    this.#off?.();
-    this.#off = null;
-    this.#w = w;
-    if (this.isConnected)
-      this.#off = w.subject.watch((what) => this.#moved(what));
-  }
-
-  get wiring(): Wiring {
-    return this.#w!;
-  }
-
-  connectedCallback(): void {
-    // Subscribed here, not in `wiring`: the element is wired before it is put in the page, and a
-    // panel taken out and put back hears the subject again.
-    if (this.#off || !this.#w) return;
-    this.#off = this.#w.subject.watch((what) => this.#moved(what));
-  }
-
-  disconnectedCallback(): void {
-    this.#off?.();
-    this.#off = null;
   }
 
   #x(col: number): number {
@@ -244,162 +141,6 @@ export class FsmjsHistory extends HTMLElement {
     return `M ${x0} ${y0} C ${x0 + bend} ${y0}, ${x1 - bend} ${y1}, ${x1} ${y1}`;
   }
 
-  /**
-   * The step the rule under the pointer would take: the same curve as a real step, one column,
-   * lighter. No arrowhead — a position in this panel is a dot, and the curve ends where the next
-   * dot would stand.
-   */
-  #preview(): void {
-    const maybe = this.#maybe;
-    if (!maybe) return;
-    maybe.replaceChildren();
-    const w = this.#w!;
-    const { shown, offer } = w.focus.look();
-    // Nothing pointed at, or the pointed-at thing is a past step rather than an offer.
-    if (!offer || !shown.length) return;
-    // The rules the cells name, if they leave the position the machine stands in. Resolved here
-    // and not by `between`: that also asks whether the machine can be driven, and a preview is
-    // a drawing — a watched machine previews too. A first press names a whole cell or a whole
-    // source, so there may be several candidates, one curve each.
-    const here = w.subject.at;
-    const rows = edges(this.#graph).map(rowOf);
-    const want = rows.filter(
-      (r) => r.from === here && shown.every((k) => holds(k, r)),
-    );
-    if (!want.length) return;
-
-    // The column the machine stands in, in fold coordinates — recomputed each time rather than
-    // cached from the last draw.
-    const sits = spread(folds(w.subject.steps.map(asEdge))).findIndex(
-      (c) => w.subject.step >= c.first && w.subject.step <= c.last,
-    );
-    const x0 = this.#x(sits < 0 ? 0 : sits + 1);
-    const x1 = x0 + CELL;
-    // One curve per distinct target: two rules into one state would draw the same curve twice.
-    const seen = new Set<string>();
-    for (const rule of want) {
-      if (seen.has(rule.to)) continue;
-      seen.add(rule.to);
-      const y1 = this.#y(rule.to);
-      maybe.append(
-        svg("path", {
-          d: this.#arc(x0, this.#y(rule.from), x1, y1),
-          class: "maybe",
-          style: this.#colour(rule.to),
-        }),
-        // Where the offered step would stand: the position as a ring, not yet a dot.
-        svg("circle", {
-          cx: x1,
-          cy: y1,
-          r: 4,
-          class: "maybe-at",
-          style: this.#colour(rule.to),
-        }),
-      );
-    }
-  }
-
-  #build(): void {
-    const w = this.#w!;
-    this.#cols.replaceChildren();
-    this.#index?.remove();
-    this.#index = null;
-    this.#list = [];
-    this.#trails = [];
-    this.#slices = [];
-    this.#bands = [];
-    this.#board = null;
-    this.#strings = null;
-    this.#run = null;
-    this.#dotsG = null;
-
-    const steps = w.subject.steps.map(asEdge);
-    const at = w.subject.step;
-    // Folded columns: a long repetition is drawn as first + elided middle + last. Step numbers
-    // stay the run's own.
-    const list = spread(folds(steps));
-    this.#list = list;
-    // A column per slice: where the run started, and where each fold took it.
-    const end = this.#x(list.length) + CELL / 2;
-    // One column of room past the end — for the preview of the next step, and no more.
-    const width = end + CELL;
-    const height = HEAD + this.#row.size * CELL + FOOT;
-
-    // The names, left of the strings and out of the scroll — the same index the figure writes.
-    const wide =
-      14 + Math.max(0, ...[...this.#row.keys()].map((n) => n.length * EM));
-    this.#index = svg("svg", {
-      class: "names",
-      width: wide,
-      height,
-      viewBox: `0 0 ${wide} ${height}`,
-    });
-    for (const [state] of this.#row)
-      this.#index.append(
-        svg(
-          "text",
-          {
-            x: wide - 8,
-            y: this.#y(state) + 4,
-            class: "name",
-            "text-anchor": "end",
-            style: this.#colour(state),
-          },
-          state,
-        ),
-      );
-
-    // The board's layers in draw order: strings, curves, slices, preview. Kept as groups so an
-    // appended step drops one column in without re-laying the run.
-    this.#board = svg("svg", {
-      class: "run",
-      width,
-      height,
-      viewBox: `0 0 ${width} ${height}`,
-    });
-    this.#strings = svg("g", { class: "strings" });
-    this.#run = svg("g", { class: "trails" });
-    this.#dotsG = svg("g", { class: "slices" });
-    this.#maybe = svg("g", { class: "ahead-of" });
-    this.#board.append(this.#strings, this.#run, this.#dotsG, this.#maybe);
-
-    // The strings: the figure's rows carried across — same lines, colours and weight.
-    for (const [state] of this.#row)
-      this.#strings.append(
-        svg("line", {
-          x1: 0,
-          y1: this.#y(state),
-          x2: end,
-          y2: this.#y(state),
-          class: "string",
-          style: this.#colour(state),
-        }),
-      );
-
-    // One curve per column.
-    list.forEach((c, i) => this.#trail(c, i, at));
-
-    // Slices: slice 0 is where the run began, then one per fold — where that fold ended, which is
-    // also where the next one starts, drawn once.
-    this.#slice(0, list.length ? list[0]!.edge.from : w.subject.at, false);
-    list.forEach((c, i) => this.#slice(i + 1, c.edge.to, c.first > at));
-
-    this.#cols.append(this.#board);
-    this.#root.replaceChildren(this.#tag, this.#index, this.#cols);
-    // A run of no steps has one slice; there is nothing to walk or scroll.
-    this.#ends.hidden = !list.length;
-
-    // One band per fold, standing on the slice it arrived in: the click target, the snap target,
-    // and the holder of the number. The tint drawn is two columns wide (both slices of the step);
-    // the pressed area stays one column, or adjacent bands would overlap. At the tip of the run
-    // nothing is marked — the mark means the machine stands behind the end.
-    const stood = this.#stood(list, at, steps.length);
-    list.forEach((c, i) => this.#band(c, i, i === stood, c.first > at));
-
-    this.#preview();
-    this.#scroll();
-  }
-
   /** How far along the run the machine stands, in columns — `-1` when it stands at its tip. */
   #stood(list: Col[], at: number, count: number): number {
     // Inside the elided middle counts as standing on it: a run walked back into a drag is
@@ -410,181 +151,232 @@ export class FsmjsHistory extends HTMLElement {
     return at < count ? stands : -1;
   }
 
-  /** The curve of one step, from the slice it left to the slice it arrived at. */
-  #trail(c: Col, i: number, at: number): void {
-    const p = svg("path", {
-      d: this.#arc(
-        this.#x(i),
-        this.#y(c.edge.from),
-        this.#x(i + 1),
-        this.#y(c.edge.to),
-      ),
-      class: `trail${c.count === undefined ? "" : " elided"}${c.first > at ? " ahead" : ""}`,
-      style: this.#colour(c.edge.to),
-    });
-    this.#run!.append(p);
-    this.#trails.push(p);
-  }
-
-  /** A slice — the machine was in exactly one state at each of them. */
-  #slice(col: number, state: string, ahead: boolean): void {
-    const d = svg("circle", {
-      cx: this.#x(col),
-      cy: this.#y(state),
-      r: 4,
-      class: `at${ahead ? " ahead" : ""}`,
-      style: this.#colour(state),
-    });
-    this.#dotsG!.append(d);
-    this.#slices.push(d);
-  }
-
-  /** One band under a column: what is pressed to go back to that step. */
-  #band(c: Col, i: number, now: boolean, ahead: boolean): void {
-    const w = this.#w!;
-    const k = i + 1;
-    const band = make(
-      "div",
-      `step${c.count === undefined ? "" : " elided"}${now ? " now" : ""}${ahead ? " ahead" : ""}`,
-    );
-    band.style.left = `${k * CELL}px`;
-    band.style.width = `${CELL}px`;
-    // The step number under the column. The dashed column is several steps, so it carries a
-    // count instead — the fold's count minus the drawn first and last.
-    band.append(
-      c.count === undefined
-        ? make("span", "no", String(c.step))
-        : make("span", "no gap", `×${c.count - 2}`),
-    );
-    // The dashed column is several steps, not one moment: no title, no click.
-    this.#bands.push(band);
-    if (c.count !== undefined) {
-      this.#cols.append(band);
-      return;
-    }
-    const when = w.subject.steps[c.step - 1]?.at;
-    // The step in the figure's notation: cause pair, partial arrow, effect —
-    // `ready × down ⇀ resizing × draw`.
-    band.title = [
-      when === undefined ? "" : `${clock(when)}  `,
-      `${c.edge.from} × ${c.edge.on} ⇀ ${c.edge.to}`,
-      c.edge.emit === undefined ? "" : ` × ${c.edge.emit}`,
-      w.subject.rewind ? "\nclick to go back here" : "",
-    ].join("");
-    // Lights the figure and the text, but is not an offer: this rule was already taken.
-    band.addEventListener("mouseenter", () =>
-      w.focus.pointer.dispatch("enter", {
-        keys: halvesOf(c.edge),
-        offer: false,
-        alive: true,
-      }),
-    );
-    band.addEventListener("mouseleave", () =>
-      w.focus.pointer.dispatch("leave"),
-    );
-    // A fold rewinds to the slice its last repetition reached.
-    band.addEventListener("click", () => w.rewind(c.step));
-    this.#cols.append(band);
-  }
-
   /**
-   * Append columns without re-laying the board. Called only when the new columns are the old
-   * ones with more after them; a fold that grew a third column rebuilds instead.
+   * The step the rule under the pointer would take: the same curve as a real step, one column,
+   * lighter. No arrowhead — a position in this panel is a dot, and the curve ends where the
+   * next dot would stand.
    */
-  #append(list: Col[], n: number, at: number, count: number): void {
+  #preview(list: Col[]): TemplateResult[] {
+    const w = this.w!;
+    const { shown, offer } = w.focus.look();
+    // Nothing pointed at, or the pointed-at thing is a past step rather than an offer.
+    if (!offer || !shown.length) return [];
+    // The rules the cells name, if they leave the position the machine stands in. Resolved here
+    // and not by `between`: that also asks whether the machine can be driven, and a preview is
+    // a drawing — a watched machine previews too. A first press names a whole cell or a whole
+    // source, so there may be several candidates, one curve each.
+    const here = w.subject.at;
+    const want = edges(this.#graph)
+      .map(rowOf)
+      .filter((r) => r.from === here && shown.every((k) => holds(k, r)));
+    if (!want.length) return [];
+
+    // The column the machine stands in, in fold coordinates.
+    const sits = list.findIndex(
+      (c) => w.subject.step >= c.first && w.subject.step <= c.last,
+    );
+    const x0 = this.#x(sits < 0 ? 0 : sits + 1);
+    const x1 = x0 + CELL;
+    // One curve per distinct target: two rules into one state would draw the same curve twice.
+    const seen = new Set<string>();
+    const drawn: TemplateResult[] = [];
+    for (const rule of want) {
+      if (seen.has(rule.to)) continue;
+      seen.add(rule.to);
+      const y1 = this.#y(rule.to);
+      drawn.push(
+        svg`<path class="maybe" style=${this.#colour(rule.to)}
+          d=${this.#arc(x0, this.#y(rule.from), x1, y1)}></path>`,
+        // Where the offered step would stand: the position as a ring, not yet a dot.
+        svg`<circle class="maybe-at" style=${this.#colour(rule.to)}
+          cx=${x1} cy=${y1} r="4"></circle>`,
+      );
+    }
+    return drawn;
+  }
+
+  override render(): TemplateResult | typeof nothing {
+    const w = this.w;
+    if (!w) return nothing;
+    const steps = w.subject.steps.map(asEdge);
+    const at = w.subject.step;
+    // Folded columns: a long repetition is drawn as first + elided middle + last. Step numbers
+    // stay the run's own.
+    const list = spread(folds(steps));
+    const stood = this.#stood(list, at, steps.length);
+    // A column per slice: where the run started, and where each fold took it — and one column
+    // of room past the end, for the preview of the next step.
     const end = this.#x(list.length) + CELL / 2;
     const width = end + CELL;
     const height = HEAD + this.#row.size * CELL + FOOT;
-    this.#board!.setAttribute("width", String(width));
-    this.#board!.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    // The strings run on to the new end.
-    this.#strings!.replaceChildren(
-      ...[...this.#row].map(([state]) =>
-        svg("line", {
-          x1: 0,
-          y1: this.#y(state),
-          x2: end,
-          y2: this.#y(state),
-          class: "string",
-          style: this.#colour(state),
-        }),
-      ),
-    );
-    for (let i = n; i < list.length; i++) {
-      const c = list[i]!;
-      this.#trail(c, i, at);
-      this.#slice(i + 1, c.edge.to, c.first > at);
-      this.#band(c, i, i === this.#stood(list, at, count), c.first > at);
-    }
-    this.#list = list;
-    this.#ends.hidden = !list.length;
-    // A step taken at the end needs no mark — the tip is the ordinary case — and the redo future
-    // it just dropped goes with it, so nothing keeps an `ahead` or a `now`.
-    this.#remark(at, count);
-    this.#scroll();
-  }
 
-  /** Put the `now` and `ahead` classes where the machine stands. Nothing else moved. */
-  #remark(at: number, count: number): void {
-    const list = this.#list;
-    const stood = this.#stood(list, at, count);
-    list.forEach((c, i) => {
-      const ahead = c.first > at;
-      const now = i === stood;
-      this.#trails[i]?.classList.toggle("ahead", ahead);
-      this.#slices[i + 1]?.classList.toggle("ahead", ahead);
-      this.#bands[i]?.classList.toggle("ahead", ahead);
-      this.#bands[i]?.classList.toggle("now", now);
+    // The names, left of the strings and out of the scroll — the same index the figure writes.
+    const wide =
+      14 + Math.max(0, ...[...this.#row.keys()].map((n) => n.length * EM));
+    const names = [...this.#row.keys()].map(
+      (state) =>
+        svg`<text class="name" text-anchor="end" style=${this.#colour(state)}
+          x=${wide - 8} y=${this.#y(state) + 4}>${state}</text>`,
+    );
+
+    // The strings: the figure's rows carried across — same lines, colours and weight.
+    const strings = [...this.#row.keys()].map(
+      (state) =>
+        svg`<line class="string" style=${this.#colour(state)}
+          x1="0" y1=${this.#y(state)} x2=${end} y2=${this.#y(state)}></line>`,
+    );
+
+    // One curve per column.
+    const trails = list.map(
+      (c, i) =>
+        svg`<path
+          class=${classMap({ trail: true, elided: c.count !== undefined, ahead: c.first > at })}
+          style=${this.#colour(c.edge.to)}
+          d=${this.#arc(this.#x(i), this.#y(c.edge.from), this.#x(i + 1), this.#y(c.edge.to))}></path>`,
+    );
+
+    // Slices: slice 0 is where the run began, then one per fold — where that fold ended, which
+    // is also where the next one starts, drawn once.
+    const slices = [
+      {
+        col: 0,
+        state: list.length ? list[0]!.edge.from : w.subject.at,
+        ahead: false,
+      },
+      ...list.map((c, i) => ({
+        col: i + 1,
+        state: c.edge.to,
+        ahead: c.first > at,
+      })),
+    ].map(
+      ({ col, state, ahead }) =>
+        svg`<circle class=${classMap({ at: true, ahead })} style=${this.#colour(state)}
+          cx=${this.#x(col)} cy=${this.#y(state)} r="4"></circle>`,
+    );
+
+    // One band per fold, standing on the slice it arrived in: the click target, the snap target,
+    // and the holder of the number. The tint drawn is two columns wide (both slices of the
+    // step); the pressed area stays one column, or adjacent bands would overlap. At the tip of
+    // the run nothing is marked — the mark means the machine stands behind the end.
+    const bands = list.map((c, i) => {
+      const cls = classMap({
+        step: true,
+        elided: c.count !== undefined,
+        now: i === stood,
+        ahead: c.first > at,
+      });
+      const place = `left: ${(i + 1) * CELL}px; width: ${CELL}px`;
+      // The dashed column is several steps, not one moment: no title, no click.
+      if (c.count !== undefined)
+        return html`<div class=${cls} style=${place}>
+          <span class="no gap">×${c.count - 2}</span>
+        </div>`;
+      const when = w.subject.steps[c.step - 1]?.at;
+      // The step in the figure's notation: cause pair, partial arrow, effect —
+      // `ready × down ⇀ resizing × draw`.
+      const title = [
+        when === undefined ? "" : `${clock(when)}  `,
+        `${c.edge.from} × ${c.edge.on} ⇀ ${c.edge.to}`,
+        c.edge.emit === undefined ? "" : ` × ${c.edge.emit}`,
+        w.subject.rewind ? "\nclick to go back here" : "",
+      ].join("");
+      // Lights the figure and the text, but is not an offer: this rule was already taken.
+      return html`<div
+        class=${cls}
+        style=${place}
+        title=${title}
+        @mouseenter=${() =>
+          w.focus.pointer.dispatch("enter", {
+            keys: halvesOf(c.edge),
+            offer: false,
+            alive: true,
+          })}
+        @mouseleave=${() => w.focus.pointer.dispatch("leave")}
+        @click=${() => w.rewind(c.step)}
+      >
+        <span class="no">${c.step}</span>
+      </div>`;
     });
+
+    // Shortcuts to both ends of the run. With a rewindable subject they rewind the machine;
+    // a machine watched from another process is not moved, so they scroll instead.
+    const goto = (step: () => number, edge: number) => () => {
+      if (w.subject.rewind) w.rewind(step());
+      else {
+        const cols = this.renderRoot.querySelector(".cols");
+        cols?.scrollTo({ left: edge < 0 ? 0 : cols.scrollWidth });
+      }
+    };
+
+    return html`<div
+        class="tag"
+        title="← and → walk the run · Home and End for its ends"
+      >
+        history
+        <div class="ends" ?hidden=${!list.length}>
+          <button
+            class="end"
+            title="the slice the run began at"
+            @click=${goto(() => 0, -1)}
+          >
+            start
+          </button>
+          <button
+            class="end"
+            title="where the run has got to"
+            @click=${goto(() => w.subject.steps.length, 1)}
+          >
+            end
+          </button>
+        </div>
+      </div>
+      <svg
+        class="names"
+        width=${wide}
+        height=${height}
+        viewBox=${`0 0 ${wide} ${height}`}
+      >
+        ${names}
+      </svg>
+      <div class="cols">
+        <svg
+          class="run"
+          width=${width}
+          height=${height}
+          viewBox=${`0 0 ${width} ${height}`}
+        >
+          <g class="strings">${strings}</g>
+          <g class="trails">${trails}</g>
+          <g class="slices">${slices}</g>
+          <g class="ahead-of">${this.#preview(list)}</g>
+        </svg>
+        ${bands}
+      </div>`;
   }
 
   /**
-   * Where to look, given where the run stands. At the end, a run is read at its end; standing
-   * behind it, the mark is the thing that moved. `nearest`, so a step already on screen does not
-   * move the view at all.
+   * Where to look, given where the run stands — only when the run or the position moved, so a
+   * hover's re-render does not move the view. At the end, a run is read at its end; standing
+   * behind it, the mark is the thing that moved. `nearest`, so a step already on screen does
+   * not move the view at all.
    */
-  #scroll(): void {
-    const here = this.#cols.querySelector<HTMLElement>(".step.now");
+  protected override updated(): void {
+    const w = this.w;
+    if (!w) return;
+    const saw = `${w.subject.steps.length}\0${w.subject.step}\0${this.#row.size}`;
+    if (saw === this.#saw) return;
+    this.#saw = saw;
+    const cols = this.renderRoot.querySelector<HTMLElement>(".cols");
+    if (!cols) return;
+    const here = cols.querySelector<HTMLElement>(".step.now");
     if (here) here.scrollIntoView({ block: "nearest", inline: "nearest" });
-    else this.#cols.scrollLeft = this.#cols.scrollWidth;
-  }
-
-  /** The machine moved. A step appends, a rewind re-marks, a restore re-lays the board. */
-  #moved(what: Change): void {
-    const w = this.#w;
-    if (!w || !this.#board) return;
-    if (what.say === "step") {
-      const steps = w.subject.steps.map(asEdge);
-      const at = w.subject.step;
-      const list = spread(folds(steps));
-      const n = this.#list.length;
-      if (
-        list.length >= n &&
-        list.slice(0, n).every((c, i) => sameCol(c, this.#list[i]!))
-      )
-        this.#append(list, n, at, steps.length);
-      else this.#build();
-    } else if (what.say === "rewind") {
-      // Nothing grew and nothing left; the mark of where the run stands is what moved.
-      this.#remark(w.subject.step, w.subject.steps.length);
-      this.#scroll();
-    } else {
-      // The whole run was restated — a reconnection, or a machine rebuilt. Nothing is safe to keep.
-      this.#build();
-    }
+    else cols.scrollLeft = cols.scrollWidth;
   }
 
   show(graph: Graph, start: string): void {
     this.#graph = graph;
     this.#row = new Map(lanes(graph, start).map((n, i) => [n, i]));
-  }
-
-  draw(): void {
-    this.#build();
-  }
-
-  dress(): void {
-    this.#preview();
+    this.requestUpdate();
   }
 }
 
