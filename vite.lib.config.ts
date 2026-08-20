@@ -14,11 +14,9 @@ import type { Plugin } from "vite";
  *
  * Emitted rather than copied, so it goes wherever the output goes and is cleared with it.
  *
- * It lands where the source has it, under `shared/ui`, and not at the root — because `ui.ts`
- * imports it and TypeScript writes that import into `ui.d.ts` whatever else it elides. A
- * declaration naming a file the package does not contain is a package that does not check on
- * somebody else's machine, and moving the file is cheaper than keeping a second copy of it beside
- * the first. What a reader writes is `@evgkch/fsmjs-inspector/tokens.css` either way: the name is
+ * It lands where the source has it, under `shared/ui`, and not at the root — that is the path the
+ * manifest maps `./tokens.css` onto, and one mapping is cheaper than a copy at the root beside
+ * the tree. What a reader writes is `@evgkch/fsmjs-inspector/tokens.css` either way: the name is
  * the manifest's, and where the file sits under it is nobody's business but this build's.
  */
 const TOKENS = "shared/ui/tokens/tokens.css";
